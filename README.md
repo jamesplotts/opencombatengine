@@ -5,7 +5,7 @@
 [![C#](https://img.shields.io/badge/C%23-12.0-239120.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![SRD](https://img.shields.io/badge/SRD-5.1-red.svg)](https://dnd.wizards.com/resources/systems-reference-document)
 
-An open-source, interface-driven combat engine for tabletop RPGs compatible with D&D 5e SRD mechanics. Built with extensibility, testability, and AI-assisted development in mind.
+An open-source, interface-driven combat engine for RPGs compatible with D&D 5e SRD mechanics. Built with extensibility, testability, and AI-assisted development in mind.
 
 ## 🎯 Project Goals
 
@@ -13,7 +13,7 @@ An open-source, interface-driven combat engine for tabletop RPGs compatible with
 - **SRD 5.1 Compliant**: Fully compatible with D&D 5e mechanics while respecting IP
 - **Test-Driven Development**: Minimum 80% code coverage with TDD methodology
 - **AI-Friendly**: Optimized for pair programming with AI assistants
-- **Community-Driven**: Built for and by the tabletop gaming community
+- **Community-Driven**: Built for and by the gaming community
 
 ## ✨ Features
 
