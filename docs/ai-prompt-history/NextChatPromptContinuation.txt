@@ -1,0 +1,1 @@
+We have completed the project-context.md file, and have the project structure with the repo.   Please write me a continuation prompt of this discussion so I can start a new chat with a clean context window.

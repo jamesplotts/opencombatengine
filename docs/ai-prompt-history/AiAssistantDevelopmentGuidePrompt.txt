@@ -1,0 +1,1 @@
+Can you provide an ai-assistant-development-guide.md file for me that encapsulates what people will need to know (from what we've discussed, and from whatever else you think is pertinent and should be included), and tell me where to save it in the project directories

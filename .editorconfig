@@ -1,0 +1,3 @@
+# .editorconfig
+[*.cs]
+file_header_template = // Copyright (c) 2025 James Duane Plotts\n// Licensed under MIT License for code\n// Game mechanics under OGL 1.0a\n// See LEGAL.md for full disclaimers\n

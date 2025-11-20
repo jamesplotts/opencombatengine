@@ -1,0 +1,11 @@
+{
+  "author": "James Duane Plotts",
+  "classifications": ["OpenCombatEngine"],
+  "name": "OpenCombatEngine Class",
+  "identity": "OpenCombatEngine.ClassTemplate",
+  "shortName": "oceclass",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  }
+}

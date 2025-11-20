@@ -1,0 +1,55 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8B4C5F3E-6D3A-4B8E-9E1B-4F8A5C9D2E1F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCombatEngine.Core", "src\OpenCombatEngine.Core\OpenCombatEngine.Core.csproj", "{A1B2C3D4-E5F6-7890-AB12-CD34EF567890}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCombatEngine.Implementation", "src\OpenCombatEngine.Implementation\OpenCombatEngine.Implementation.csproj", "{B2C3D4E5-F6A7-8901-BC23-DE45FA678901}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9C5D6E3B-7E4A-5C9F-0A2C-6D9B8E1C3F5A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCombatEngine.Core.Tests", "tests\OpenCombatEngine.Core.Tests\OpenCombatEngine.Core.Tests.csproj", "{C3D4E5F6-A7B8-9012-CD34-EF56AB789012}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7E8F9A2C-4B5D-6E3A-1F8C-9D2B7E4A5C3F}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		README.md = README.md
+		LICENSE = LICENSE
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".ai", ".ai", "{8F9A0B3D-5C6E-7F4B-2A9D-0E3C8F5B6D4A}"
+	ProjectSection(SolutionItems) = preProject
+		.ai\project-context.md = .ai\project-context.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-E5F6-7890-AB12-CD34EF567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-AB12-CD34EF567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-AB12-CD34EF567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-AB12-CD34EF567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BC23-DE45FA678901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BC23-DE45FA678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BC23-DE45FA678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BC23-DE45FA678901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3D4E5F6-A7B8-9012-CD34-EF56AB789012}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3D4E5F6-A7B8-9012-CD34-EF56AB789012}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3D4E5F6-A7B8-9012-CD34-EF56AB789012}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3D4E5F6-A7B8-9012-CD34-EF56AB789012}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A1B2C3D4-E5F6-7890-AB12-CD34EF567890} = {8B4C5F3E-6D3A-4B8E-9E1B-4F8A5C9D2E1F}
+		{B2C3D4E5-F6A7-8901-BC23-DE45FA678901} = {8B4C5F3E-6D3A-4B8E-9E1B-4F8A5C9D2E1F}
+		{C3D4E5F6-A7B8-9012-CD34-EF56AB789012} = {9C5D6E3B-7E4A-5C9F-0A2C-6D9B8E1C3F5A}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,89 @@
+OpenCombatEngine Development - Continuation
+Previous Session Summary
+I'm developing OpenCombatEngine, an open-source, interface-driven D&D 5e-compatible combat engine in C# (.NET 8). The project is designed for AI-assisted development and maximum extensibility through heavy use of interfaces.
+Completed So Far:
+
+✅ Created GitHub repository and project structure
+✅ Established comprehensive AI context in .ai/project-context.md (attached)
+✅ Defined coding standards adapted from my SimpleIDE project:
+
+Mandatory XML documentation on ALL members
+Enum pattern with Unspecified/LastValue sentinels
+Interface-first architecture
+TDD with minimum 80% coverage
+
+
+✅ Designed hybrid content import system supporting:
+
+5e.tools JSON format
+Open5e API format
+Foundry VTT format
+FightClub 5e XML
+Native OpenCombat Format (.ocf)
+
+
+
+Key Architecture Decisions:
+
+Legal Compliance: SRD 5.1 content only, no proprietary D&D terms
+Error Handling: Public APIs return Result<T> pattern, never throw
+Project Structure:
+
+Core project: Interfaces only
+Implementation project: Concrete implementations
+Content project: Import system for multiple formats
+
+
+Development Approach: TDD - write tests before implementation
+
+Current Task: Begin Core Interface Development
+I need to start implementing the core interfaces, beginning with the simplest and most fundamental: IDiceRoller.
+Project Structure Already Created:
+OpenCombatEngine/
+├── .ai/
+│   └── project-context.md [ATTACHED - PLEASE READ FIRST]
+├── src/
+│   ├── OpenCombatEngine.Core/
+│   ├── OpenCombatEngine.Implementation/
+│   └── OpenCombatEngine.Content/
+├── tests/
+│   └── OpenCombatEngine.Core.Tests/
+├── docs/
+└── OpenCombatEngine.sln
+Next Steps Needed:
+
+Create IDiceRoller interface in OpenCombatEngine.Core/Interfaces/Dice/
+Write comprehensive tests for IDiceRoller (TDD approach)
+Define the core dice notation parser requirements
+Consider advantage/disadvantage mechanics in the interface design
+
+Specific Questions:
+
+For IDiceRoller, should we support:
+
+Standard notation: "3d6+2", "1d20", "2d4-1"
+Advantage/Disadvantage: "1d20adv", "1d20dis"
+Keep highest/lowest: "4d6kh3" (keep highest 3)
+Exploding dice: "1d6!" (reroll and add on max)
+Or keep it simple initially and extend later?
+
+
+Should the interface return just the total, or also provide roll details for UI display?
+
+csharp// Option A: Simple
+int Roll(string notation);
+
+// Option B: Detailed
+DiceResult Roll(string notation);
+public record DiceResult(int Total, List<int> IndividualRolls, string Notation);
+Development Environment:
+
+Using Antigravity for AI-assisted development (superior to Claude Desktop)
+C# with .NET 8.0
+Following all conventions in the attached project-context.md
+
+Attachments:
+
+project-context.md - CRITICAL: Read this first for all coding standards and patterns
+
+Please help me implement the IDiceRoller interface following TDD methodology and all project conventions. Start by designing the interface, then write comprehensive tests, and finally implement.

@@ -1,0 +1,1 @@
+Okay, I've downloaded the tar and extracted it into the project directory.  Now, I want to create the github repo.  I am at the new repository webpage, and opencombatengine is available for a repo name.  What should I give for the description?  Can you provide a proper readme.md file?  .gitignore file? What license should I choose?

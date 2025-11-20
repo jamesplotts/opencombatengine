@@ -1,0 +1,2 @@
+I created the project structure and git repo.  Now please provide an artifact with the project-context.md file using what we've discussed in this chat as a guide.
+

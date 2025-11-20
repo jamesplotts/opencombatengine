@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- Suppress XML doc warnings for private members -->
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>James Duane</Authors>
+    <Company>OpenCombatEngine Contributors</Company>
+    <Product>OpenCombatEngine</Product>
+    <Description>Standard implementations for OpenCombatEngine - an open-source D&amp;D 5e-compatible combat engine</Description>
+    <Copyright>Copyright © 2024 OpenCombatEngine Contributors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/yourusername/OpenCombatEngine</RepositoryUrl>
+    <PackageTags>dnd;5e;srd;combat;tabletop;rpg</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenCombatEngine.Core\OpenCombatEngine.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

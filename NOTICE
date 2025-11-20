@@ -1,0 +1,46 @@
+# NOTICE
+
+OpenCombatEngine
+Copyright (c) 2025 James Duane Plotts
+
+## Dual License Structure
+
+This project uses a dual license structure:
+
+1. **Software Code**: Licensed under the MIT License (see LICENSE file)
+2. **Game Mechanics**: Licensed under the Open Gaming License v1.0a (see LICENSE-OGL file)
+
+## Third-Party Content
+
+This project uses game mechanics from:
+- System Reference Document 5.1 (SRD 5.1) under the Open Gaming License v1.0a
+- Copyright 2016, Wizards of the Coast, Inc.
+
+## Trademarks
+
+- "Dungeons & Dragons" and "D&D" are registered trademarks of Wizards of the Coast LLC
+- This project is NOT affiliated with, endorsed by, or sponsored by Wizards of the Coast
+
+## Important Legal Notice
+
+**NO COPYRIGHTED CONTENT INCLUDED**
+
+This project contains:
+- ✅ Game mechanics from the SRD (legally allowed under OGL)
+- ✅ Original code and implementations
+- ✅ Import tools for user-provided content
+
+This project does NOT contain:
+- ❌ Copyrighted spell descriptions
+- ❌ Proprietary monster names or descriptions  
+- ❌ Official D&D artwork or logos
+- ❌ Setting-specific content (Forgotten Realms, etc.)
+- ❌ Any content not found in the SRD 5.1
+
+## User Responsibility
+
+Users are responsible for ensuring any content they import complies with applicable licenses and copyright law.
+
+## Questions?
+
+For legal questions, see LEGAL.md for comprehensive disclaimers.
