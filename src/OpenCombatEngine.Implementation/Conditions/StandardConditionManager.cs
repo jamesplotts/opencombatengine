@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Core.Results;
 
 namespace OpenCombatEngine.Implementation.Conditions
 {
-    public class StandardConditionManager : IConditionManager
+    public class StandardConditionManager : IConditionManager, IStateful<ConditionManagerState>
     {
         private readonly List<ICondition> _conditions = new();
         private readonly ICreature _owner;
@@ -77,6 +80,23 @@ namespace OpenCombatEngine.Implementation.Conditions
                     RemoveCondition(condition.Name);
                 }
             }
+        }
+        public StandardConditionManager(ICreature owner, ConditionManagerState state) : this(owner)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            if (state.Conditions != null)
+            {
+                foreach (var cState in state.Conditions)
+                {
+                    _conditions.Add(new Condition(cState.Name, cState.Description, cState.DurationRounds, cState.Type));
+                }
+            }
+        }
+
+        public ConditionManagerState GetState()
+        {
+            var conditionStates = _conditions.Select(c => new ConditionState(c.Name, c.Description, c.DurationRounds, c.Type)).ToList();
+            return new ConditionManagerState(new Collection<ConditionState>(conditionStates));
         }
     }
 }

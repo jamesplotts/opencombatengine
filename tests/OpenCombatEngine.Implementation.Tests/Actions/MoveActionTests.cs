@@ -56,7 +56,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         {
             // Arrange
             var creature = Substitute.For<ICreature>();
-            creature.Movement.Returns((IMovement)null);
+            creature.Movement.Returns((IMovement)null!);
 
             var action = new MoveAction(15);
 

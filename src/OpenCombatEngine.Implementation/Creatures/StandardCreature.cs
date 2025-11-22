@@ -84,7 +84,10 @@ namespace OpenCombatEngine.Implementation.Creatures
             // Assuming I update it:
             HitPoints = new StandardHitPoints(state.HitPoints, CombatStats);
             
-            Conditions = new StandardConditionManager(this);
+            Conditions = state.Conditions != null 
+                ? new StandardConditionManager(this, state.Conditions) 
+                : new StandardConditionManager(this);
+                
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats, Conditions);
             Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
@@ -106,7 +109,10 @@ namespace OpenCombatEngine.Implementation.Creatures
             var combatState = (CombatStats as IStateful<CombatStatsState>)?.GetState()
                 ?? throw new InvalidOperationException("CombatStats component does not support state export");
 
-            return new CreatureState(Id, Name, abilityState, hpState, combatState);
+            var conditionState = (Conditions as IStateful<ConditionManagerState>)?.GetState()
+                ?? throw new InvalidOperationException("Conditions component does not support state export");
+
+            return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState);
         }
 
         /// <inheritdoc />

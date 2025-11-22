@@ -1,6 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Models.States;
+using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
 using Xunit;
 
@@ -14,7 +16,11 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             // Arrange
             var scores = new StandardAbilityScores(18, 14, 12, 10, 8, 16);
             var hp = new StandardHitPoints(50, 45, 5);
-            var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp);
+            var combatStats = new StandardCombatStats(armorClass: 18, initiativeBonus: 2, speed: 40);
+            var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp, combatStats);
+            
+            // Add a condition
+            original.Conditions.AddCondition(new Condition("Blinded", "Cannot see", 3, ConditionType.Blinded));
 
             // Act - Get State
             var state = original.GetState();
@@ -38,6 +44,11 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             reconstructed.HitPoints.Max.Should().Be(original.HitPoints.Max);
             reconstructed.HitPoints.Current.Should().Be(original.HitPoints.Current);
             reconstructed.HitPoints.Temporary.Should().Be(original.HitPoints.Temporary);
+            
+            reconstructed.CombatStats.ArmorClass.Should().Be(18);
+            reconstructed.CombatStats.Speed.Should().Be(40);
+            
+            reconstructed.Conditions.HasCondition(ConditionType.Blinded).Should().BeTrue();
         }
 
         [Fact]

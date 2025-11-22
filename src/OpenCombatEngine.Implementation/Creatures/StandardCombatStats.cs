@@ -2,6 +2,7 @@ using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.States;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace OpenCombatEngine.Implementation.Creatures
@@ -40,24 +41,21 @@ namespace OpenCombatEngine.Implementation.Creatures
             ArmorClass = state.ArmorClass;
             InitiativeBonus = state.InitiativeBonus;
             Speed = state.Speed;
-            // State doesn't have these yet! We need to update State too if we want serialization.
-            // For this cycle, I'll default them to empty in FromState, or update State DTO.
-            // The plan didn't explicitly say update State DTO, but we should.
-            // Let's default to empty for now to avoid breaking serialization in this step.
-            Resistances = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
-            Vulnerabilities = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
-            Immunities = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
+            Resistances = (state.Resistances ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            Vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            Immunities = (state.Immunities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
         }
 
         public CombatStatsState GetState()
         {
-            return new CombatStatsState(ArmorClass, InitiativeBonus, Speed);
-            // We are losing data here if we don't update State.
-            // I'll add a TODO or update State if I have time.
-            // Given "Unsupervised", I should probably do it right.
-            // But let's stick to the plan which was "Damage Types & Resistances".
-            // I'll leave State update for a future "Serialization Update" or do it now if easy.
-            // It requires updating CombatStatsState.cs.
+            return new CombatStatsState(
+                ArmorClass, 
+                InitiativeBonus, 
+                Speed, 
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Resistances.ToList()), 
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Vulnerabilities.ToList()), 
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Immunities.ToList())
+            );
         }
     }
 }
