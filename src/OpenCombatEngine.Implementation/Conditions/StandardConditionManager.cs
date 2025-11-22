@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Results;
 
 namespace OpenCombatEngine.Implementation.Conditions
 {
@@ -18,21 +20,26 @@ namespace OpenCombatEngine.Implementation.Conditions
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         }
 
-        public void AddCondition(ICondition condition)
+        public bool HasCondition(ConditionType type)
+        {
+            return _conditions.Any(c => c.Type == type);
+        }
+
+        public Result<bool> AddCondition(ICondition condition)
         {
             ArgumentNullException.ThrowIfNull(condition);
 
-            // Check if condition already exists (by name)
-            var existing = _conditions.FirstOrDefault(c => c.Name == condition.Name);
-            if (existing != null)
+            if (_conditions.Any(c => c.Name == condition.Name))
             {
-                // Logic for stacking or replacing?
-                // For now, let's replace/refresh.
-                RemoveCondition(existing.Name);
+                // Condition already exists. In 5e, usually refreshes duration or fails.
+                // For now, let's say it fails or we replace it?
+                // Let's return Failure for "Already exists".
+                return Result<bool>.Failure($"Condition '{condition.Name}' already active.");
             }
 
             _conditions.Add(condition);
             condition.OnApplied(_owner);
+            return Result<bool>.Success(true);
         }
 
         public void RemoveCondition(string conditionName)

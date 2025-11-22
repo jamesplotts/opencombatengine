@@ -1,5 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
+using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models.Actions;
@@ -144,6 +146,32 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             // Assert
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("Resource already used");
+            _diceRoller.DidNotReceive().Roll(Arg.Any<string>());
+        }
+        [Fact]
+        public void Execute_Should_Roll_With_Disadvantage_When_Prone()
+        {
+            // Arrange
+            var economy = Substitute.For<IActionEconomy>();
+            economy.HasAction.Returns(true);
+            
+            var conditions = Substitute.For<IConditionManager>();
+            conditions.HasCondition(ConditionType.Prone).Returns(true);
+
+            var source = Substitute.For<ICreature>();
+            source.ActionEconomy.Returns(economy);
+            source.Conditions.Returns(conditions);
+
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+
+            _diceRoller.RollWithDisadvantage(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10, 5 }, 0, RollType.Disadvantage)));
+
+            // Act
+            var result = action.Execute(source, _target);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            _diceRoller.Received(1).RollWithDisadvantage(Arg.Any<string>());
             _diceRoller.DidNotReceive().Roll(Arg.Any<string>());
         }
     }

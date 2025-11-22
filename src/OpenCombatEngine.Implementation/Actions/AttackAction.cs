@@ -72,7 +72,19 @@ namespace OpenCombatEngine.Implementation.Actions
             // We use d20 + attackBonus
             // Note: We should probably use a more robust dice notation builder, but string concat is fine for now.
             string attackNotation = $"1d20+{_attackBonus}";
-            var attackRollResult = _diceRoller.Roll(attackNotation);
+            
+            // Check for Prone (Disadvantage)
+            bool isProne = source.Conditions?.HasCondition(ConditionType.Prone) ?? false;
+            
+            Result<DiceRollResult> attackRollResult;
+            if (isProne)
+            {
+                attackRollResult = _diceRoller.RollWithDisadvantage(attackNotation);
+            }
+            else
+            {
+                attackRollResult = _diceRoller.Roll(attackNotation);
+            }
 
             if (!attackRollResult.IsSuccess)
             {

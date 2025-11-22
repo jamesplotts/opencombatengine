@@ -102,7 +102,8 @@ public class CreatureInterfaceTests
     private class StubConditionManager : IConditionManager
     {
         public IEnumerable<ICondition> ActiveConditions => Enumerable.Empty<ICondition>();
-        public void AddCondition(ICondition condition) { }
+        public bool HasCondition(ConditionType type) => false;
+        public Result<bool> AddCondition(ICondition condition) => Result<bool>.Success(true);
         public void RemoveCondition(string conditionName) { }
         public void Tick() { }
     }

@@ -51,7 +51,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
-            Movement = new StandardMovement(CombatStats);
+            Movement = new StandardMovement(CombatStats, Conditions);
             
             Checks = checkManager ?? new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
         }
@@ -86,7 +86,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
-            Movement = new StandardMovement(CombatStats);
+            Movement = new StandardMovement(CombatStats, Conditions);
             Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
         }
 

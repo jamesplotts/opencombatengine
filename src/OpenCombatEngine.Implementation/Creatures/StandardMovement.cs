@@ -1,32 +1,37 @@
 using System;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Conditions;
+using OpenCombatEngine.Core.Enums; // Added this using statement for ConditionType
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
     public class StandardMovement : IMovement
     {
-        private readonly ICombatStats _combatStats;
+        private readonly ICombatStats _stats;
+        private readonly IConditionManager _conditions;
 
-        public int Speed => _combatStats.Speed;
+        public int Speed => _stats.Speed;
         public int MovementRemaining { get; private set; }
 
-        public StandardMovement(ICombatStats combatStats)
+        public StandardMovement(ICombatStats stats, IConditionManager conditions)
         {
-            _combatStats = combatStats ?? throw new ArgumentNullException(nameof(combatStats));
+            _stats = stats ?? throw new ArgumentNullException(nameof(stats));
+            _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
             MovementRemaining = Speed;
         }
 
         public void Move(int distance)
         {
-            if (distance < 0) throw new ArgumentException("Distance cannot be negative", nameof(distance));
+            if (distance < 0) throw new ArgumentOutOfRangeException(nameof(distance), "Distance cannot be negative.");
             
-            if (distance > MovementRemaining)
+            if (_conditions.HasCondition(ConditionType.Grappled))
             {
-                // In a real engine, this might return a Result or throw.
-                // For now, we'll just cap it or throw. 
-                // Let's cap it to remaining to be safe, or throw to indicate illegal move?
-                // The interface implies "Move", so let's throw if illegal.
-                throw new InvalidOperationException($"Cannot move {distance}ft. Only {MovementRemaining}ft remaining.");
+                throw new InvalidOperationException("Cannot move while Grappled.");
+            }
+
+            if (MovementRemaining < distance)
+            {
+                throw new InvalidOperationException($"Not enough movement remaining. Current: {MovementRemaining}, Requested: {distance}");
             }
 
             MovementRemaining -= distance;
@@ -34,8 +39,15 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public void ResetTurn()
         {
-            // Reset to current speed (which might have changed due to buffs/debuffs affecting stats)
-            MovementRemaining = Speed;
+            if (_conditions.HasCondition(ConditionType.Grappled))
+            {
+                MovementRemaining = 0;
+            }
+            else
+            {
+                // Reset to current speed (which might have changed due to buffs/debuffs affecting stats)
+                MovementRemaining = Speed;
+            }
         }
     }
 }

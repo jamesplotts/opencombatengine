@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Implementation.Conditions;
@@ -60,7 +61,7 @@ namespace OpenCombatEngine.Implementation.Tests
             // Arrange
             var creature = Substitute.For<ICreature>();
             var manager = new StandardConditionManager(creature);
-            var condition = Substitute.For<Condition>("Prone", "Lying down", 1);
+            var condition = Substitute.For<Condition>("Prone", "Lying down", 1, ConditionType.Prone);
 
             // Act
             manager.AddCondition(condition);

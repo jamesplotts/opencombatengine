@@ -1,3 +1,5 @@
+using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Results;
 using System.Collections.Generic;
 
 namespace OpenCombatEngine.Core.Interfaces.Conditions
@@ -13,10 +15,18 @@ namespace OpenCombatEngine.Core.Interfaces.Conditions
         IEnumerable<ICondition> ActiveConditions { get; }
 
         /// <summary>
+        /// Checks if the creature has a specific condition type.
+        /// </summary>
+        /// <param name="type">The condition type to check.</param>
+        /// <returns>True if the creature has the condition, otherwise false.</returns>
+        bool HasCondition(ConditionType type);
+
+        /// <summary>
         /// Adds a condition to the manager.
         /// </summary>
         /// <param name="condition">The condition to add.</param>
-        void AddCondition(ICondition condition);
+        /// <returns>Success if added, Failure if invalid.</returns>
+        Result<bool> AddCondition(ICondition condition);
 
         /// <summary>
         /// Removes a condition by name.

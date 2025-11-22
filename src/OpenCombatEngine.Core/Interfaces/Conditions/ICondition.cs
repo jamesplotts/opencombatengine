@@ -1,5 +1,7 @@
 using OpenCombatEngine.Core.Interfaces.Creatures;
 
+using OpenCombatEngine.Core.Enums;
+
 namespace OpenCombatEngine.Core.Interfaces.Conditions
 {
     /// <summary>
@@ -11,6 +13,11 @@ namespace OpenCombatEngine.Core.Interfaces.Conditions
         /// Gets the unique name of the condition (e.g., "Blinded").
         /// </summary>
         string Name { get; }
+
+        /// <summary>
+        /// Gets the type of the condition.
+        /// </summary>
+        ConditionType Type { get; }
 
         /// <summary>
         /// Gets the description of the condition's effects.
