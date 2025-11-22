@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using OpenCombatEngine.Core.Interfaces.Dice;
@@ -22,7 +23,9 @@ namespace OpenCombatEngine.Implementation.Dice
         #region Private Fields
 
         private readonly ILogger<StandardDiceRoller> _logger;
+#pragma warning disable CA5394 // Random is an insecure random number generator
         private Random _random;
+#pragma warning restore CA5394
         private int? _seed;
 
         // Regex pattern for dice notation: [count]d<sides>[+/-modifier]
@@ -42,11 +45,13 @@ namespace OpenCombatEngine.Implementation.Dice
         /// Initializes a new instance of the StandardDiceRoller class
         /// </summary>
         /// <param name="logger">Optional logger for diagnostic output</param>
-        public StandardDiceRoller(ILogger<StandardDiceRoller> logger = null)
+        public StandardDiceRoller(ILogger<StandardDiceRoller>? logger = null)
         {
             _logger = logger ?? NullLogger<StandardDiceRoller>.Instance;
             _random = new Random();
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
             _logger.LogDebug("StandardDiceRoller initialized with random seed");
+#pragma warning restore CA1848
         }
 
         #endregion
@@ -66,9 +71,16 @@ namespace OpenCombatEngine.Implementation.Dice
                     ? new Random(value.Value) 
                     : new Random();
                 
-                _logger.LogDebug(value.HasValue 
-                    ? $"Seed set to {value.Value}" 
-                    : "Seed cleared, using random seed");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+                if (value.HasValue)
+                {
+                    _logger.LogDebug("Seed set to {Seed}", value.Value);
+                }
+                else
+                {
+                    _logger.LogDebug("Seed cleared, using random seed");
+                }
+#pragma warning restore CA1848
             }
         }
 
@@ -87,7 +99,9 @@ namespace OpenCombatEngine.Implementation.Dice
             if (!IsValidNotation(notation))
             {
                 var error = $"Invalid dice notation: '{notation}'";
-                _logger.LogWarning(error);
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+                _logger.LogWarning("Invalid dice notation: '{Notation}'", notation);
+#pragma warning restore CA1848
                 return Result<DiceRollResult>.Failure(error);
             }
 
@@ -105,7 +119,9 @@ namespace OpenCombatEngine.Implementation.Dice
                 // Handle constant values
                 if (isConstant)
                 {
-                    _logger.LogDebug($"Rolling constant value: {modifier}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+                    _logger.LogDebug("Rolling constant value: {Modifier}", modifier);
+#pragma warning restore CA1848
                     return Result<DiceRollResult>.Success(DiceRollResult.Constant(modifier));
                 }
 
@@ -122,15 +138,21 @@ namespace OpenCombatEngine.Implementation.Dice
                     RollType: RollType.Normal
                 );
 
-                _logger.LogDebug($"Rolled {notation}: {result}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+                _logger.LogDebug("Rolled {Notation}: {Result}", notation, result);
+#pragma warning restore CA1848
                 return Result<DiceRollResult>.Success(result);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
                 var error = $"Error rolling dice: {ex.Message}";
-                _logger.LogError(ex, error);
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+                _logger.LogError(ex, "Error rolling dice: {Message}", ex.Message);
+#pragma warning restore CA1848
                 return Result<DiceRollResult>.Failure(error);
             }
+#pragma warning restore CA1031
         }
 
         /// <summary>
@@ -140,7 +162,9 @@ namespace OpenCombatEngine.Implementation.Dice
         /// <returns>Result containing the higher of two rolls, or failure with error message</returns>
         public Result<DiceRollResult> RollWithAdvantage(string notation)
         {
-            _logger.LogDebug($"Rolling with advantage: {notation}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+            _logger.LogDebug("Rolling with advantage: {Notation}", notation);
+#pragma warning restore CA1848
 
             // Roll twice
             var roll1 = Roll(notation);
@@ -164,7 +188,9 @@ namespace OpenCombatEngine.Implementation.Dice
                 AlternateRoll: alternateRoll
             );
 
-            _logger.LogDebug($"Advantage roll result: {result}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+            _logger.LogDebug("Advantage roll result: {Result}", result);
+#pragma warning restore CA1848
             return Result<DiceRollResult>.Success(result);
         }
 
@@ -175,7 +201,9 @@ namespace OpenCombatEngine.Implementation.Dice
         /// <returns>Result containing the lower of two rolls, or failure with error message</returns>
         public Result<DiceRollResult> RollWithDisadvantage(string notation)
         {
-            _logger.LogDebug($"Rolling with disadvantage: {notation}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+            _logger.LogDebug("Rolling with disadvantage: {Notation}", notation);
+#pragma warning restore CA1848
 
             // Roll twice
             var roll1 = Roll(notation);
@@ -199,7 +227,9 @@ namespace OpenCombatEngine.Implementation.Dice
                 AlternateRoll: alternateRoll
             );
 
-            _logger.LogDebug($"Disadvantage roll result: {result}");
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
+            _logger.LogDebug("Disadvantage roll result: {Result}", result);
+#pragma warning restore CA1848
             return Result<DiceRollResult>.Success(result);
         }
 
@@ -226,8 +256,8 @@ namespace OpenCombatEngine.Implementation.Dice
             var sidesStr = match.Groups["sides"].Value;
 
             // Default count to 1 if not specified
-            int diceCount = string.IsNullOrEmpty(countStr) ? 1 : int.Parse(countStr);
-            int dieSides = int.Parse(sidesStr);
+            int diceCount = string.IsNullOrEmpty(countStr) ? 1 : int.Parse(countStr, CultureInfo.InvariantCulture);
+            int dieSides = int.Parse(sidesStr, CultureInfo.InvariantCulture);
 
             // Validate ranges
             if (diceCount < 1 || diceCount > MAX_DICE_COUNT)
@@ -248,7 +278,7 @@ namespace OpenCombatEngine.Implementation.Dice
         /// </summary>
         /// <param name="notation">The notation to parse</param>
         /// <returns>Tuple of (diceCount, dieSides, modifier, isConstant)</returns>
-        private Result<(int diceCount, int dieSides, int modifier, bool isConstant)> ParseNotation(string notation)
+        private static Result<(int diceCount, int dieSides, int modifier, bool isConstant)> ParseNotation(string notation)
         {
             var match = DiceNotationRegex.Match(notation);
             
@@ -258,7 +288,7 @@ namespace OpenCombatEngine.Implementation.Dice
             // Check for constant value
             if (match.Groups["constant"].Success)
             {
-                int constantValue = int.Parse(match.Groups["constant"].Value);
+                int constantValue = int.Parse(match.Groups["constant"].Value, CultureInfo.InvariantCulture);
                 return Result<(int, int, int, bool)>.Success((0, 0, constantValue, true));
             }
 
@@ -267,9 +297,9 @@ namespace OpenCombatEngine.Implementation.Dice
             var sidesStr = match.Groups["sides"].Value;
             var modifierStr = match.Groups["modifier"].Value;
 
-            int diceCount = string.IsNullOrEmpty(countStr) ? 1 : int.Parse(countStr);
-            int dieSides = int.Parse(sidesStr);
-            int modifier = string.IsNullOrEmpty(modifierStr) ? 0 : int.Parse(modifierStr);
+            int diceCount = string.IsNullOrEmpty(countStr) ? 1 : int.Parse(countStr, CultureInfo.InvariantCulture);
+            int dieSides = int.Parse(sidesStr, CultureInfo.InvariantCulture);
+            int modifier = string.IsNullOrEmpty(modifierStr) ? 0 : int.Parse(modifierStr, CultureInfo.InvariantCulture);
 
             return Result<(int, int, int, bool)>.Success((diceCount, dieSides, modifier, false));
         }
@@ -287,7 +317,9 @@ namespace OpenCombatEngine.Implementation.Dice
             for (int i = 0; i < count; i++)
             {
                 // Random.Next(min, max) where max is exclusive, so we use sides + 1
+#pragma warning disable CA5394 // Random is an insecure random number generator
                 int roll = _random.Next(1, sides + 1);
+#pragma warning restore CA5394
                 rolls.Add(roll);
             }
 

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 
 namespace OpenCombatEngine.Core.Interfaces.Dice
 {
@@ -44,7 +45,7 @@ namespace OpenCombatEngine.Core.Interfaces.Dice
         /// </remarks>
         public bool IsCriticalSuccess => 
             DiceCount == 1 && 
-            IndividualRolls?.FirstOrDefault() == 20 &&
+            (IndividualRolls != null && IndividualRolls.Count > 0 && IndividualRolls[0] == 20) &&
             Notation.Contains("d20", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace OpenCombatEngine.Core.Interfaces.Dice
         /// </remarks>
         public bool IsCriticalFailure => 
             DiceCount == 1 && 
-            IndividualRolls?.FirstOrDefault() == 1 &&
+            (IndividualRolls != null && IndividualRolls.Count > 0 && IndividualRolls[0] == 1) &&
             Notation.Contains("d20", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
@@ -64,7 +65,7 @@ namespace OpenCombatEngine.Core.Interfaces.Dice
         /// <param name="value">The constant value</param>
         /// <returns>A DiceRollResult representing the constant</returns>
         public static DiceRollResult Constant(int value) =>
-            new(value, value.ToString(), Array.Empty<int>(), value, RollType.Normal);
+            new(value, value.ToString(CultureInfo.InvariantCulture), Array.Empty<int>(), value, RollType.Normal);
 
         /// <summary>
         /// Provides a formatted string representation of the roll
@@ -85,7 +86,7 @@ namespace OpenCombatEngine.Core.Interfaces.Dice
             }
             else
             {
-                result += Total.ToString();
+                result += Total.ToString(CultureInfo.InvariantCulture);
             }
 
             if (RollType == RollType.Advantage && AlternateRoll != null)

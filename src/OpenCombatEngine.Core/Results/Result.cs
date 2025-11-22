@@ -11,6 +11,7 @@ namespace OpenCombatEngine.Core.Results
     /// Represents the result of an operation that can succeed or fail without throwing exceptions
     /// </summary>
     /// <typeparam name="T">The type of value returned on success</typeparam>
+#pragma warning disable CA1000 // Do not declare static members on generic types
     public class Result<T>
     {
         /// <summary>
@@ -65,10 +66,9 @@ namespace OpenCombatEngine.Core.Results
         /// <returns>A successful Result containing the value</returns>
         public static Result<T> Success(T value)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value), "Success result cannot have null value");
+            ArgumentNullException.ThrowIfNull(value, "Success result cannot have null value");
             
-            return new Result<T>(value, null, true);
+            return new Result<T>(value, string.Empty, true);
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace OpenCombatEngine.Core.Results
             if (string.IsNullOrWhiteSpace(error))
                 throw new ArgumentException("Error message cannot be null or whitespace", nameof(error));
             
-            return new Result<T>(default, error, false);
+            return new Result<T>(default!, error, false);
         }
 
         /// <summary>
@@ -91,6 +91,8 @@ namespace OpenCombatEngine.Core.Results
         /// <returns>This Result for method chaining</returns>
         public Result<T> OnSuccess(Action<T> action)
         {
+            ArgumentNullException.ThrowIfNull(action);
+
             if (IsSuccess)
                 action(Value);
             return this;
@@ -103,6 +105,8 @@ namespace OpenCombatEngine.Core.Results
         /// <returns>This Result for method chaining</returns>
         public Result<T> OnFailure(Action<string> action)
         {
+            ArgumentNullException.ThrowIfNull(action);
+
             if (IsFailure)
                 action(Error);
             return this;
@@ -116,6 +120,8 @@ namespace OpenCombatEngine.Core.Results
         /// <returns>A new Result with the mapped value or the same error</returns>
         public Result<TNew> Map<TNew>(Func<T, TNew> mapper)
         {
+            ArgumentNullException.ThrowIfNull(mapper);
+
             return IsSuccess 
                 ? Result<TNew>.Success(mapper(Value)) 
                 : Result<TNew>.Failure(Error);
@@ -132,4 +138,5 @@ namespace OpenCombatEngine.Core.Results
                 : $"Failure: {Error}";
         }
     }
+#pragma warning restore CA1000 // Do not declare static members on generic types
 }
