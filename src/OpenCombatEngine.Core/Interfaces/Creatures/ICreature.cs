@@ -47,4 +47,9 @@ public interface ICreature
     /// Called at the end of the creature's turn.
     /// </summary>
     void EndTurn();
+
+    /// <summary>
+    /// Gets the action economy manager for the creature.
+    /// </summary>
+    IActionEconomy ActionEconomy { get; }
 }

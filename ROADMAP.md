@@ -65,3 +65,11 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardTurnManager` to call `StartTurn`
     - [x] Verify with Lifecycle tests
 - [x] [Save Turn Lifecycle Architecture Record](docs/architecture/007-turn-lifecycle.md)
+
+- [x] **Implement Action Economy**
+    - [x] Define `IActionEconomy`
+    - [x] Add `ActionEconomy` to `ICreature`
+    - [x] Implement `StandardActionEconomy`
+    - [x] Update `StandardCreature.StartTurn` to reset economy
+    - [x] Verify with ActionEconomy tests
+- [x] [Save Action Economy Architecture Record](docs/architecture/008-action-economy.md)

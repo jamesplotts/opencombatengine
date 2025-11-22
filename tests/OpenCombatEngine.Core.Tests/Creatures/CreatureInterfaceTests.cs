@@ -59,6 +59,19 @@ public class CreatureInterfaceTests
         public IConditionManager Conditions { get; set; } = new StubConditionManager();
         public void StartTurn() { }
         public void EndTurn() { }
+        public IActionEconomy ActionEconomy { get; set; } = new StubActionEconomy();
+    }
+
+    private class StubActionEconomy : IActionEconomy
+    {
+        public bool HasAction => true;
+        public bool HasBonusAction => true;
+        public bool HasReaction => true;
+        public void UseAction() { }
+        public void UseBonusAction() { }
+        public void UseReaction() { }
+        public void ResetTurn() { }
+        public void ResetReaction() { }
     }
 
     private class StubConditionManager : IConditionManager
