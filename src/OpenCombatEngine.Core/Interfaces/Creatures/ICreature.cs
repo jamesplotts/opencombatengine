@@ -26,4 +26,9 @@ public interface ICreature
     /// Gets the hit points for the creature.
     /// </summary>
     IHitPoints HitPoints { get; }
+
+    /// <summary>
+    /// Gets the combat statistics for the creature.
+    /// </summary>
+    ICombatStats CombatStats { get; }
 }

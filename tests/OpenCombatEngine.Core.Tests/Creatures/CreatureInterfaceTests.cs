@@ -34,18 +34,28 @@ public class CreatureInterfaceTests
 
     private class StubHitPoints : IHitPoints
     {
-        public int Current => 10;
-        public int Max => 20;
-        public int Temporary => 5;
+        public int Current { get; set; } = 10;
+        public int Max { get; set; } = 20;
+        public int Temporary { get; set; } = 5;
         public bool IsDead => Current <= 0;
+        public void TakeDamage(int amount) { Current -= amount; }
+        public void Heal(int amount) { Current += amount; }
     }
 
     private class StubCreature : ICreature
     {
-        public Guid Id { get; } = Guid.NewGuid();
-        public string Name { get; } = "Test Creature";
-        public IAbilityScores AbilityScores { get; } = new StubAbilityScores();
-        public IHitPoints HitPoints { get; } = new StubHitPoints();
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = "Test Creature";
+        public IAbilityScores AbilityScores { get; set; } = new StubAbilityScores();
+        public IHitPoints HitPoints { get; set; } = new StubHitPoints();
+        public ICombatStats CombatStats { get; set; } = new StubCombatStats();
+    }
+
+    private class StubCombatStats : ICombatStats
+    {
+        public int ArmorClass { get; set; } = 10;
+        public int InitiativeBonus { get; set; } = 0;
+        public int Speed { get; set; } = 30;
     }
 
     [Fact]
