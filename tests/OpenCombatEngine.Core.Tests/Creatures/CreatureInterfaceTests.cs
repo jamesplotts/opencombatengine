@@ -3,7 +3,9 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Events;
+using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Core.Results;
 using Xunit;
 using System;
@@ -77,6 +79,7 @@ public class CreatureInterfaceTests
         public IConditionManager Conditions { get; set; }
         public IActionEconomy ActionEconomy { get; set; }
         public IMovement Movement { get; set; }
+        public ISpellCaster? Spellcasting { get; } = null;
         public ICheckManager Checks { get; }
         public int ProficiencyBonus { get; }
         public IInventory Inventory { get; }

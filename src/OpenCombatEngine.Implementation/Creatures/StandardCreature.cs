@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Items;
@@ -26,6 +27,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public ICheckManager Checks { get; }
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
+        public ISpellCaster? Spellcasting { get; }
         public int ProficiencyBonus => 2; // Placeholder, should be based on level/CR 1
 
         /// <summary>
@@ -37,13 +39,15 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// <param name="hitPoints">Hit points manager.</param>
         /// <param name="combatStats">Combat statistics.</param>
         /// <param name="checkManager">Optional check manager.</param>
+        /// <param name="spellCaster">Optional spellcasting component.</param>
         public StandardCreature(
             string id, 
             string name, 
             IAbilityScores abilityScores, 
             IHitPoints hitPoints, 
             ICombatStats? combatStats = null,
-            ICheckManager? checkManager = null)
+            ICheckManager? checkManager = null,
+            ISpellCaster? spellCaster = null)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Id cannot be empty", nameof(id));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -70,6 +74,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Movement = new StandardMovement(CombatStats, Conditions);
             
             Checks = checkManager ?? new StandardCheckManager(AbilityScores, diceRoller, this);
+            Spellcasting = spellCaster;
         }
 
         /// <summary>

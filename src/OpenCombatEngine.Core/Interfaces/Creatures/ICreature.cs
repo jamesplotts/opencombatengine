@@ -2,6 +2,7 @@ using System;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Spells;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
@@ -79,6 +80,11 @@ public interface ICreature
     /// Gets the equipment manager.
     /// </summary>
     IEquipmentManager Equipment { get; }
+
+    /// <summary>
+    /// Gets the spellcasting component, if the creature is a spellcaster.
+    /// </summary>
+    ISpellCaster? Spellcasting { get; }
 
     /// <summary>
     /// Performs a rest.
