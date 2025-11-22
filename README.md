@@ -12,14 +12,27 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 - **Interface-First Architecture**: Maximum extensibility through comprehensive interfaces
 - **SRD 5.1 Compliant**: Fully compatible with D&D 5e mechanics while respecting IP
 - **Test-Driven Development**: Minimum 80% code coverage with TDD methodology
-- **AI-Friendly**: Optimized for pair programming with AI assistants
-- **Community-Driven**: Built for and by the gaming community
+- **AI-Friendly**: Optimized for pair programming with AI assist## Features
 
-## ✨ Features
-
-### Current
-- ✅ **Dice Rolling System**: Complete dice notation parser with advantage/disadvantage
-- ✅ **Error Handling**: Result<T> pattern for safe error handling without exceptions
+- **Core D20 Mechanics**:
+  - Ability Scores (STR, DEX, CON, INT, WIS, CHA)
+  - Modifiers calculated automatically (`(Score - 10) / 2`)
+  - Dice Rolling (Standard notation like `1d20+5`, Advantage/Disadvantage)
+- **Creature Management**:
+  - Composition-based architecture (`ICreature`, `IAbilityScores`, `IHitPoints`)
+  - **Serialization**: Memento pattern support for saving/loading creature state (JSON compatible)
+- **Action System**:
+  - Command-based Actions (`IAction`, `AttackAction`)
+  - Combat Stats (AC, Initiative, Speed)
+  - Damage and Healing logic
+- **Turn Management**:
+  - Cyclic Initiative system
+  - Tie-breaking using Dexterity score
+  - Round tracking
+- **Extensible Design**:
+  - Interface-driven architecture
+  - Dependency Injection friendly
+  - Result pattern for robust error handling without exceptions
 - ✅ **Reproducible Testing**: Seed-based dice rolling for deterministic tests
 
 ### Planned
