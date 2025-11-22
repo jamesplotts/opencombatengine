@@ -37,4 +37,14 @@ public interface ICreature
     /// Gets the condition manager for the creature.
     /// </summary>
     IConditionManager Conditions { get; }
+
+    /// <summary>
+    /// Called at the start of the creature's turn.
+    /// </summary>
+    void StartTurn();
+
+    /// <summary>
+    /// Called at the end of the creature's turn.
+    /// </summary>
+    void EndTurn();
 }

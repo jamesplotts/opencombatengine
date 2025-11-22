@@ -12,7 +12,12 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 - **Interface-First Architecture**: Maximum extensibility through comprehensive interfaces
 - **SRD 5.1 Compliant**: Fully compatible with D&D 5e mechanics while respecting IP
 - **Test-Driven Development**: Minimum 80% code coverage with TDD methodology
-- **AI-Friendly**: Optimized for pair programming with AI assist## Features
+- **AI-Friendly**: Optimized for pair programming with AI assistants
+
+> [!TIP]
+> Check out the [Project Roadmap](ROADMAP.md) to see our progress and architectural decisions.
+
+## Features
 
 - **Core D20 Mechanics**:
   - Ability Scores (STR, DEX, CON, INT, WIS, CHA)
@@ -190,29 +195,7 @@ For important legal disclaimers, see [LEGAL.md](LEGAL.md).
 
 ## 🗺️ Roadmap
 
-### Phase 1: Foundation (Current)
-- ✅ Project structure and standards
-- ✅ Dice rolling system
-- 🚧 Core creature interfaces
-- 🚧 Basic action system
-
-### Phase 2: Combat Core
-- Initiative and turn order
-- Action economy
-- Basic conditions
-- Attack and damage resolution
-
-### Phase 3: Content System
-- 5e.tools import support
-- Open5e API integration
-- Foundry VTT compatibility
-- Native content format (.ocf)
-
-### Phase 4: Advanced Features
-- Spell system
-- Class features
-- Magic items
-- Environmental effects
+See [ROADMAP.md](ROADMAP.md) for the detailed project roadmap and task history.
 
 ## 🔧 Development
 

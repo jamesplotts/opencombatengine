@@ -57,6 +57,8 @@ public class CreatureInterfaceTests
         public IHitPoints HitPoints { get; set; } = new StubHitPoints();
         public ICombatStats CombatStats { get; set; } = new StubCombatStats();
         public IConditionManager Conditions { get; set; } = new StubConditionManager();
+        public void StartTurn() { }
+        public void EndTurn() { }
     }
 
     private class StubConditionManager : IConditionManager

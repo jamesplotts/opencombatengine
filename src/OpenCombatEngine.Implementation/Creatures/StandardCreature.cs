@@ -82,5 +82,17 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(Id, Name, abilityState, hpState, combatState);
         }
+
+        /// <inheritdoc />
+        public void StartTurn()
+        {
+            Conditions.Tick();
+        }
+
+        /// <inheritdoc />
+        public void EndTurn()
+        {
+            // Future cleanup if needed
+        }
     }
 }

@@ -70,7 +70,8 @@ namespace OpenCombatEngine.Implementation
             _turnOrder.AddRange(sortedCreatures);
             
             CurrentRound = 1;
-            _currentTurnIndex = 0;
+            _currentTurnIndex = -1;
+            NextTurn();
         }
 
         public void NextTurn()
@@ -89,6 +90,7 @@ namespace OpenCombatEngine.Implementation
             var currentCreature = CurrentCreature;
             if (currentCreature != null)
             {
+                currentCreature.StartTurn();
                 TurnChanged?.Invoke(this, new TurnChangedEventArgs(currentCreature, CurrentRound));
             }
         }
