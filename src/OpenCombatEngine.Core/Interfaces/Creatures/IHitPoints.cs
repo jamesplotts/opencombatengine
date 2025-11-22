@@ -1,5 +1,6 @@
 using System;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Core.Models.Events;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
@@ -64,6 +65,21 @@ public interface IHitPoints
     bool IsStable { get; }
 
     /// <summary>
+    /// Gets the creature's hit dice type (e.g., "1d8").
+    /// </summary>
+    string HitDice { get; }
+
+    /// <summary>
+    /// Gets the total number of hit dice the creature has.
+    /// </summary>
+    int HitDiceTotal { get; }
+
+    /// <summary>
+    /// Gets the number of hit dice remaining for the creature to spend.
+    /// </summary>
+    int HitDiceRemaining { get; }
+
+    /// <summary>
     /// Records the result of a death saving throw.
     /// </summary>
     /// <param name="success">Whether the save was successful.</param>
@@ -74,6 +90,19 @@ public interface IHitPoints
     /// Stabilizes the creature, resetting death saves and stopping the dying process.
     /// </summary>
     void Stabilize();
+
+    /// <summary>
+    /// Uses a specified amount of hit dice to regain hit points.
+    /// </summary>
+    /// <param name="amount">The number of hit dice to use.</param>
+    /// <returns>A Result indicating the amount of hit points regained, or an error if unsuccessful.</returns>
+    Result<int> UseHitDice(int amount);
+
+    /// <summary>
+    /// Recovers a specified amount of hit dice.
+    /// </summary>
+    /// <param name="amount">The number of hit dice to recover.</param>
+    void RecoverHitDice(int amount);
 
     event EventHandler<DamageTakenEventArgs> DamageTaken;
     event EventHandler<HealedEventArgs> Healed;

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using OpenCombatEngine.Implementation.Creatures;
 using Xunit;
+using System;
 
 namespace OpenCombatEngine.Implementation.Tests.Creatures
 {
@@ -11,7 +12,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
         {
             // Arrange
             var scores = new StandardAbilityScores();
-            var hp = new StandardHitPoints(10);
+            var hp = new StandardHitPoints(10, 10, 0);
             var id = Guid.NewGuid();
 
             // Act
@@ -29,7 +30,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
         {
             // Arrange
             var scores = new StandardAbilityScores();
-            var hp = new StandardHitPoints(10);
+            var hp = new StandardHitPoints(10, 10, 0);
 
             // Act
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "Goblin", scores, hp);
@@ -42,7 +43,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
         public void Constructor_Should_Throw_On_Null_Name()
         {
             // Act
-            Action act = () => new StandardCreature(Guid.NewGuid().ToString(), null!, new StandardAbilityScores(), new StandardHitPoints(10));
+            Action act = () => new StandardCreature(Guid.NewGuid().ToString(), null!, new StandardAbilityScores(), new StandardHitPoints(10, 10, 0));
 
             // Assert
             act.Should().Throw<ArgumentException>()
@@ -50,15 +51,13 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
         }
 
         [Fact]
-        public void Constructor_Should_Throw_On_Null_Components()
+        public void Constructor_Should_Throw_On_Null_AbilityScores()
         {
             // Act
-            Action act1 = () => new StandardCreature(Guid.NewGuid().ToString(), "Goblin", null!, new StandardHitPoints(10));
-            Action act2 = () => new StandardCreature(Guid.NewGuid().ToString(), "Goblin", new StandardAbilityScores(), null!);
+            Action act = () => new StandardCreature(Guid.NewGuid().ToString(), "Goblin", null!, new StandardHitPoints(10, 10, 0));
 
             // Assert
-            act1.Should().Throw<ArgumentNullException>();
-            act2.Should().Throw<ArgumentNullException>();
+            act.Should().Throw<ArgumentNullException>();
         }
     }
 }

@@ -40,21 +40,31 @@ public class CreatureInterfaceTests
 
     private class StubHitPoints : IHitPoints
     {
-        public int Current { get; set; } = 10;
         public int Max { get; set; } = 20;
+        public int Current { get; set; } = 20;
         public int Temporary { get; set; } = 5;
-        public bool IsDead => Current <= 0;
+        public bool IsDead { get; set; } = false;
+        public bool IsStable { get; set; } = true;
+        
+        public int DeathSaveSuccesses { get; set; }
+        public int DeathSaveFailures { get; set; }
+        
+        public string HitDice { get; } = "1d8";
+        public int HitDiceTotal { get; } = 1;
+        public int HitDiceRemaining { get; private set; } = 1;
+
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
         public event EventHandler<HealedEventArgs>? Healed;
         public event EventHandler<DeathEventArgs>? Died;
-        public void TakeDamage(int amount) => DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, 10));
-        public void TakeDamage(int amount, OpenCombatEngine.Core.Enums.DamageType type) => TakeDamage(amount);
-        public void Heal(int amount) => Healed?.Invoke(this, new HealedEventArgs(amount, 10));
-        public int DeathSaveSuccesses { get; set; }
-        public int DeathSaveFailures { get; set; }
-        public bool IsStable { get; set; }
+
+        public void TakeDamage(int amount, DamageType type = DamageType.Bludgeoning) { }
+        public void TakeDamage(int amount) { }
+        public void Heal(int amount) { }
+        public void AddTemporaryHitPoints(int amount) { }
         public void RecordDeathSave(bool success, bool critical = false) { }
-        public void Stabilize() { IsStable = true; }
+        public void Stabilize() { }
+        public Result<int> UseHitDice(int amount) => Result<int>.Success(5);
+        public void RecoverHitDice(int amount) { }
     }
 
     private class StubCreature : ICreature
@@ -89,6 +99,7 @@ public class CreatureInterfaceTests
         }
         public void StartTurn() { }
         public void EndTurn() { }
+        public void Rest(RestType type, int hitDiceToSpend = 0) { }
     }
 
     private class StubCheckManager : ICheckManager

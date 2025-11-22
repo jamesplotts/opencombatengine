@@ -3,9 +3,9 @@ using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
-
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
+using System;
 using System.Collections.Generic;
 using Xunit;
 
@@ -23,16 +23,7 @@ namespace OpenCombatEngine.Implementation.Tests
             
             var abilityScores = Substitute.For<IAbilityScores>();
             var combatStats = new StandardCombatStats();
-            var hp = new StandardHitPoints(10, current: 0);
-            
-            // Create creature with mocked CheckManager (via mocked DiceRoller)
-            // Actually, we can just inject a CheckManager that uses our mocked DiceRoller.
-            // But we need to construct StandardCheckManager with the creature... which we are constructing.
-            // Circular dependency for testing?
-            // StandardCheckManager takes ICreature.
-            // We can pass null for creature if we know RollDeathSave doesn't use it?
-            // RollDeathSave doesn't use _creature.
-            // So we can create the manager first.
+            var hp = new StandardHitPoints(10, 0, 0);
             
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
             
@@ -47,6 +38,98 @@ namespace OpenCombatEngine.Implementation.Tests
         }
 
         [Fact]
+        public void Should_Die_On_3_Failures()
+        {
+            // Arrange
+            var hp = new StandardHitPoints(10, 0, 0);
+            hp.RecordDeathSave(false);
+            hp.RecordDeathSave(false);
+            
+            // Act
+            hp.RecordDeathSave(false); // 3rd failure
+
+            // Assert
+            hp.IsDead.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Should_Reset_Saves_On_Stabilize()
+        {
+            // Arrange
+            var hp = new StandardHitPoints(10, 0, 0);
+            hp.RecordDeathSave(true);
+            hp.RecordDeathSave(false);
+            
+            // Act
+            hp.Stabilize();
+
+            // Assert
+            hp.IsStable.Should().BeTrue();
+            hp.DeathSaveSuccesses.Should().Be(0);
+            hp.DeathSaveFailures.Should().Be(0);
+        }
+
+        [Fact]
+        public void Should_Reset_Saves_On_Heal()
+        {
+            // Arrange
+            var hp = new StandardHitPoints(10, 0, 0);
+            hp.RecordDeathSave(true);
+            hp.RecordDeathSave(false);
+            
+            // Act
+            hp.Heal(1);
+
+            // Assert
+            hp.Current.Should().Be(1);
+            hp.IsStable.Should().BeFalse(); // Alive, not stable
+            hp.DeathSaveSuccesses.Should().Be(0);
+            hp.DeathSaveFailures.Should().Be(0);
+        }
+
+        [Fact]
+        public void Creature_Should_Roll_Death_Save_Start_Of_Turn()
+        {
+            // Arrange
+            var diceRoller = Substitute.For<IDiceRoller>();
+            diceRoller.Roll("1d20").Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Normal)));
+
+            var abilityScores = Substitute.For<IAbilityScores>();
+            var hp = new StandardHitPoints(10, 0, 0);
+            var combatStats = Substitute.For<ICombatStats>();
+            
+            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, combatStats, checkManager);
+            
+            // Act
+            creature.StartTurn();
+
+            // Assert
+            hp.DeathSaveSuccesses.Should().Be(1);
+        }
+
+        [Fact]
+        public void Creature_Should_Not_Roll_Death_Save_If_Stable()
+        {
+            // Arrange
+            var diceRoller = Substitute.For<IDiceRoller>();
+            
+            var abilityScores = Substitute.For<IAbilityScores>();
+            var hp = new StandardHitPoints(10, 0, 0);
+            hp.Stabilize();
+            
+            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, null, checkManager);
+            
+            // Act
+            creature.StartTurn();
+
+            // Assert
+            diceRoller.DidNotReceive().Roll(Arg.Any<string>());
+        }
+
+        [Fact]
         public void Nat20_Should_Heal_1HP()
         {
             // Arrange
@@ -55,7 +138,7 @@ namespace OpenCombatEngine.Implementation.Tests
             diceRoller.Roll("1d20").Returns(Result<DiceRollResult>.Success(new DiceRollResult(20, "1d20", new List<int> { 20 }, 0, RollType.Normal)));
             
             var abilityScores = Substitute.For<IAbilityScores>();
-            var hp = new StandardHitPoints(10, current: 0);
+            var hp = new StandardHitPoints(10, 0, 0);
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, null, checkManager);
             
@@ -77,7 +160,7 @@ namespace OpenCombatEngine.Implementation.Tests
             diceRoller.Roll("1d20").Returns(Result<DiceRollResult>.Success(new DiceRollResult(1, "1d20", new List<int> { 1 }, 0, RollType.Normal)));
             
             var abilityScores = Substitute.For<IAbilityScores>();
-            var hp = new StandardHitPoints(10, current: 0);
+            var hp = new StandardHitPoints(10, 0, 0);
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, null, checkManager);
             

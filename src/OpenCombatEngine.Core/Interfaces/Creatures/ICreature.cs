@@ -1,4 +1,5 @@
 using System;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Items;
 
@@ -78,4 +79,11 @@ public interface ICreature
     /// Gets the equipment manager.
     /// </summary>
     IEquipmentManager Equipment { get; }
+
+    /// <summary>
+    /// Performs a rest.
+    /// </summary>
+    /// <param name="type">The type of rest.</param>
+    /// <param name="hitDiceToSpend">Number of hit dice to spend (Short Rest only).</param>
+    void Rest(RestType type, int hitDiceToSpend = 0);
 }

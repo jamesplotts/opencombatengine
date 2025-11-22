@@ -1,171 +1,157 @@
 using System;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Models.States;
+using OpenCombatEngine.Core.Results;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
     /// <summary>
     /// Standard implementation of hit points management.
     /// </summary>
-    public record StandardHitPoints : IHitPoints, IStateful<HitPointsState>
+    public class StandardHitPoints : IHitPoints, IStateful<HitPointsState>
     {
+        private readonly ICombatStats? _combatStats;
+        private readonly IDiceRoller _diceRoller;
+
+        public int Max { get; private set; }
+        public int Current { get; private set; }
+        public int Temporary { get; private set; }
+        
+        public bool IsDead => DeathSaveFailures >= 3; // Simplified death logic
+        public bool IsStable { get; private set; }
+        
+        public int DeathSaveSuccesses { get; private set; }
+        public int DeathSaveFailures { get; private set; }
+
+        public string HitDice { get; }
+        public int HitDiceTotal { get; }
+        public int HitDiceRemaining { get; private set; }
+
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
         public event EventHandler<HealedEventArgs>? Healed;
+#pragma warning disable CS0067 // The event 'StandardHitPoints.Died' is never used
         public event EventHandler<DeathEventArgs>? Died;
+#pragma warning restore CS0067
 
-        public int Current { get; private set; }
-        public int Max { get; }
-        public int Temporary { get; private set; }
-
-        
-        // Dead if failures >= 3. (Or massive damage, but ignoring for now).
-        // Note: Previously IsDead was Current <= 0. Now that's "Unconscious/Down".
-        public bool IsDead => DeathSaveFailures >= 3;
-
-        private readonly ICombatStats? _combatStats;
-
-        /// <summary>
-        /// Initializes a new instance of StandardHitPoints.
-        /// </summary>
-        /// <param name="max">Maximum hit points (must be positive)</param>
-        /// <param name="current">Current hit points (defaults to max)</param>
-        /// <param name="temporary">Temporary hit points (defaults to 0)</param>
-        /// <param name="combatStats">Optional combat stats for resistance calculations</param>
-        public StandardHitPoints(int max, int? current = null, int temporary = 0, ICombatStats? combatStats = null)
+        public StandardHitPoints(int max, int current, int temporary, ICombatStats? combatStats = null, string hitDice = "1d8", int hitDiceTotal = 1, IDiceRoller? diceRoller = null)
         {
-            if (max <= 0)
-                throw new ArgumentOutOfRangeException(nameof(max), max, "Max hit points must be positive");
-            
-            if (temporary < 0)
-                throw new ArgumentOutOfRangeException(nameof(temporary), temporary, "Temporary hit points cannot be negative");
-
+            if (max <= 0) throw new ArgumentOutOfRangeException(nameof(max), "Max HP must be positive.");
             Max = max;
-            Temporary = temporary;
+            Current = Math.Clamp(current, 0, Max);
+            Temporary = Math.Max(0, temporary);
             _combatStats = combatStats;
-            
-            // If current is not specified, default to max. Otherwise clamp between 0 and max.
-            // Note: In some systems you can have current > max, but typically not in standard 5e without temp HP.
-            // We'll enforce 0 <= Current <= Max for now.
-            int initialCurrent = current ?? max;
-            if (initialCurrent < 0) initialCurrent = 0;
-            if (initialCurrent > max) initialCurrent = max;
-            
-            Current = initialCurrent;
+            HitDice = hitDice;
+            HitDiceTotal = hitDiceTotal > 0 ? hitDiceTotal : 1;
+            HitDiceRemaining = HitDiceTotal; // Default to full
+            _diceRoller = diceRoller ?? new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
         }
 
+        public StandardHitPoints(int max, ICombatStats? combatStats = null, string hitDice = "1d8", int hitDiceTotal = 1, IDiceRoller? diceRoller = null) 
+            : this(max, max, 0, combatStats, hitDice, hitDiceTotal, diceRoller) { }
 
-        /// <summary>
-        /// Initializes a new instance of StandardHitPoints from a state object.
-        /// </summary>
-        /// <param name="state">The state to restore from.</param>
-        /// <param name="combatStats">Optional combat stats.</param>
-        public StandardHitPoints(HitPointsState state, ICombatStats? combatStats = null)
+        public StandardHitPoints(HitPointsState state, ICombatStats? combatStats = null, IDiceRoller? diceRoller = null)
         {
             ArgumentNullException.ThrowIfNull(state);
-            _combatStats = combatStats;
-            
-            // Re-use logic from main constructor manually or call it if possible.
-            // Since we can't validate before calling 'this', we have to duplicate logic or use a static helper.
-            // Or just suppress CA1062 if we are sure 'this' handles it? No, 'this' expects values.
-            // Actually, we can just call the main constructor, but we need to ensure state is not null first.
-            // But we can't do statements before 'this'.
-            // So we'll just implement the logic directly here to satisfy the analyzer and be safe.
-            
-            if (state.Max <= 0)
-                throw new ArgumentOutOfRangeException(nameof(state), state.Max, "Max hit points must be positive");
-            
-            if (state.Temporary < 0)
-                throw new ArgumentOutOfRangeException(nameof(state), state.Temporary, "Temporary hit points cannot be negative");
-
             Max = state.Max;
+            Current = state.Current;
             Temporary = state.Temporary;
-            Current = state.Current; // Trust the state, or re-validate? Let's trust state for now but ensure basic sanity.
-            if (Current < 0) Current = 0;
-            if (Current > Max) Current = Max;
+            _combatStats = combatStats;
+            // State doesn't have HitDice info yet! We need to update HitPointsState or assume defaults/passed in.
+            // For now, defaults. Ideally state has this.
+            HitDice = "1d8"; 
+            HitDiceTotal = 1;
+            HitDiceRemaining = 1;
+            _diceRoller = diceRoller ?? new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
         }
 
-        /// <inheritdoc />
-        public HitPointsState GetState()
+        public void TakeDamage(int amount, DamageType type = DamageType.Bludgeoning)
         {
-            return new HitPointsState(Current, Max, Temporary);
-        }
+            if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Damage amount cannot be negative.");
+            if (amount == 0) return;
 
-        /// <inheritdoc />
-        public void TakeDamage(int amount)
-        {
-            TakeDamage(amount, OpenCombatEngine.Core.Enums.DamageType.Unspecified);
-        }
-
-        /// <inheritdoc />
-        public void TakeDamage(int amount, OpenCombatEngine.Core.Enums.DamageType type)
-        {
-            if (amount <= 0) return;
-
-            // Apply Resistances/Vulnerabilities if stats are available
-            if (_combatStats != null && type != OpenCombatEngine.Core.Enums.DamageType.Unspecified)
+            // Apply Resistances/Vulnerabilities/Immunities if stats available
+            if (_combatStats != null)
             {
                 if (_combatStats.Immunities.Contains(type))
                 {
                     amount = 0;
                 }
-                else
+                else if (_combatStats.Resistances.Contains(type))
                 {
-                    if (_combatStats.Resistances.Contains(type))
-                    {
-                        amount /= 2;
-                    }
-                    
-                    if (_combatStats.Vulnerabilities.Contains(type))
-                    {
-                        amount *= 2;
-                    }
+                    amount /= 2;
+                }
+                else if (_combatStats.Vulnerabilities.Contains(type))
+                {
+                    amount *= 2;
                 }
             }
 
-            if (amount <= 0) return;
+            if (amount == 0) return;
 
-            // First reduce temporary HP
-            if (Temporary > 0)
-            {
-                int tempDamage = Math.Min(Temporary, amount);
-                Temporary -= tempDamage;
-                amount -= tempDamage;
-            }
+            int damageToTemp = Math.Min(Temporary, amount);
+            Temporary -= damageToTemp;
+            int remainingDamage = amount - damageToTemp;
 
-            // Then reduce current HP
-            if (amount > 0)
-            {
-                Current = Math.Max(0, Current - amount);
-                DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, Current));
-            }
+            int damageToCurrent = Math.Min(Current, remainingDamage);
+            Current -= damageToCurrent;
 
-            if (IsDead)
+            DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, type, Current, Temporary));
+
+            if (Current == 0 && !IsStable)
             {
-                Died?.Invoke(this, new DeathEventArgs());
+                // Check for massive damage instant death (optional rule, not implementing yet)
+                // Trigger death logic if needed
+                // For now, just event
+                Died?.Invoke(this, new DeathEventArgs()); 
             }
         }
 
-        public int DeathSaveSuccesses { get; private set; }
-        public int DeathSaveFailures { get; private set; }
-        public bool IsStable { get; private set; }
+        public void TakeDamage(int amount)
+        {
+            TakeDamage(amount, DamageType.Bludgeoning); // Default fallback
+        }
 
-        /// <inheritdoc />
+        public void Heal(int amount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
+            if (amount == 0) return;
+            if (Current <= 0)
+            {
+                Current = 0;
+                IsStable = false; // Healed from 0 means conscious? Or just stable? 5e: Regain consciousness.
+                DeathSaveSuccesses = 0;
+                DeathSaveFailures = 0;
+            }
+
+            int healAmount = Math.Min(Max - Current, amount);
+            Current += healAmount;
+
+            Healed?.Invoke(this, new HealedEventArgs(healAmount, Current));
+        }
+
+        public void AddTemporaryHitPoints(int amount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
+            if (amount > Temporary)
+            {
+                Temporary = amount;
+            }
+        }
+
         public void RecordDeathSave(bool success, bool critical = false)
         {
-            if (Current > 0) return; // Only record if at 0 HP
-            if (IsStable) return; // Only record if not stable
-
             if (success)
             {
-                DeathSaveSuccesses += 1;
-                // Nat 20 (critical success) logic is handled by caller (Heal 1 HP), 
-                // but if we just want to record success here:
-                // If 3 successes, stabilize.
+                DeathSaveSuccesses += critical ? 2 : 1;
                 if (DeathSaveSuccesses >= 3)
                 {
                     Stabilize();
+                    DeathSaveSuccesses = 0;
+                    DeathSaveFailures = 0;
                 }
             }
             else
@@ -173,22 +159,12 @@ namespace OpenCombatEngine.Implementation.Creatures
                 DeathSaveFailures += critical ? 2 : 1;
                 if (DeathSaveFailures >= 3)
                 {
-                    // Die
-                    // We don't set a flag, IsDead checks Failures.
-                    // But we should fire Died event if we just crossed the threshold.
-                    // Wait, IsDead is a property.
-                    // If we just became dead, fire event.
-                    // We need to check if we WERE dead before? No, IsDead checks Failures.
-                    // So if we are now dead, fire event.
-                    if (IsDead)
-                    {
-                        Died?.Invoke(this, new DeathEventArgs());
-                    }
+                    // Dead
+                    Died?.Invoke(this, new DeathEventArgs());
                 }
             }
         }
 
-        /// <inheritdoc />
         public void Stabilize()
         {
             IsStable = true;
@@ -196,23 +172,33 @@ namespace OpenCombatEngine.Implementation.Creatures
             DeathSaveFailures = 0;
         }
 
-        /// <inheritdoc />
-        public void Heal(int amount)
+        public Result<int> UseHitDice(int amount)
         {
-            if (amount <= 0) return;
-            if (IsDead) return; // Cannot heal dead creatures normally (needs resurrection magic)
+            if (amount <= 0) return Result<int>.Failure("Amount must be positive.");
+            if (amount > HitDiceRemaining) return Result<int>.Failure("Not enough hit dice remaining.");
 
-            Current = Math.Min(Max, Current + amount);
-            
-            // Healing stabilizes and resets death saves
-            if (Current > 0)
+            int totalHealed = 0;
+            for (int i = 0; i < amount; i++)
             {
-                IsStable = false; // Not stable, just alive
-                DeathSaveSuccesses = 0;
-                DeathSaveFailures = 0;
+                var roll = _diceRoller.Roll(HitDice);
+                if (!roll.IsSuccess) return Result<int>.Failure($"Failed to roll hit die: {roll.Error}");
+                
+                totalHealed += roll.Value.Total;
             }
 
-            Healed?.Invoke(this, new HealedEventArgs(amount, Current));
+            HitDiceRemaining -= amount;
+            return Result<int>.Success(totalHealed);
+        }
+
+        public void RecoverHitDice(int amount)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(amount);
+            HitDiceRemaining = Math.Min(HitDiceTotal, HitDiceRemaining + amount);
+        }
+
+        public HitPointsState GetState()
+        {
+            return new HitPointsState(Current, Max, Temporary);
         }
     }
 }

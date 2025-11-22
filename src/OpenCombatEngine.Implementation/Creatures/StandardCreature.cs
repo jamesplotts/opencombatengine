@@ -1,4 +1,5 @@
 using System;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
@@ -50,7 +51,14 @@ namespace OpenCombatEngine.Implementation.Creatures
             Id = Guid.Parse(id); // Assuming id is a string representation of a Guid
             Name = name;
             AbilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
-            HitPoints = hitPoints ?? throw new ArgumentNullException(nameof(hitPoints));
+            
+            var diceRoller = new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
+            
+            // If hitPoints passed in, use it. If not, create default with diceRoller.
+            // But wait, if passed in, we can't force it to use our diceRoller.
+            // If it's StandardHitPoints, it might have its own.
+            // If we create it, we pass diceRoller.
+            HitPoints = hitPoints ?? new StandardHitPoints(10, combatStats, diceRoller: diceRoller);
             
             Inventory = new StandardInventory();
             Equipment = new StandardEquipmentManager();
@@ -61,7 +69,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats, Conditions);
             
-            Checks = checkManager ?? new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
+            Checks = checkManager ?? new StandardCheckManager(AbilityScores, diceRoller, this);
         }
 
         /// <summary>
@@ -179,6 +187,39 @@ namespace OpenCombatEngine.Implementation.Creatures
         public void EndTurn()
         {
             // Future cleanup if needed
+        }
+
+        public void Rest(RestType type, int hitDiceToSpend = 0)
+        {
+            if (type == RestType.ShortRest)
+            {
+                if (hitDiceToSpend > 0)
+                {
+                    var result = HitPoints.UseHitDice(hitDiceToSpend);
+                    if (result.IsSuccess)
+                    {
+                        // Add Con mod per die?
+                        // 5e: "For each Hit Die spent in this way, the player rolls the die and adds the character's Constitution modifier to it."
+                        int conMod = AbilityScores.GetModifier(OpenCombatEngine.Core.Enums.Ability.Constitution);
+                        int totalHealing = result.Value + (conMod * hitDiceToSpend);
+                        HitPoints.Heal(totalHealing);
+                    }
+                }
+                
+                // Reset short rest resources (e.g. Warlock slots, Monk Ki, Fighter Action Surge)
+                // Currently ActionEconomy doesn't track these specific resources, but we can reset generic ones if any.
+                // ActionEconomy.ResetTurn() is for turn start.
+                // We might need a ResetShortRest() on components.
+            }
+            else if (type == RestType.LongRest)
+            {
+                HitPoints.Heal(HitPoints.Max);
+                HitPoints.RecoverHitDice(HitPoints.HitDiceTotal / 2);
+                // Reset all resources
+                // ActionEconomy.ResetLongRest(); // If we had it.
+                // Conditions might be removed? (Exhaustion -1)
+                // For now, just HP and Hit Dice.
+            }
         }
     }
 }
