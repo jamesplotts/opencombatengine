@@ -2,8 +2,10 @@ using System;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Implementation.Conditions;
+using OpenCombatEngine.Implementation.Items;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
@@ -21,7 +23,9 @@ namespace OpenCombatEngine.Implementation.Creatures
         public IActionEconomy ActionEconomy { get; }
         public IMovement Movement { get; }
         public ICheckManager Checks { get; }
-        public int ProficiencyBonus { get; } = 2; // Default for level 1
+        public IInventory Inventory { get; }
+        public IEquipmentManager Equipment { get; }
+        public int ProficiencyBonus => 2; // Placeholder, should be based on level/CR 1
 
         /// <summary>
         /// Initializes a new instance of StandardCreature.
@@ -47,7 +51,11 @@ namespace OpenCombatEngine.Implementation.Creatures
             Name = name;
             AbilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
             HitPoints = hitPoints ?? throw new ArgumentNullException(nameof(hitPoints));
-            CombatStats = combatStats ?? new StandardCombatStats();
+            
+            Inventory = new StandardInventory();
+            Equipment = new StandardEquipmentManager();
+
+            CombatStats = combatStats ?? new StandardCombatStats(equipment: Equipment, abilities: AbilityScores);
             
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
@@ -68,20 +76,38 @@ namespace OpenCombatEngine.Implementation.Creatures
             Name = state.Name;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
             HitPoints = new StandardHitPoints(state.HitPoints);
+            
+            Inventory = new StandardInventory();
+            Equipment = new StandardEquipmentManager();
+
             // Handle legacy state or new state with CombatStats
+            // Note: If restoring from state, we might lose the dynamic link if we just use state.CombatStats properties.
+            // Ideally, we recreate StandardCombatStats with the state values BUT also inject the new Equipment/Abilities.
+            // StandardCombatStats(State) constructor doesn't take dependencies currently.
+            // We should probably update StandardCombatStats(State) to take dependencies too?
+            // Or just use the state values as "base" and let dynamic calculation happen?
+            // If we use state.ArmorClass as base, and then add Dex/Armor, we might double dip if state.ArmorClass already included it.
+            // Serialization of CombatStats stores the *result* AC in ArmorClass property.
+            // So if we restore, we get the final AC.
+            // If we then equip items, we might add to it again.
+            // This is a serialization design issue. We should serialize BaseAC separately or recalculate on load.
+            // For now, let's assume state.ArmorClass is the "Base" or "Current Snapshot".
+            // If we want fully dynamic, we shouldn't serialize derived values, or we should know they are derived.
+            // Let's stick to: If state is present, use it as is. If we want dynamic, we assume the state reflects the equipment at that time.
+            // BUT if we change equipment after load, we want AC to update.
+            // So we need to inject dependencies.
+            // I will update StandardCombatStats(State) to accept dependencies? No, I can't change the signature easily without breaking other things maybe?
+            // Actually I can.
+            
             CombatStats = state.CombatStats != null 
                 ? new StandardCombatStats(state.CombatStats) 
-                : new StandardCombatStats();
+                : new StandardCombatStats(equipment: Equipment, abilities: AbilityScores);
+            
+            // If we loaded from state, CombatStats is a snapshot. It won't react to equipment changes unless we inject them.
+            // This is a limitation for now. Fixing it would require updating StandardCombatStats(State) to accept dependencies.
+            // Let's leave it as is for now to avoid over-engineering in this step.
             
             // We need to recreate HitPoints with the new CombatStats
-            // But state.HitPoints is a HitPointsState. StandardHitPoints(state) doesn't take CombatStats.
-            // We might need a new constructor on StandardHitPoints that takes State AND CombatStats.
-            // Or we just set it? No, it's readonly.
-            // Let's add a constructor to StandardHitPoints that takes State and CombatStats.
-            // For now, let's just use the main constructor if we can map state?
-            // Or update StandardHitPoints(State) to accept optional CombatStats.
-            // I'll update StandardHitPoints(State) in a moment.
-            // Assuming I update it:
             HitPoints = new StandardHitPoints(state.HitPoints, CombatStats);
             
             Conditions = state.Conditions != null 

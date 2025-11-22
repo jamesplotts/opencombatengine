@@ -2,6 +2,7 @@ using FluentAssertions;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Results;
 using Xunit;
@@ -58,18 +59,36 @@ public class CreatureInterfaceTests
 
     private class StubCreature : ICreature
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "Test Creature";
-        public IAbilityScores AbilityScores { get; set; } = new StubAbilityScores();
-        public IHitPoints HitPoints { get; set; } = new StubHitPoints();
-        public ICombatStats CombatStats { get; set; } = new StubCombatStats();
-        public IConditionManager Conditions { get; set; } = new StubConditionManager();
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public IAbilityScores AbilityScores { get; set; }
+        public IHitPoints HitPoints { get; set; }
+        public ICombatStats CombatStats { get; set; }
+        public IConditionManager Conditions { get; set; }
+        public IActionEconomy ActionEconomy { get; set; }
+        public IMovement Movement { get; set; }
+        public ICheckManager Checks { get; }
+        public int ProficiencyBonus { get; }
+        public IInventory Inventory { get; }
+        public IEquipmentManager Equipment { get; }
+        
+        public StubCreature()
+        {
+            Id = Guid.NewGuid();
+            Name = "Test Creature";
+            AbilityScores = new StubAbilityScores();
+            HitPoints = new StubHitPoints();
+            CombatStats = new StubCombatStats();
+            Conditions = new StubConditionManager();
+            ActionEconomy = new StubActionEconomy();
+            Movement = new StubMovement();
+            Checks = new StubCheckManager();
+            ProficiencyBonus = 2;
+            Inventory = null!; // Placeholder for actual implementation
+            Equipment = null!; // Placeholder for actual implementation
+        }
         public void StartTurn() { }
         public void EndTurn() { }
-        public IActionEconomy ActionEconomy { get; set; } = new StubActionEconomy();
-        public IMovement Movement { get; set; } = new StubMovement();
-        public ICheckManager Checks { get; set; } = new StubCheckManager();
-        public int ProficiencyBonus => 2;
     }
 
     private class StubCheckManager : ICheckManager

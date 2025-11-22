@@ -1,5 +1,6 @@
 using System;
 using OpenCombatEngine.Core.Interfaces.Conditions;
+using OpenCombatEngine.Core.Interfaces.Items;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
@@ -67,4 +68,14 @@ public interface ICreature
     /// Gets the creature's proficiency bonus.
     /// </summary>
     int ProficiencyBonus { get; }
+
+    /// <summary>
+    /// Gets the inventory.
+    /// </summary>
+    IInventory Inventory { get; }
+
+    /// <summary>
+    /// Gets the equipment manager.
+    /// </summary>
+    IEquipmentManager Equipment { get; }
 }

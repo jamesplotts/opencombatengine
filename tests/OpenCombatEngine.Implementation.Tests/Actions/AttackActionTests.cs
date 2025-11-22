@@ -45,7 +45,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         public void Execute_Should_Hit_When_Roll_Meets_AC()
         {
             // Arrange
-            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", DamageType.Slashing, 0, _diceRoller);
             
             // Mock Attack Roll: 10 + 5 = 15 (Hits AC 15)
             _diceRoller.Roll("1d20+5").Returns(Result<DiceRollResult>.Success(
@@ -71,7 +71,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         public void Execute_Should_Miss_When_Roll_Below_AC()
         {
             // Arrange
-            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", DamageType.Slashing, 0, _diceRoller);
             
             // Mock Attack Roll: 9 + 5 = 14 (Misses AC 15)
             _diceRoller.Roll("1d20+5").Returns(Result<DiceRollResult>.Success(
@@ -93,7 +93,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         public void Execute_Should_Fail_If_Dice_Roll_Fails()
         {
             // Arrange
-            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", attackBonus: 5, damageDice: "1d8", DamageType.Slashing, 0, _diceRoller);
             
             _diceRoller.Roll("1d20+5").Returns(Result<DiceRollResult>.Failure("Dice error"));
 
@@ -116,7 +116,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             source.CombatStats.Returns(new StandardCombatStats()); // Needed for hit check? No, source stats not used for hit, only target AC.
             // Wait, AttackAction uses _attackBonus from constructor, doesn't look at source stats for bonus yet.
 
-            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);
 
             _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(15, "1d20", new List<int> { 15 }, 0, RollType.Normal)));
 
@@ -138,7 +138,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var source = Substitute.For<ICreature>();
             source.ActionEconomy.Returns(economy);
 
-            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);
 
             // Act
             var result = action.Execute(source, _target);
@@ -162,7 +162,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             source.ActionEconomy.Returns(economy);
             source.Conditions.Returns(conditions);
 
-            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);
 
             _diceRoller.RollWithDisadvantage(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10, 5 }, 0, RollType.Disadvantage)));
 
