@@ -3,6 +3,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.Events;
+using OpenCombatEngine.Core.Results;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -61,6 +62,14 @@ public class CreatureInterfaceTests
         public void EndTurn() { }
         public IActionEconomy ActionEconomy { get; set; } = new StubActionEconomy();
         public IMovement Movement { get; set; } = new StubMovement();
+        public ICheckManager Checks { get; set; } = new StubCheckManager();
+        public int ProficiencyBonus => 2;
+    }
+
+    private class StubCheckManager : ICheckManager
+    {
+        public Result<int> RollAbilityCheck(Ability ability) => Result<int>.Success(10);
+        public Result<int> RollSavingThrow(Ability ability) => Result<int>.Success(10);
     }
 
     private class StubMovement : IMovement

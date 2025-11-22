@@ -57,4 +57,14 @@ public interface ICreature
     /// Gets the movement manager for the creature.
     /// </summary>
     IMovement Movement { get; }
+
+    /// <summary>
+    /// Gets the check manager for ability checks and saves.
+    /// </summary>
+    ICheckManager Checks { get; }
+
+    /// <summary>
+    /// Gets the creature's proficiency bonus.
+    /// </summary>
+    int ProficiencyBonus { get; }
 }

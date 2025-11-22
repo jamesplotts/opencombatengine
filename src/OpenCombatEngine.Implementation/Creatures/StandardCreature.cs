@@ -20,6 +20,8 @@ namespace OpenCombatEngine.Implementation.Creatures
         public IConditionManager Conditions { get; }
         public IActionEconomy ActionEconomy { get; }
         public IMovement Movement { get; }
+        public ICheckManager Checks { get; }
+        public int ProficiencyBonus { get; } = 2; // Default for level 1
 
         /// <summary>
         /// Initializes a new instance of StandardCreature.
@@ -47,6 +49,14 @@ namespace OpenCombatEngine.Implementation.Creatures
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats);
+            // We need a dice roller for checks. StandardCreature doesn't have one injected usually?
+            // Wait, StandardCreature constructors don't take a DiceRoller.
+            // We might need to instantiate a default one or change the constructor.
+            // Changing constructor is a breaking change for tests.
+            // Let's use StandardDiceRoller for now if none provided, or inject it?
+            // The plan didn't specify injecting DiceRoller into Creature.
+            // Let's instantiate new StandardDiceRoller() for now to avoid breaking signature.
+            Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
         }
 
         /// <summary>
@@ -68,6 +78,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats);
+            Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
         }
 
         /// <inheritdoc />
