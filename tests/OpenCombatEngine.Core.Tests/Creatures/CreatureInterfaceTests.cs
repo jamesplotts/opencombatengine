@@ -1,6 +1,7 @@
 using FluentAssertions;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Models.Events;
 using Xunit;
 using System;
 
@@ -38,6 +39,9 @@ public class CreatureInterfaceTests
         public int Max { get; set; } = 20;
         public int Temporary { get; set; } = 5;
         public bool IsDead => Current <= 0;
+        public event EventHandler<DamageTakenEventArgs>? DamageTaken;
+        public event EventHandler<HealedEventArgs>? Healed;
+        public event EventHandler<DeathEventArgs>? Died;
         public void TakeDamage(int amount) { Current -= amount; }
         public void Heal(int amount) { Current += amount; }
     }

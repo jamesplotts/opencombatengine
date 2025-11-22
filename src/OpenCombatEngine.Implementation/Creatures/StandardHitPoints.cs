@@ -1,6 +1,7 @@
 using System;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Models.States;
 
 namespace OpenCombatEngine.Implementation.Creatures
@@ -8,8 +9,12 @@ namespace OpenCombatEngine.Implementation.Creatures
     /// <summary>
     /// Standard implementation of hit points management.
     /// </summary>
-    public class StandardHitPoints : IHitPoints, IStateful<HitPointsState>
+    public record StandardHitPoints : IHitPoints, IStateful<HitPointsState>
     {
+        public event EventHandler<DamageTakenEventArgs>? DamageTaken;
+        public event EventHandler<HealedEventArgs>? Healed;
+        public event EventHandler<DeathEventArgs>? Died;
+
         public int Current { get; private set; }
         public int Max { get; }
         public int Temporary { get; private set; }
@@ -93,6 +98,12 @@ namespace OpenCombatEngine.Implementation.Creatures
             if (amount > 0)
             {
                 Current = Math.Max(0, Current - amount);
+                DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, Current));
+            }
+
+            if (IsDead)
+            {
+                Died?.Invoke(this, new DeathEventArgs());
             }
         }
 
@@ -103,6 +114,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             if (IsDead) return; // Cannot heal dead creatures normally (needs resurrection magic)
 
             Current = Math.Min(Max, Current + amount);
+            Healed?.Invoke(this, new HealedEventArgs(amount, Current));
         }
     }
 }

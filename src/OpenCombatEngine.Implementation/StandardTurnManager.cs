@@ -5,11 +5,16 @@ using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models;
+using OpenCombatEngine.Core.Models.Events;
 
 namespace OpenCombatEngine.Implementation
 {
     public class StandardTurnManager : ITurnManager
     {
+        public event EventHandler<TurnChangedEventArgs>? TurnChanged;
+        public event EventHandler<RoundChangedEventArgs>? RoundChanged;
+        public event EventHandler<CombatEndedEventArgs>? CombatEnded;
+
         private readonly IDiceRoller _diceRoller;
         private readonly List<ICreature> _turnOrder = new();
         private int _currentTurnIndex = -1;
@@ -78,6 +83,13 @@ namespace OpenCombatEngine.Implementation
             {
                 _currentTurnIndex = 0;
                 CurrentRound++;
+                RoundChanged?.Invoke(this, new RoundChangedEventArgs(CurrentRound));
+            }
+
+            var currentCreature = CurrentCreature;
+            if (currentCreature != null)
+            {
+                TurnChanged?.Invoke(this, new TurnChangedEventArgs(currentCreature, CurrentRound));
             }
         }
 
@@ -86,6 +98,7 @@ namespace OpenCombatEngine.Implementation
             _turnOrder.Clear();
             CurrentRound = 0;
             _currentTurnIndex = -1;
+            CombatEnded?.Invoke(this, new CombatEndedEventArgs());
         }
     }
 }

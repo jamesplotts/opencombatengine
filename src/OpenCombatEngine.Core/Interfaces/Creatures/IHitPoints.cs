@@ -1,3 +1,6 @@
+using System;
+using OpenCombatEngine.Core.Models.Events;
+
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
 /// <summary>
@@ -36,4 +39,8 @@ public interface IHitPoints
     /// </summary>
     /// <param name="amount">Amount of healing to receive.</param>
     void Heal(int amount);
+
+    event EventHandler<DamageTakenEventArgs> DamageTaken;
+    event EventHandler<HealedEventArgs> Healed;
+    event EventHandler<DeathEventArgs> Died;
 }

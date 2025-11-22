@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Models.Events;
 
 namespace OpenCombatEngine.Core.Interfaces
 {
@@ -41,5 +43,9 @@ namespace OpenCombatEngine.Core.Interfaces
         /// Ends the combat encounter, clearing state.
         /// </summary>
         void EndCombat();
+
+        event EventHandler<TurnChangedEventArgs> TurnChanged;
+        event EventHandler<RoundChangedEventArgs> RoundChanged;
+        event EventHandler<CombatEndedEventArgs> CombatEnded;
     }
 }
