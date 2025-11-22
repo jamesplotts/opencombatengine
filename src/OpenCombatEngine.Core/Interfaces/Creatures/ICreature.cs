@@ -52,4 +52,9 @@ public interface ICreature
     /// Gets the action economy manager for the creature.
     /// </summary>
     IActionEconomy ActionEconomy { get; }
+
+    /// <summary>
+    /// Gets the movement manager for the creature.
+    /// </summary>
+    IMovement Movement { get; }
 }

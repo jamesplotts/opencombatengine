@@ -60,6 +60,15 @@ public class CreatureInterfaceTests
         public void StartTurn() { }
         public void EndTurn() { }
         public IActionEconomy ActionEconomy { get; set; } = new StubActionEconomy();
+        public IMovement Movement { get; set; } = new StubMovement();
+    }
+
+    private class StubMovement : IMovement
+    {
+        public int Speed => 30;
+        public int MovementRemaining => 30;
+        public void Move(int distance) { }
+        public void ResetTurn() { }
     }
 
     private class StubActionEconomy : IActionEconomy

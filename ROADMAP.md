@@ -73,3 +73,11 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardCreature.StartTurn` to reset economy
     - [x] Verify with ActionEconomy tests
 - [x] [Save Action Economy Architecture Record](docs/architecture/008-action-economy.md)
+
+- [x] **Implement Movement System**
+    - [x] Define `IMovement`
+    - [x] Add `Movement` to `ICreature`
+    - [x] Implement `StandardMovement`
+    - [x] Update `StandardCreature.StartTurn` to reset movement
+    - [x] Verify with Movement tests
+- [x] [Save Movement System Architecture Record](docs/architecture/009-movement-system.md)

@@ -40,13 +40,9 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - Result pattern for robust error handling without exceptions
 - ✅ **Reproducible Testing**: Seed-based dice rolling for deterministic tests
 
-### Planned
-- 🚧 Creature management system
-- 🚧 Action economy and combat rounds
-- 🚧 Initiative tracking
-- 🚧 Conditions and status effects
-- 🚧 Spell and ability system
-- 🚧 Content import (5e.tools, Open5e, Foundry VTT formats)
+### Planned Features
+> [!NOTE]
+> See [PLANNED.md](PLANNED.md) for our future feature roadmap, including Content Systems and Advanced Magic.
 
 ## 🚀 Getting Started
 

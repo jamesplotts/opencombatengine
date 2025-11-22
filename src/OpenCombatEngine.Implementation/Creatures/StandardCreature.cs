@@ -19,6 +19,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public ICombatStats CombatStats { get; }
         public IConditionManager Conditions { get; }
         public IActionEconomy ActionEconomy { get; }
+        public IMovement Movement { get; }
 
         /// <summary>
         /// Initializes a new instance of StandardCreature.
@@ -45,6 +46,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             CombatStats = combatStats ?? new StandardCombatStats();
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
+            Movement = new StandardMovement(CombatStats);
         }
 
         /// <summary>
@@ -65,6 +67,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                 : new StandardCombatStats();
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
+            Movement = new StandardMovement(CombatStats);
         }
 
         /// <inheritdoc />
@@ -91,6 +94,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         {
             Conditions.Tick();
             ActionEconomy.ResetTurn();
+            Movement.ResetTurn();
         }
 
         /// <inheritdoc />
