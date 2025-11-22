@@ -20,13 +20,16 @@ namespace OpenCombatEngine.Implementation.Creatures
         public int Temporary { get; private set; }
         public bool IsDead => Current <= 0;
 
+        private readonly ICombatStats? _combatStats;
+
         /// <summary>
         /// Initializes a new instance of StandardHitPoints.
         /// </summary>
         /// <param name="max">Maximum hit points (must be positive)</param>
         /// <param name="current">Current hit points (defaults to max)</param>
         /// <param name="temporary">Temporary hit points (defaults to 0)</param>
-        public StandardHitPoints(int max, int? current = null, int temporary = 0)
+        /// <param name="combatStats">Optional combat stats for resistance calculations</param>
+        public StandardHitPoints(int max, int? current = null, int temporary = 0, ICombatStats? combatStats = null)
         {
             if (max <= 0)
                 throw new ArgumentOutOfRangeException(nameof(max), max, "Max hit points must be positive");
@@ -36,6 +39,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             Max = max;
             Temporary = temporary;
+            _combatStats = combatStats;
             
             // If current is not specified, default to max. Otherwise clamp between 0 and max.
             // Note: In some systems you can have current > max, but typically not in standard 5e without temp HP.
@@ -47,13 +51,16 @@ namespace OpenCombatEngine.Implementation.Creatures
             Current = initialCurrent;
         }
 
+
         /// <summary>
         /// Initializes a new instance of StandardHitPoints from a state object.
         /// </summary>
         /// <param name="state">The state to restore from.</param>
-        public StandardHitPoints(HitPointsState state)
+        /// <param name="combatStats">Optional combat stats.</param>
+        public StandardHitPoints(HitPointsState state, ICombatStats? combatStats = null)
         {
             ArgumentNullException.ThrowIfNull(state);
+            _combatStats = combatStats;
             
             // Re-use logic from main constructor manually or call it if possible.
             // Since we can't validate before calling 'this', we have to duplicate logic or use a static helper.
@@ -84,6 +91,35 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// <inheritdoc />
         public void TakeDamage(int amount)
         {
+            TakeDamage(amount, OpenCombatEngine.Core.Enums.DamageType.Unspecified);
+        }
+
+        /// <inheritdoc />
+        public void TakeDamage(int amount, OpenCombatEngine.Core.Enums.DamageType type)
+        {
+            if (amount <= 0) return;
+
+            // Apply Resistances/Vulnerabilities if stats are available
+            if (_combatStats != null && type != OpenCombatEngine.Core.Enums.DamageType.Unspecified)
+            {
+                if (_combatStats.Immunities.Contains(type))
+                {
+                    amount = 0;
+                }
+                else
+                {
+                    if (_combatStats.Resistances.Contains(type))
+                    {
+                        amount /= 2;
+                    }
+                    
+                    if (_combatStats.Vulnerabilities.Contains(type))
+                    {
+                        amount *= 2;
+                    }
+                }
+            }
+
             if (amount <= 0) return;
 
             // First reduce temporary HP

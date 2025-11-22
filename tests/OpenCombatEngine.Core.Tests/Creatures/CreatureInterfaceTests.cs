@@ -46,8 +46,9 @@ public class CreatureInterfaceTests
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
         public event EventHandler<HealedEventArgs>? Healed;
         public event EventHandler<DeathEventArgs>? Died;
-        public void TakeDamage(int amount) { Current -= amount; }
-        public void Heal(int amount) { Current += amount; }
+        public void TakeDamage(int amount) => DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, 10));
+        public void TakeDamage(int amount, OpenCombatEngine.Core.Enums.DamageType type) => TakeDamage(amount);
+        public void Heal(int amount) => Healed?.Invoke(this, new HealedEventArgs(amount, 10));
     }
 
     private class StubCreature : ICreature
@@ -102,9 +103,12 @@ public class CreatureInterfaceTests
 
     private class StubCombatStats : ICombatStats
     {
-        public int ArmorClass { get; set; } = 10;
-        public int InitiativeBonus { get; set; } = 0;
-        public int Speed { get; set; } = 30;
+        public int ArmorClass => 10;
+        public int InitiativeBonus => 0;
+        public int Speed => 30;
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Resistances { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Vulnerabilities { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Immunities { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
     }
 
     [Fact]

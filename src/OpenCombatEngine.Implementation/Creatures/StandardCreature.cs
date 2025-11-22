@@ -75,6 +75,18 @@ namespace OpenCombatEngine.Implementation.Creatures
             CombatStats = state.CombatStats != null 
                 ? new StandardCombatStats(state.CombatStats) 
                 : new StandardCombatStats();
+            
+            // We need to recreate HitPoints with the new CombatStats
+            // But state.HitPoints is a HitPointsState. StandardHitPoints(state) doesn't take CombatStats.
+            // We might need a new constructor on StandardHitPoints that takes State AND CombatStats.
+            // Or we just set it? No, it's readonly.
+            // Let's add a constructor to StandardHitPoints that takes State and CombatStats.
+            // For now, let's just use the main constructor if we can map state?
+            // Or update StandardHitPoints(State) to accept optional CombatStats.
+            // I'll update StandardHitPoints(State) in a moment.
+            // Assuming I update it:
+            HitPoints = new StandardHitPoints(state.HitPoints, CombatStats);
+            
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats);

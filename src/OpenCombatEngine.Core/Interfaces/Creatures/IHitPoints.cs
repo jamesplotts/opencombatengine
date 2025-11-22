@@ -1,4 +1,5 @@
 using System;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Models.Events;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
@@ -33,6 +34,13 @@ public interface IHitPoints
     /// </summary>
     /// <param name="amount">Amount of damage to take.</param>
     void TakeDamage(int amount);
+
+    /// <summary>
+    /// Applies damage of a specific type to the creature, accounting for resistances/vulnerabilities.
+    /// </summary>
+    /// <param name="amount">The amount of damage.</param>
+    /// <param name="type">The type of damage.</param>
+    void TakeDamage(int amount, DamageType type);
 
     /// <summary>
     /// Heals the creature.
