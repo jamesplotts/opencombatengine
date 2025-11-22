@@ -1,4 +1,5 @@
 using System;
+using OpenCombatEngine.Core.Interfaces.Conditions;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
@@ -31,4 +32,9 @@ public interface ICreature
     /// Gets the combat statistics for the creature.
     /// </summary>
     ICombatStats CombatStats { get; }
+
+    /// <summary>
+    /// Gets the condition manager for the creature.
+    /// </summary>
+    IConditionManager Conditions { get; }
 }

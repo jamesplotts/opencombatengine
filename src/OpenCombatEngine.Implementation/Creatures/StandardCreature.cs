@@ -1,7 +1,9 @@
 using System;
 using OpenCombatEngine.Core.Interfaces;
+using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.States;
+using OpenCombatEngine.Implementation.Conditions;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
@@ -15,6 +17,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public IAbilityScores AbilityScores { get; }
         public IHitPoints HitPoints { get; }
         public ICombatStats CombatStats { get; }
+        public IConditionManager Conditions { get; }
 
         /// <summary>
         /// Initializes a new instance of StandardCreature.
@@ -39,6 +42,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             AbilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
             HitPoints = hitPoints ?? throw new ArgumentNullException(nameof(hitPoints));
             CombatStats = combatStats ?? new StandardCombatStats();
+            Conditions = new StandardConditionManager(this);
         }
 
         /// <summary>
@@ -57,6 +61,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             CombatStats = state.CombatStats != null 
                 ? new StandardCombatStats(state.CombatStats) 
                 : new StandardCombatStats();
+            Conditions = new StandardConditionManager(this);
         }
 
         /// <inheritdoc />

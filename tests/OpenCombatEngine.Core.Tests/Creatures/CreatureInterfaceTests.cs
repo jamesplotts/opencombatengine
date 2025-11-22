@@ -1,9 +1,12 @@
 using FluentAssertions;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.Events;
 using Xunit;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenCombatEngine.Core.Tests.Creatures;
 
@@ -53,6 +56,15 @@ public class CreatureInterfaceTests
         public IAbilityScores AbilityScores { get; set; } = new StubAbilityScores();
         public IHitPoints HitPoints { get; set; } = new StubHitPoints();
         public ICombatStats CombatStats { get; set; } = new StubCombatStats();
+        public IConditionManager Conditions { get; set; } = new StubConditionManager();
+    }
+
+    private class StubConditionManager : IConditionManager
+    {
+        public IEnumerable<ICondition> ActiveConditions => Enumerable.Empty<ICondition>();
+        public void AddCondition(ICondition condition) { }
+        public void RemoveCondition(string conditionName) { }
+        public void Tick() { }
     }
 
     private class StubCombatStats : ICombatStats
