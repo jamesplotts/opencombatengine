@@ -33,7 +33,13 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 - **Turn Management**:
   - Cyclic Initiative system
   - Tie-breaking using Dexterity score
+  - Cyclic Initiative system
+  - Tie-breaking using Dexterity score
   - Round tracking
+- **Health & Survival**:
+  - Death Saving Throws (Success/Failure tracking, Stabilization)
+  - Damage Types & Resistances (Resistance, Vulnerability, Immunity logic)
+  - Ability Checks & Saving Throws
 - **Extensible Design**:
   - Interface-driven architecture
   - Dependency Injection friendly

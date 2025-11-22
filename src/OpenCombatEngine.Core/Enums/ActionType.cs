@@ -26,6 +26,11 @@ namespace OpenCombatEngine.Core.Enums
         /// Special actions available to legendary creatures.
         /// </summary>
         LegendaryAction,
+
+        /// <summary>
+        /// Movement.
+        /// </summary>
+        Movement,
         
         LastValue
     }

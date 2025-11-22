@@ -102,5 +102,49 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("Dice error");
         }
+        [Fact]
+        public void Execute_Should_Consume_Action_When_Successful()
+        {
+            // Arrange
+            var economy = Substitute.For<IActionEconomy>();
+            economy.HasAction.Returns(true);
+            
+            var source = Substitute.For<ICreature>();
+            source.ActionEconomy.Returns(economy);
+            source.CombatStats.Returns(new StandardCombatStats()); // Needed for hit check? No, source stats not used for hit, only target AC.
+            // Wait, AttackAction uses _attackBonus from constructor, doesn't look at source stats for bonus yet.
+
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+
+            _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(15, "1d20", new List<int> { 15 }, 0, RollType.Normal)));
+
+            // Act
+            var result = action.Execute(source, _target);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            economy.Received(1).UseAction();
+        }
+
+        [Fact]
+        public void Execute_Should_Fail_When_Action_Already_Used()
+        {
+            // Arrange
+            var economy = Substitute.For<IActionEconomy>();
+            economy.HasAction.Returns(false);
+            
+            var source = Substitute.For<ICreature>();
+            source.ActionEconomy.Returns(economy);
+
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", _diceRoller);
+
+            // Act
+            var result = action.Execute(source, _target);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("Resource already used");
+            _diceRoller.DidNotReceive().Roll(Arg.Any<string>());
+        }
     }
 }

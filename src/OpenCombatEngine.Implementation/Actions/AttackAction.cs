@@ -12,13 +12,13 @@ namespace OpenCombatEngine.Implementation.Actions
     {
         public string Name { get; }
         public string Description { get; }
-        public ActionType Type => ActionType.Action;
+        public ActionType Type { get; }
 
         private readonly int _attackBonus;
         private readonly string _damageDice;
         private readonly IDiceRoller _diceRoller;
 
-        public AttackAction(string name, string description, int attackBonus, string damageDice, IDiceRoller diceRoller)
+        public AttackAction(string name, string description, int attackBonus, string damageDice, IDiceRoller diceRoller, ActionType type = ActionType.Action)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             if (string.IsNullOrWhiteSpace(damageDice)) throw new ArgumentException("Damage dice cannot be empty", nameof(damageDice));
@@ -29,12 +29,44 @@ namespace OpenCombatEngine.Implementation.Actions
             _attackBonus = attackBonus;
             _damageDice = damageDice;
             _diceRoller = diceRoller;
+            Type = type;
         }
 
         public Result<ActionResult> Execute(ICreature source, ICreature target)
         {
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(target);
+
+            // 0. Check Action Economy
+            if (source.ActionEconomy != null)
+            {
+                bool canAct = Type switch
+                {
+                    ActionType.Action => source.ActionEconomy.HasAction,
+                    ActionType.BonusAction => source.ActionEconomy.HasBonusAction,
+                    ActionType.Reaction => source.ActionEconomy.HasReaction,
+                    _ => true
+                };
+
+                if (!canAct)
+                {
+                    return Result<ActionResult>.Failure($"Cannot perform {Type}: Resource already used.");
+                }
+
+                // Consume resource
+                switch (Type)
+                {
+                    case ActionType.Action:
+                        source.ActionEconomy.UseAction();
+                        break;
+                    case ActionType.BonusAction:
+                        source.ActionEconomy.UseBonusAction();
+                        break;
+                    case ActionType.Reaction:
+                        source.ActionEconomy.UseReaction();
+                        break;
+                }
+            }
 
             // 1. Roll to Hit
             // We use d20 + attackBonus
