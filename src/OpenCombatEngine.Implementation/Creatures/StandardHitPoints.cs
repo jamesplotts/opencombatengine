@@ -18,7 +18,11 @@ namespace OpenCombatEngine.Implementation.Creatures
         public int Current { get; private set; }
         public int Max { get; }
         public int Temporary { get; private set; }
-        public bool IsDead => Current <= 0;
+
+        
+        // Dead if failures >= 3. (Or massive damage, but ignoring for now).
+        // Note: Previously IsDead was Current <= 0. Now that's "Unconscious/Down".
+        public bool IsDead => DeathSaveFailures >= 3;
 
         private readonly ICombatStats? _combatStats;
 
@@ -143,6 +147,55 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
         }
 
+        public int DeathSaveSuccesses { get; private set; }
+        public int DeathSaveFailures { get; private set; }
+        public bool IsStable { get; private set; }
+
+        /// <inheritdoc />
+        public void RecordDeathSave(bool success, bool critical = false)
+        {
+            if (Current > 0) return; // Only record if at 0 HP
+            if (IsStable) return; // Only record if not stable
+
+            if (success)
+            {
+                DeathSaveSuccesses += 1;
+                // Nat 20 (critical success) logic is handled by caller (Heal 1 HP), 
+                // but if we just want to record success here:
+                // If 3 successes, stabilize.
+                if (DeathSaveSuccesses >= 3)
+                {
+                    Stabilize();
+                }
+            }
+            else
+            {
+                DeathSaveFailures += critical ? 2 : 1;
+                if (DeathSaveFailures >= 3)
+                {
+                    // Die
+                    // We don't set a flag, IsDead checks Failures.
+                    // But we should fire Died event if we just crossed the threshold.
+                    // Wait, IsDead is a property.
+                    // If we just became dead, fire event.
+                    // We need to check if we WERE dead before? No, IsDead checks Failures.
+                    // So if we are now dead, fire event.
+                    if (IsDead)
+                    {
+                        Died?.Invoke(this, new DeathEventArgs());
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        public void Stabilize()
+        {
+            IsStable = true;
+            DeathSaveSuccesses = 0;
+            DeathSaveFailures = 0;
+        }
+
         /// <inheritdoc />
         public void Heal(int amount)
         {
@@ -150,6 +203,15 @@ namespace OpenCombatEngine.Implementation.Creatures
             if (IsDead) return; // Cannot heal dead creatures normally (needs resurrection magic)
 
             Current = Math.Min(Max, Current + amount);
+            
+            // Healing stabilizes and resets death saves
+            if (Current > 0)
+            {
+                IsStable = false; // Not stable, just alive
+                DeathSaveSuccesses = 0;
+                DeathSaveFailures = 0;
+            }
+
             Healed?.Invoke(this, new HealedEventArgs(amount, Current));
         }
     }

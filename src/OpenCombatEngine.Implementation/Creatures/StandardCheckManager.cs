@@ -51,5 +51,12 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return Result<int>.Success(roll.Value.Total);
         }
+
+        public Result<int> RollDeathSave()
+        {
+            var roll = _diceRoller.Roll("1d20");
+            if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
+            return Result<int>.Success(roll.Value.Total);
+        }
     }
 }

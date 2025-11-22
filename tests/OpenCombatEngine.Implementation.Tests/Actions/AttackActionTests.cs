@@ -22,6 +22,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             
             // Setup Source
             _source = new StandardCreature(
+                Guid.NewGuid().ToString(),
                 "Attacker",
                 new StandardAbilityScores(),
                 new StandardHitPoints(10),
@@ -30,6 +31,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             // Setup Target with AC 15, HP 20
             _target = new StandardCreature(
+                Guid.NewGuid().ToString(),
                 "Defender",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),

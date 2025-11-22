@@ -14,7 +14,7 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             // Arrange
             var scores = new StandardAbilityScores(18, 14, 12, 10, 8, 16);
             var hp = new StandardHitPoints(50, 45, 5);
-            var original = new StandardCreature("Test Hero", scores, hp);
+            var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp);
 
             // Act - Get State
             var state = original.GetState();

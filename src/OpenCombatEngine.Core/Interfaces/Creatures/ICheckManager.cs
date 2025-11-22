@@ -23,5 +23,11 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// <param name="ability">The ability to save against.</param>
         /// <returns>The result of the saving throw.</returns>
         Result<int> RollSavingThrow(Ability ability);
+
+        /// <summary>
+        /// Rolls a death saving throw.
+        /// </summary>
+        /// <returns>The result of the death save.</returns>
+        Result<int> RollDeathSave();
     }
 }

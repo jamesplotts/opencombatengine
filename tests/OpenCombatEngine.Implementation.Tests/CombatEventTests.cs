@@ -20,7 +20,7 @@ namespace OpenCombatEngine.Implementation.Tests
             // Arrange
             var diceRoller = Substitute.For<IDiceRoller>();
             var turnManager = new StandardTurnManager(diceRoller);
-            var creature = new StandardCreature("Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
             
             diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Normal)));
             turnManager.StartCombat(new[] { creature });
@@ -58,7 +58,10 @@ namespace OpenCombatEngine.Implementation.Tests
             using var monitoredHp = hp.Monitor();
 
             // Act
-            hp.TakeDamage(10);
+            hp.TakeDamage(10); // HP = 0
+            hp.RecordDeathSave(false); // 1 failure
+            hp.RecordDeathSave(false); // 2 failures
+            hp.RecordDeathSave(false); // 3 failures -> Died
 
             // Assert
             monitoredHp.Should().Raise(nameof(IHitPoints.Died));

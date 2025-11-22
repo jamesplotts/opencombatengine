@@ -38,7 +38,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void StartTurn_Should_Tick_Conditions()
         {
             // Arrange
-            var creature = new StandardCreature("Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
             var condition = Substitute.For<ICondition>();
             condition.Name.Returns("TestCondition");
             condition.DurationRounds.Returns(1);
@@ -58,7 +58,7 @@ namespace OpenCombatEngine.Implementation.Tests
             // Arrange
             var diceRoller = Substitute.For<IDiceRoller>();
             var turnManager = new StandardTurnManager(diceRoller);
-            var creature = new StandardCreature("Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
             
             // Condition with 2 round duration. 
             // StartCombat (Turn 1) -> Tick -> Duration 1.

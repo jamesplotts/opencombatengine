@@ -63,7 +63,7 @@ namespace OpenCombatEngine.Implementation.Tests
         [Fact]
         public void StandardCreature_StartTurn_Should_Reset_Movement()
         {
-            var creature = new StandardCreature("Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
             // Default speed is 0 in StandardCombatStats if not set? 
             // Let's check StandardCombatStats default.
             // StandardCombatStats defaults: AC 10, Init 0, Speed 30.

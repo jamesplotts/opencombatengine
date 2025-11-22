@@ -26,37 +26,34 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// <summary>
         /// Initializes a new instance of StandardCreature.
         /// </summary>
+        /// <param name="id">The unique identifier of the creature.</param>
         /// <param name="name">The name of the creature</param>
         /// <param name="abilityScores">The creature's ability scores</param>
-        /// <param name="hitPoints">The creature's hit points</param>
-        /// <param name="combatStats">The creature's combat stats</param>
-        /// <param name="id">Optional unique identifier (generates new Guid if null)</param>
+        /// <param name="hitPoints">Hit points manager.</param>
+        /// <param name="combatStats">Combat statistics.</param>
+        /// <param name="checkManager">Optional check manager.</param>
         public StandardCreature(
-            string name,
-            IAbilityScores abilityScores,
-            IHitPoints hitPoints,
+            string id, 
+            string name, 
+            IAbilityScores abilityScores, 
+            IHitPoints hitPoints, 
             ICombatStats? combatStats = null,
-            Guid? id = null)
+            ICheckManager? checkManager = null)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Creature name cannot be null or empty", nameof(name));
-
-            Id = id ?? Guid.NewGuid();
+            if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Id cannot be empty", nameof(id));
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
+            
+            Id = Guid.Parse(id); // Assuming id is a string representation of a Guid
             Name = name;
             AbilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
             HitPoints = hitPoints ?? throw new ArgumentNullException(nameof(hitPoints));
             CombatStats = combatStats ?? new StandardCombatStats();
+            
             Conditions = new StandardConditionManager(this);
             ActionEconomy = new StandardActionEconomy();
             Movement = new StandardMovement(CombatStats);
-            // We need a dice roller for checks. StandardCreature doesn't have one injected usually?
-            // Wait, StandardCreature constructors don't take a DiceRoller.
-            // We might need to instantiate a default one or change the constructor.
-            // Changing constructor is a breaking change for tests.
-            // Let's use StandardDiceRoller for now if none provided, or inject it?
-            // The plan didn't specify injecting DiceRoller into Creature.
-            // Let's instantiate new StandardDiceRoller() for now to avoid breaking signature.
-            Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
+            
+            Checks = checkManager ?? new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
         }
 
         /// <summary>
@@ -118,6 +115,32 @@ namespace OpenCombatEngine.Implementation.Creatures
             Conditions.Tick();
             ActionEconomy.ResetTurn();
             Movement.ResetTurn();
+
+            // Death Saving Throws
+            if (HitPoints.Current <= 0 && !HitPoints.IsDead && !HitPoints.IsStable)
+            {
+                var rollResult = Checks.RollDeathSave();
+                if (rollResult.IsSuccess)
+                {
+                    int roll = rollResult.Value;
+                    if (roll == 20)
+                    {
+                        HitPoints.Heal(1);
+                    }
+                    else if (roll == 1)
+                    {
+                        HitPoints.RecordDeathSave(false, critical: true);
+                    }
+                    else if (roll >= 10)
+                    {
+                        HitPoints.RecordDeathSave(true);
+                    }
+                    else
+                    {
+                        HitPoints.RecordDeathSave(false);
+                    }
+                }
+            }
         }
 
         /// <inheritdoc />

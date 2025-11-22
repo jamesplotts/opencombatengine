@@ -50,17 +50,17 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
 
             // Assert
             hp.Current.Should().Be(0);
-            hp.IsDead.Should().BeTrue();
+            hp.IsDead.Should().BeFalse(); // 0 HP is unconscious, not dead
         }
 
         [Fact]
-        public void IsDead_Should_Be_True_When_Current_Is_Zero()
+        public void IsDead_Should_Be_False_When_Current_Is_Zero()
         {
             // Arrange
             var hp = new StandardHitPoints(max: 20, current: 0);
 
             // Assert
-            hp.IsDead.Should().BeTrue();
+            hp.IsDead.Should().BeFalse();
         }
 
         [Fact]

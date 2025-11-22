@@ -48,6 +48,33 @@ public interface IHitPoints
     /// <param name="amount">Amount of healing to receive.</param>
     void Heal(int amount);
 
+    /// <summary>
+    /// Gets the number of successful death saving throws.
+    /// </summary>
+    int DeathSaveSuccesses { get; }
+
+    /// <summary>
+    /// Gets the number of failed death saving throws.
+    /// </summary>
+    int DeathSaveFailures { get; }
+
+    /// <summary>
+    /// Gets whether the creature is stable (at 0 HP but not dying).
+    /// </summary>
+    bool IsStable { get; }
+
+    /// <summary>
+    /// Records the result of a death saving throw.
+    /// </summary>
+    /// <param name="success">Whether the save was successful.</param>
+    /// <param name="critical">Whether the result was critical (Nat 1 or Nat 20 effects).</param>
+    void RecordDeathSave(bool success, bool critical = false);
+
+    /// <summary>
+    /// Stabilizes the creature, resetting death saves and stopping the dying process.
+    /// </summary>
+    void Stabilize();
+
     event EventHandler<DamageTakenEventArgs> DamageTaken;
     event EventHandler<HealedEventArgs> Healed;
     event EventHandler<DeathEventArgs> Died;

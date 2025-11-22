@@ -57,7 +57,7 @@ namespace OpenCombatEngine.Implementation.Tests
         [Fact]
         public void StandardCreature_StartTurn_Should_Reset_Economy()
         {
-            var creature = new StandardCreature("Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
             creature.ActionEconomy.UseAction();
             
             creature.StartTurn();

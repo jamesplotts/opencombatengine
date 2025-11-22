@@ -15,7 +15,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             var id = Guid.NewGuid();
 
             // Act
-            var creature = new StandardCreature("Goblin", scores, hp, null, id);
+            var creature = new StandardCreature(id.ToString(), "Goblin", scores, hp);
 
             // Assert
             creature.Name.Should().Be("Goblin");
@@ -32,7 +32,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             var hp = new StandardHitPoints(10);
 
             // Act
-            var creature = new StandardCreature("Goblin", scores, hp);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Goblin", scores, hp);
 
             // Assert
             creature.Id.Should().NotBeEmpty();
@@ -42,19 +42,19 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
         public void Constructor_Should_Throw_On_Null_Name()
         {
             // Act
-            Action act = () => new StandardCreature(null!, new StandardAbilityScores(), new StandardHitPoints(10));
+            Action act = () => new StandardCreature(Guid.NewGuid().ToString(), null!, new StandardAbilityScores(), new StandardHitPoints(10));
 
             // Assert
             act.Should().Throw<ArgumentException>()
-                .WithMessage("*name cannot be null*");
+                .WithMessage("*Name cannot be empty*");
         }
 
         [Fact]
         public void Constructor_Should_Throw_On_Null_Components()
         {
             // Act
-            Action act1 = () => new StandardCreature("Goblin", null!, new StandardHitPoints(10));
-            Action act2 = () => new StandardCreature("Goblin", new StandardAbilityScores(), null!);
+            Action act1 = () => new StandardCreature(Guid.NewGuid().ToString(), "Goblin", null!, new StandardHitPoints(10));
+            Action act2 = () => new StandardCreature(Guid.NewGuid().ToString(), "Goblin", new StandardAbilityScores(), null!);
 
             // Assert
             act1.Should().Throw<ArgumentNullException>();

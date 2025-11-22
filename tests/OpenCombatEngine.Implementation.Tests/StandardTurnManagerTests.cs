@@ -98,6 +98,7 @@ namespace OpenCombatEngine.Implementation.Tests
         private ICreature CreateCreature(string name, int dex, int initBonus)
         {
             return new StandardCreature(
+                Guid.NewGuid().ToString(),
                 name,
                 new StandardAbilityScores(dexterity: dex),
                 new StandardHitPoints(10),

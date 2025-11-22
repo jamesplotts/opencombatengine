@@ -49,6 +49,11 @@ public class CreatureInterfaceTests
         public void TakeDamage(int amount) => DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, 10));
         public void TakeDamage(int amount, OpenCombatEngine.Core.Enums.DamageType type) => TakeDamage(amount);
         public void Heal(int amount) => Healed?.Invoke(this, new HealedEventArgs(amount, 10));
+        public int DeathSaveSuccesses { get; set; }
+        public int DeathSaveFailures { get; set; }
+        public bool IsStable { get; set; }
+        public void RecordDeathSave(bool success, bool critical = false) { }
+        public void Stabilize() { IsStable = true; }
     }
 
     private class StubCreature : ICreature
@@ -71,6 +76,7 @@ public class CreatureInterfaceTests
     {
         public Result<int> RollAbilityCheck(Ability ability) => Result<int>.Success(10);
         public Result<int> RollSavingThrow(Ability ability) => Result<int>.Success(10);
+        public Result<int> RollDeathSave() => Result<int>.Success(10);
     }
 
     private class StubMovement : IMovement
