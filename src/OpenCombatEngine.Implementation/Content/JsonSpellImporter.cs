@@ -14,6 +14,13 @@ namespace OpenCombatEngine.Implementation.Content
 {
     public class JsonSpellImporter : IContentImporter<ISpell>
     {
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
+
+        public JsonSpellImporter(OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller diceRoller)
+        {
+            _diceRoller = diceRoller ?? throw new ArgumentNullException(nameof(diceRoller));
+        }
+
         public Result<IEnumerable<ISpell>> Import(string data)
         {
             if (string.IsNullOrWhiteSpace(data))
@@ -72,7 +79,7 @@ namespace OpenCombatEngine.Implementation.Content
             }
         }
 
-        private static Spell MapDtoToSpell(SpellDto dto)
+        private Spell MapDtoToSpell(SpellDto dto)
         {
             var school = MapSchool(dto.School);
             var components = MapComponents(dto.Components);
@@ -81,6 +88,7 @@ namespace OpenCombatEngine.Implementation.Content
             var duration = MapDuration(dto.Duration);
             var description = MapEntries(dto.Entries);
 
+            // TODO: Parse attack/save/damage from DTO
             return new Spell(
                 dto.Name ?? "Unknown",
                 dto.Level,
@@ -90,7 +98,7 @@ namespace OpenCombatEngine.Implementation.Content
                 components,
                 duration,
                 description,
-                (caster, target) => Result<bool>.Success(true)
+                _diceRoller
             );
         }
 

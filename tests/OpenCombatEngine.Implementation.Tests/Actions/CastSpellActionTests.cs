@@ -12,10 +12,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 {
     public class CastSpellActionTests
     {
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller = Substitute.For<OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller>();
+
         [Fact]
         public void Execute_Should_Fail_If_No_Spellcasting()
         {
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             var action = new CastSpellAction(spell);
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns((ISpellCaster?)null);
@@ -29,7 +31,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         [Fact]
         public void Execute_Should_Fail_If_No_Slots()
         {
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             var action = new CastSpellAction(spell);
             
             var spellCaster = Substitute.For<ISpellCaster>();
@@ -49,10 +51,10 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         public void Execute_Should_Consume_Slot_And_Cast_Spell()
         {
             bool casted = false;
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => 
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => 
             {
                 casted = true;
-                return Result<bool>.Success(true);
+                return Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, ""));
             });
             var action = new CastSpellAction(spell);
             
@@ -74,7 +76,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         [Fact]
         public void Execute_Should_Fail_If_Not_Prepared()
         {
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             var action = new CastSpellAction(spell);
 
             var spellCaster = Substitute.For<ISpellCaster>();

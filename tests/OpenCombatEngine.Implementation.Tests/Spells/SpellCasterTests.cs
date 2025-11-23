@@ -12,6 +12,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
     public class SpellCasterTests
     {
         private readonly IAbilityScores _abilityScores;
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller = Substitute.For<OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller>();
 
         public SpellCasterTests()
         {
@@ -85,7 +86,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         public void LearnSpell_Should_Add_To_Known()
         {
             var caster = CreateCaster();
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
 
             caster.LearnSpell(spell);
 
@@ -106,7 +107,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         public void PrepareSpell_Should_Add_To_Prepared()
         {
             var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: true);
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             caster.LearnSpell(spell);
 
             var result = caster.PrepareSpell(spell);
@@ -119,7 +120,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         public void PreparedSpells_Should_Return_Known_If_Not_PreparedCaster()
         {
             var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: false);
-            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             caster.LearnSpell(spell);
 
             // Even if we prepare it (which we can technically do), PreparedSpells should return KnownSpells
@@ -133,8 +134,8 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         public void PreparedSpells_Should_Return_Only_Prepared_If_PreparedCaster()
         {
             var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: true);
-            var spell1 = new Spell("Test1", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
-            var spell2 = new Spell("Test2", 1, SpellSchool.Abjuration, "", "", "", "", "", (c, t) => Result<bool>.Success(true));
+            var spell1 = new Spell("Test1", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
+            var spell2 = new Spell("Test2", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller, customEffect: (c, t) => Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "")));
             caster.LearnSpell(spell1);
             caster.LearnSpell(spell2);
 

@@ -15,12 +15,17 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         string Duration { get; } // e.g. "Instantaneous", "1 minute"
         string Description { get; }
 
+        bool RequiresAttackRoll { get; }
+        Ability? SaveAbility { get; } // Null if no save
+        string? DamageDice { get; } // e.g. "8d6"
+        DamageType? DamageType { get; }
+
         /// <summary>
         /// Executes the spell's effect.
         /// </summary>
         /// <param name="caster">The creature casting the spell.</param>
         /// <param name="target">The target of the spell (optional).</param>
         /// <returns>Result of the cast.</returns>
-        Result<bool> Cast(ICreature caster, object? target = null);
+        Result<OpenCombatEngine.Core.Models.Spells.SpellResolution> Cast(ICreature caster, object? target = null);
     }
 }

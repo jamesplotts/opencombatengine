@@ -1,6 +1,8 @@
 using System.Linq;
 using FluentAssertions;
+using NSubstitute;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Implementation.Content;
 using Xunit;
 
@@ -8,6 +10,8 @@ namespace OpenCombatEngine.Implementation.Tests.Content
 {
     public class JsonSpellImporterTests
     {
+        private readonly IDiceRoller _diceRoller = Substitute.For<IDiceRoller>();
+
         [Fact]
         public void Import_Should_Parse_Single_Spell_Object()
         {
@@ -23,7 +27,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""entries"": [""A bright streak flashes...""]
             }";
 
-            var importer = new JsonSpellImporter();
+            var importer = new JsonSpellImporter(_diceRoller);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -60,7 +64,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ]
             }";
 
-            var importer = new JsonSpellImporter();
+            var importer = new JsonSpellImporter(_diceRoller);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -79,7 +83,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""school"": ""A""
             }";
 
-            var importer = new JsonSpellImporter();
+            var importer = new JsonSpellImporter(_diceRoller);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -94,7 +98,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
         public void Import_Should_Fail_On_Invalid_Json()
         {
             var json = "{ invalid json }";
-            var importer = new JsonSpellImporter();
+            var importer = new JsonSpellImporter(_diceRoller);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeFalse();

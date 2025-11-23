@@ -10,6 +10,8 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
 {
     public class SpellTests
     {
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller = Substitute.For<OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller>();
+
         [Fact]
         public void Constructor_Should_Set_Properties()
         {
@@ -22,7 +24,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
                 "V, S, M", 
                 "Instantaneous", 
                 "Boom", 
-                (caster, target) => Result<bool>.Success(true));
+                _diceRoller);
 
             spell.Name.Should().Be("Fireball");
             spell.Level.Should().Be(3);
@@ -35,7 +37,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         }
 
         [Fact]
-        public void Cast_Should_Execute_Effect()
+        public void Cast_Should_Execute_Custom_Effect()
         {
             bool executed = false;
             var spell = new Spell(
@@ -43,10 +45,12 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
                 1, 
                 SpellSchool.Abjuration, 
                 "", "", "", "", "", 
-                (caster, target) => 
+                _diceRoller,
+                customEffect: (caster, target) => 
                 {
                     executed = true;
-                    return Result<bool>.Success(true);
+                    return Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(
+                        new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "Custom"));
                 });
 
             var caster = Substitute.For<ICreature>();

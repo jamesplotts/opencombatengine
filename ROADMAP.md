@@ -140,4 +140,21 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement "Attack Object" pattern (`AttackResult`)
     - [x] Add `ResolveAttack` to `ICreature`
     - [x] Refactor Actions to use new pipeline
-- [x] [Save Combat Resolution Pattern Architecture Record](docs/architecture/021-combat-resolution-pattern.md)
+- [x] **Cycle 13: Class Features**
+    - [x] Implement `IFeature` and `FeatureManager`
+    - [x] Implement `RageFeature` and `SneakAttackFeature`
+    - [x] Verify with Tests
+- [x] [Save Class Features Architecture Record](docs/architecture/022-class-features.md)
+
+- [x] **Cycle 14: Spellcasting Expansion**
+    - [x] Implement Spell Slots & Preparation
+    - [x] Implement Spell Save DC & Attack Bonus
+    - [x] Verify with Tests
+- [x] [Save Spellcasting Expansion Architecture Record](docs/architecture/023-spellcasting-expansion.md)
+
+- [x] **Cycle 15: Spell Resolution**
+    - [x] Implement `SpellResolution` model
+    - [x] Update `ISpell` and `Spell` for attacks/saves
+    - [x] Update `CastSpellAction`
+    - [x] Verify with Tests
+- [x] [Save Spell Resolution Architecture Record](docs/architecture/024-spell-resolution.md)

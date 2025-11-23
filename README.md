@@ -40,6 +40,10 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - Death Saving Throws (Success/Failure tracking, Stabilization)
   - Damage Types & Resistances (Resistance, Vulnerability, Immunity logic)
   - Ability Checks & Saving Throws
+- **Spellcasting System**:
+  - Spell Slots & Preparation (Wizard/Sorcerer style support)
+  - Spell Resolution (Attack Rolls, Saving Throws, Damage)
+  - Content Import (JSON support for Spells)
 - **Extensible Design**:
   - Interface-driven architecture
   - Dependency Injection friendly

@@ -72,7 +72,8 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure($"Failed to cast {_spell.Name}: {castResult.Error}");
             }
 
-            return Result<ActionResult>.Success(new ActionResult(true, $"Cast {_spell.Name}."));
+            var resolution = castResult.Value;
+            return Result<ActionResult>.Success(new ActionResult(true, resolution.Message));
         }
     }
 }
