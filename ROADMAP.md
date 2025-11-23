@@ -81,3 +81,44 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardCreature.StartTurn` to reset movement
     - [x] Verify with Movement tests
 - [x] [Save Movement System Architecture Record](docs/architecture/009-movement-system.md)
+
+- [x] **Unsupervised Cycle 1: Ability Checks & Saving Throws**
+    - [x] Implement `RollCheck` and `RollSave`
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 2: Damage Types & Resistances**
+    - [x] Implement `DamageType` Enum
+    - [x] Update `TakeDamage` logic
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 3: Death Saving Throws**
+    - [x] Implement Death Save logic in `StartTurn`
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 4: Combat Actions Integration**
+    - [x] Implement `MoveAction`
+    - [x] Update `AttackAction` to consume Action
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 5: Concrete Conditions**
+    - [x] Implement Standard Conditions (Blinded, etc.)
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 6: Serialization & Cleanup**
+    - [x] Update Serialization (CombatStats, Conditions)
+    - [x] Fix Warnings & Cleanup
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 7: Inventory & Equipment**
+    - [x] Implement Items, Weapons, Armor
+    - [x] Integrate with CombatStats (AC) and AttackAction
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 8: Resting System**
+    - [x] Implement Short/Long Rest
+    - [x] Verify with Tests
+
+- [x] **Unsupervised Cycle 9: Spellcasting Foundation**
+    - [x] Implement Spells & Spellbook
+    - [x] Implement CastSpellAction
+    - [x] Verify with Tests

@@ -9,7 +9,6 @@ This document outlines the future direction of the OpenCombatEngine.
 - [ ] **Native Format**: Definition of a `.ocf` (Open Combat Format) for portable content.
 
 ## Phase 4: Advanced Features
-- [ ] **Spell System**: Spell slots, casting levels, components (V, S, M), and school logic.
 - [ ] **Class Features**: Rage, Sneak Attack, Wild Shape, etc.
 - [ ] **Magic Items**: Attunement, charges, and passive bonuses.
 - [ ] **Environmental Effects**: Difficult terrain, cover, visibility/lighting.
