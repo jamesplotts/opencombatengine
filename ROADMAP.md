@@ -194,3 +194,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement Distance Calculation (5e Rules)
     - [x] Verify with Tests
 - [x] [Save Grid System ADR](docs/adr/0028-grid-system.md)
+
+- [x] **Cycle 20: Initiative System Refinement**
+    - [x] Define `IInitiativeComparer`
+    - [x] Implement `StandardInitiativeComparer`
+    - [x] Update `StandardTurnManager`
+    - [x] Verify with Tests
+- [x] [Save Initiative Refinement ADR](docs/adr/0029-initiative-refinement.md)

@@ -16,6 +16,7 @@ namespace OpenCombatEngine.Implementation
         public event EventHandler<CombatEndedEventArgs>? CombatEnded;
 
         private readonly IDiceRoller _diceRoller;
+        private readonly IInitiativeComparer _initiativeComparer;
         private readonly List<ICreature> _turnOrder = new();
         private int _currentTurnIndex = -1;
 
@@ -28,9 +29,10 @@ namespace OpenCombatEngine.Implementation
 
         public IEnumerable<ICreature> TurnOrder => _turnOrder.AsReadOnly();
 
-        public StandardTurnManager(IDiceRoller diceRoller)
+        public StandardTurnManager(IDiceRoller diceRoller, IInitiativeComparer? initiativeComparer = null)
         {
             _diceRoller = diceRoller ?? throw new ArgumentNullException(nameof(diceRoller));
+            _initiativeComparer = initiativeComparer ?? new OpenCombatEngine.Implementation.Comparers.StandardInitiativeComparer();
         }
 
         public void StartCombat(IEnumerable<ICreature> creatures)
@@ -60,12 +62,14 @@ namespace OpenCombatEngine.Implementation
                 initiativeRolls.Add(new InitiativeRoll(creature, total, creature.AbilityScores.Dexterity));
             }
 
-            // Sort by Total Descending, then Dex Score Descending
-            var sortedCreatures = initiativeRolls
-                .OrderByDescending(x => x.Total)
-                .ThenByDescending(x => x.DexterityScore)
-                .Select(x => x.Creature)
-                .ToList();
+            // Sort using the comparer
+            // StandardInitiativeComparer returns > 0 if x > y (High Roll > Low Roll).
+            // List.Sort sorts Ascending (Smallest first).
+            // So we sort, then Reverse to get Descending (Highest first).
+            initiativeRolls.Sort(_initiativeComparer);
+            initiativeRolls.Reverse();
+
+            var sortedCreatures = initiativeRolls.Select(x => x.Creature).ToList();
 
             _turnOrder.AddRange(sortedCreatures);
             
