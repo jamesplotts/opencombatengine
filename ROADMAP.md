@@ -214,3 +214,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement Range Validation
     - [x] Verify with Tests
 - [x] [Save Range Validation ADR](docs/adr/0031-range-validation.md)
+
+- [x] **Cycle 23: Line of Sight**
+    - [x] Implement Obstacles & LOS Algorithm
+    - [x] Update Actions to check LOS
+    - [x] Verify with Tests
+- [x] [Save Line of Sight ADR](docs/adr/0032-line-of-sight.md)

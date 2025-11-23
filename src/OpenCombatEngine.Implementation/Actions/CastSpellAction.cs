@@ -52,6 +52,21 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure("Target must be a creature for spellcasting (currently).");
             }
             
+            // LOS Check
+            if (context.Grid != null)
+            {
+                var sourcePos = context.Grid.GetPosition(source);
+                var targetPos = context.Grid.GetPosition(target);
+
+                if (sourcePos != null && targetPos != null)
+                {
+                    if (!context.Grid.HasLineOfSight(sourcePos.Value, targetPos.Value))
+                    {
+                        return Result<ActionResult>.Failure("No line of sight to target.");
+                    }
+                }
+            }
+            
             var spellcasting = source.Spellcasting;
             if (spellcasting == null)
             {

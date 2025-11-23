@@ -13,6 +13,11 @@ namespace OpenCombatEngine.Core.Interfaces.Spatial
         ICreature? GetCreatureAt(Position position);
         int GetDistance(ICreature a, ICreature b);
         int GetDistance(Position a, Position b);
+
+        void AddObstacle(Position position);
+        void RemoveObstacle(Position position);
+        bool IsObstructed(Position position);
+        bool HasLineOfSight(Position source, Position target);
         IEnumerable<ICreature> GetCreaturesWithin(Position center, int radius);
         IEnumerable<ICreature> GetAllCreatures();
     }

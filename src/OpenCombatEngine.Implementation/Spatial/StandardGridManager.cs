@@ -111,6 +111,129 @@ namespace OpenCombatEngine.Implementation.Spatial
             }
         }
 
+        private readonly HashSet<Position> _obstacles = new();
+
+        public void AddObstacle(Position position)
+        {
+            _obstacles.Add(position);
+        }
+
+        public void RemoveObstacle(Position position)
+        {
+            _obstacles.Remove(position);
+        }
+
+        public bool IsObstructed(Position position)
+        {
+            return _obstacles.Contains(position);
+        }
+
+        public bool HasLineOfSight(Position source, Position target)
+        {
+            // 3D Bresenham's Line Algorithm
+            // We need to check every point along the line from source to target.
+            // If any point is an obstacle, return false.
+            // Source and Target themselves are usually excluded from the "blocking" check 
+            // (i.e., if target is IN an obstacle, you can still see them? Maybe not. 
+            // But if source is IN an obstacle, they can't see out? 
+            // For now, let's check strictly between source and target).
+
+            int x1 = source.X;
+            int y1 = source.Y;
+            int z1 = source.Z;
+            int x2 = target.X;
+            int y2 = target.Y;
+            int z2 = target.Z;
+
+            int dx = Math.Abs(x2 - x1);
+            int dy = Math.Abs(y2 - y1);
+            int dz = Math.Abs(z2 - z1);
+
+            int xs = (x2 > x1) ? 1 : -1;
+            int ys = (y2 > y1) ? 1 : -1;
+            int zs = (z2 > z1) ? 1 : -1;
+
+            // Driving axis is the one with max difference
+            if (dx >= dy && dx >= dz)
+            {
+                int p1 = 2 * dy - dx;
+                int p2 = 2 * dz - dx;
+                while (x1 != x2)
+                {
+                    x1 += xs;
+                    if (p1 >= 0)
+                    {
+                        y1 += ys;
+                        p1 -= 2 * dx;
+                    }
+                    if (p2 >= 0)
+                    {
+                        z1 += zs;
+                        p2 -= 2 * dx;
+                    }
+                    p1 += 2 * dy;
+                    p2 += 2 * dz;
+
+                    // Check if this point is an obstacle
+                    // Don't check the target point itself (we want to see the target even if they are in a "blocked" cell, 
+                    // though typically creatures aren't in obstacles. But let's be safe).
+                    if (x1 == x2 && y1 == y2 && z1 == z2) break; 
+
+                    if (IsObstructed(new Position(x1, y1, z1))) return false;
+                }
+            }
+            else if (dy >= dx && dy >= dz)
+            {
+                int p1 = 2 * dx - dy;
+                int p2 = 2 * dz - dy;
+                while (y1 != y2)
+                {
+                    y1 += ys;
+                    if (p1 >= 0)
+                    {
+                        x1 += xs;
+                        p1 -= 2 * dy;
+                    }
+                    if (p2 >= 0)
+                    {
+                        z1 += zs;
+                        p2 -= 2 * dy;
+                    }
+                    p1 += 2 * dx;
+                    p2 += 2 * dz;
+
+                    if (x1 == x2 && y1 == y2 && z1 == z2) break;
+                    if (IsObstructed(new Position(x1, y1, z1))) return false;
+                }
+            }
+            else
+            {
+                int p1 = 2 * dy - dz;
+                int p2 = 2 * dx - dz;
+                while (z1 != z2)
+                {
+                    z1 += zs;
+                    if (p1 >= 0)
+                    {
+                        y1 += ys;
+                        p1 -= 2 * dz;
+                    }
+                    if (p2 >= 0)
+                    {
+                        x1 += xs;
+                        p2 -= 2 * dz;
+                    }
+                    p1 += 2 * dy;
+                    p2 += 2 * dx;
+
+                    if (x1 == x2 && y1 == y2 && z1 == z2) break;
+                    if (IsObstructed(new Position(x1, y1, z1))) return false;
+                }
+            }
+
+            return true;
+        }
+
         public IEnumerable<ICreature> GetAllCreatures()
         {
             return _creatures.Values;

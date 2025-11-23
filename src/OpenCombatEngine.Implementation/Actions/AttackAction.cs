@@ -63,6 +63,11 @@ namespace OpenCombatEngine.Implementation.Actions
                 {
                     return Result<ActionResult>.Failure($"Target is out of range. Distance: {distance}, Range: {Range}");
                 }
+
+                if (!context.Grid.HasLineOfSight(sourcePos.Value, targetPos.Value))
+                {
+                    return Result<ActionResult>.Failure("No line of sight to target.");
+                }
             }
 
             // 0. Check Action Economy

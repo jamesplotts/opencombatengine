@@ -251,6 +251,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             grid.GetPosition(_source).Returns(sourcePos);
             grid.GetPosition(_target).Returns(targetPos);
             grid.GetDistance(sourcePos, targetPos).Returns(10);
+            grid.HasLineOfSight(sourcePos, targetPos).Returns(true);
 
             // Mock successful roll
             _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(15, "1d20", new List<int> { 15 }, 0, RollType.Normal)));
@@ -266,6 +267,35 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             // Assert
             result.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Execute_Should_Fail_When_LOS_Blocked()
+        {
+            // Arrange
+            var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller, range: 10);
+            
+            var grid = Substitute.For<OpenCombatEngine.Core.Interfaces.Spatial.IGridManager>();
+            var sourcePos = new OpenCombatEngine.Core.Models.Spatial.Position(0, 0, 0);
+            var targetPos = new OpenCombatEngine.Core.Models.Spatial.Position(10, 0, 0); // 10ft away
+
+            grid.GetPosition(_source).Returns(sourcePos);
+            grid.GetPosition(_target).Returns(targetPos);
+            grid.GetDistance(sourcePos, targetPos).Returns(10);
+            grid.HasLineOfSight(sourcePos, targetPos).Returns(false); // Blocked
+
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                _source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target),
+                grid
+            );
+
+            // Act
+            var result = action.Execute(context);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("No line of sight");
         }
     }
 }

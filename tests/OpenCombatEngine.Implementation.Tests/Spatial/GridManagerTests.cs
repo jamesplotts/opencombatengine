@@ -94,5 +94,43 @@ namespace OpenCombatEngine.Implementation.Tests.Spatial
             nearby.Should().Contain(c2);
             nearby.Should().NotContain(c3);
         }
+        [Fact]
+        public void HasLineOfSight_Should_Return_True_If_Clear()
+        {
+            var grid = new StandardGridManager();
+            // No obstacles
+            grid.HasLineOfSight(new Position(0, 0), new Position(5, 0)).Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasLineOfSight_Should_Return_False_If_Blocked()
+        {
+            var grid = new StandardGridManager();
+            grid.AddObstacle(new Position(2, 0)); // Obstacle in the middle
+
+            grid.HasLineOfSight(new Position(0, 0), new Position(5, 0)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void HasLineOfSight_Should_Return_True_If_Obstacle_Not_On_Line()
+        {
+            var grid = new StandardGridManager();
+            grid.AddObstacle(new Position(2, 1)); // Obstacle to the side
+
+            grid.HasLineOfSight(new Position(0, 0), new Position(5, 0)).Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasLineOfSight_Should_Handle_Diagonals()
+        {
+            var grid = new StandardGridManager();
+            // Line from (0,0) to (3,3) passes through (1,1) and (2,2)
+            
+            grid.AddObstacle(new Position(1, 1));
+            grid.HasLineOfSight(new Position(0, 0), new Position(3, 3)).Should().BeFalse();
+
+            grid.RemoveObstacle(new Position(1, 1));
+            grid.HasLineOfSight(new Position(0, 0), new Position(3, 3)).Should().BeTrue();
+        }
     }
 }
