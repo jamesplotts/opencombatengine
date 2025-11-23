@@ -21,5 +21,10 @@ namespace OpenCombatEngine.Core.Interfaces.Spatial
         IEnumerable<ICreature> GetCreaturesWithin(Position center, int radius);
         IEnumerable<ICreature> GetCreaturesInShape(Position origin, IShape shape, Position? direction = null);
         IEnumerable<ICreature> GetAllCreatures();
+
+        void AddDifficultTerrain(Position position);
+        void RemoveDifficultTerrain(Position position);
+        bool IsDifficultTerrain(Position position);
+        int GetPathCost(Position start, Position destination);
     }
 }

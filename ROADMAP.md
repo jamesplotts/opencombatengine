@@ -226,3 +226,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement AOE Targeting
     - [x] Verify with Tests
 - [x] [Save Area of Effect ADR](docs/adr/0033-area-of-effect.md)
+
+- [x] **Cycle 25: Movement Cost**
+    - [x] Implement Difficult Terrain
+    - [x] Update MoveAction for Cost
+    - [x] Verify with Tests
+- [x] [Save Movement Cost ADR](docs/adr/0034-movement-cost.md)

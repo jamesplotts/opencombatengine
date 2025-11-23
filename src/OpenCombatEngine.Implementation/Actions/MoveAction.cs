@@ -47,16 +47,23 @@ namespace OpenCombatEngine.Implementation.Actions
                 }
 
                 var targetPos = positionTarget.Position;
-                var distance = context.Grid.GetDistance(currentPos.Value, targetPos);
+                
+                // Calculate PATH COST instead of simple distance
+                var movementCost = context.Grid.GetPathCost(currentPos.Value, targetPos);
 
-                if (distance > _distance)
+                // We still check if the "distance" (cost) is within the action's limit?
+                // MoveAction(30) means "Move up to 30 feet".
+                // If terrain is difficult, 30 feet of movement might only get you 15 feet of distance.
+                // So we check if cost <= _distance (action limit) AND cost <= MovementRemaining.
+                
+                if (movementCost > _distance)
                 {
-                    return Result<ActionResult>.Failure($"Distance {distance} exceeds action range {_distance}.");
+                    return Result<ActionResult>.Failure($"Movement cost {movementCost} exceeds action limit {_distance}.");
                 }
 
-                if (source.Movement.MovementRemaining < distance)
+                if (source.Movement.MovementRemaining < movementCost)
                 {
-                    return Result<ActionResult>.Failure($"Not enough movement. Required: {distance}, Remaining: {source.Movement.MovementRemaining}");
+                    return Result<ActionResult>.Failure($"Not enough movement. Required: {movementCost}, Remaining: {source.Movement.MovementRemaining}");
                 }
 
                 var moveResult = context.Grid.MoveCreature(source, targetPos);
@@ -65,8 +72,8 @@ namespace OpenCombatEngine.Implementation.Actions
                     return Result<ActionResult>.Failure(moveResult.Error);
                 }
 
-                source.Movement.Move(distance);
-                return Result<ActionResult>.Success(new ActionResult(true, $"Moved {distance} feet to {targetPos}."));
+                source.Movement.Move(movementCost);
+                return Result<ActionResult>.Success(new ActionResult(true, $"Moved to {targetPos}. Cost: {movementCost}."));
             }
             else
             {

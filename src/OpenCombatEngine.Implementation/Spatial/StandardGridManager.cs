@@ -255,5 +255,94 @@ namespace OpenCombatEngine.Implementation.Spatial
         {
             return _creatures.Values;
         }
+
+        private readonly System.Collections.Generic.HashSet<Position> _difficultTerrain = new();
+
+        public void AddDifficultTerrain(Position position)
+        {
+            _difficultTerrain.Add(position);
+        }
+
+        public void RemoveDifficultTerrain(Position position)
+        {
+            _difficultTerrain.Remove(position);
+        }
+
+        public bool IsDifficultTerrain(Position position)
+        {
+            return _difficultTerrain.Contains(position);
+        }
+
+        public int GetPathCost(Position start, Position destination)
+        {
+            // Simplified path cost: Straight line (Bresenham)
+            // Cost = Sum of costs of entering each cell.
+            // Start cell cost is NOT included (you are already there).
+            
+            var points = GetLinePoints(start, destination);
+            int totalCost = 0;
+
+            // Skip the first point (start)
+            foreach (var point in System.Linq.Enumerable.Skip(points, 1))
+            {
+                int stepCost = IsDifficultTerrain(point) ? 10 : 5;
+                totalCost += stepCost;
+            }
+
+            return totalCost;
+        }
+
+        // Helper to expose line points (refactored from HasLineOfSight or duplicated for now)
+        private static System.Collections.Generic.IEnumerable<Position> GetLinePoints(Position p1, Position p2)
+        {
+            int x1 = p1.X, y1 = p1.Y, z1 = p1.Z;
+            int x2 = p2.X, y2 = p2.Y, z2 = p2.Z;
+
+            int dx = Math.Abs(x2 - x1);
+            int dy = Math.Abs(y2 - y1);
+            int dz = Math.Abs(z2 - z1);
+
+            int xs = x1 < x2 ? 1 : -1;
+            int ys = y1 < y2 ? 1 : -1;
+            int zs = z1 < z2 ? 1 : -1;
+
+            // 3D Bresenham is complex.
+            // Let's use a simpler approach: Max(dx, dy, dz) steps.
+            // This is equivalent to Chebyshev distance steps.
+            
+            int steps = Math.Max(dx, Math.Max(dy, dz));
+            
+            // Yield start
+            yield return p1;
+
+            if (steps == 0) yield break;
+
+            for (int i = 1; i <= steps; i++)
+            {
+                // Interpolate
+                // Note: This is a rough approximation for grid movement.
+                // Ideally we'd use a proper 3D line algorithm.
+                // But for "Chebyshev" movement (diagonals are free), we just need to visit cells.
+                
+                int x = x1 + (dx == 0 ? 0 : (int)Math.Round((double)dx * i / steps) * xs);
+                // Wait, simple interpolation:
+                // x = x1 + i * (x2 - x1) / steps ?? No, integer division issues.
+                
+                // Let's stick to the logic used in HasLineOfSight if possible, or a standard one.
+                // Actually, let's just use the same logic as HasLineOfSight but yield points.
+                
+                // Re-implementing Bresenham cleanly:
+                // For 3D, we can drive by the major axis.
+                
+                // But wait, if we use Chebyshev distance (5-5-5), we just take 'steps' moves.
+                // Each move brings us closer.
+                
+                int cx = x1 + (int)Math.Round((double)(x2 - x1) * i / steps);
+                int cy = y1 + (int)Math.Round((double)(y2 - y1) * i / steps);
+                int cz = z1 + (int)Math.Round((double)(z2 - z1) * i / steps);
+                
+                yield return new Position(cx, cy, cz);
+            }
+        }
     }
 }
