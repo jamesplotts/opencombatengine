@@ -19,6 +19,7 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         Ability? SaveAbility { get; } // Null if no save
         string? DamageDice { get; } // e.g. "8d6"
         DamageType? DamageType { get; }
+        OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
         /// <summary>
         /// Executes the spell's effect.

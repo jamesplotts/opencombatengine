@@ -21,6 +21,7 @@ namespace OpenCombatEngine.Implementation.Spells
         public Ability? SaveAbility { get; }
         public string? DamageDice { get; }
         public DamageType? DamageType { get; }
+        public OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
         private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
         private readonly Func<ICreature, object?, Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>>? _customEffect;
@@ -39,6 +40,7 @@ namespace OpenCombatEngine.Implementation.Spells
             Ability? saveAbility = null,
             string? damageDice = null,
             DamageType? damageType = null,
+            OpenCombatEngine.Core.Interfaces.Spatial.IShape? areaOfEffect = null,
             Func<ICreature, object?, Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>>? customEffect = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -58,6 +60,7 @@ namespace OpenCombatEngine.Implementation.Spells
             SaveAbility = saveAbility;
             DamageDice = damageDice;
             DamageType = damageType;
+            AreaOfEffect = areaOfEffect;
             _customEffect = customEffect;
         }
 

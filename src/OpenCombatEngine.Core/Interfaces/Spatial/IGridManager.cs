@@ -19,6 +19,7 @@ namespace OpenCombatEngine.Core.Interfaces.Spatial
         bool IsObstructed(Position position);
         bool HasLineOfSight(Position source, Position target);
         IEnumerable<ICreature> GetCreaturesWithin(Position center, int radius);
+        IEnumerable<ICreature> GetCreaturesInShape(Position origin, IShape shape, Position? direction = null);
         IEnumerable<ICreature> GetAllCreatures();
     }
 }

@@ -220,3 +220,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update Actions to check LOS
     - [x] Verify with Tests
 - [x] [Save Line of Sight ADR](docs/adr/0032-line-of-sight.md)
+
+- [x] **Cycle 24: Area of Effect**
+    - [x] Define Shapes
+    - [x] Implement AOE Targeting
+    - [x] Verify with Tests
+- [x] [Save Area of Effect ADR](docs/adr/0033-area-of-effect.md)

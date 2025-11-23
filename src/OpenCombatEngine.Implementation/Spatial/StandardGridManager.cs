@@ -234,6 +234,23 @@ namespace OpenCombatEngine.Implementation.Spatial
             return true;
         }
 
+        public IEnumerable<ICreature> GetCreaturesInShape(Position origin, IShape shape, Position? direction = null)
+        {
+            ArgumentNullException.ThrowIfNull(shape);
+
+            foreach (var kvp in _creaturePositions)
+            {
+                var pos = kvp.Value;
+                if (shape.Contains(origin, pos, direction))
+                {
+                    if (_creatures.TryGetValue(kvp.Key, out var creature))
+                    {
+                        yield return creature;
+                    }
+                }
+            }
+        }
+
         public IEnumerable<ICreature> GetAllCreatures()
         {
             return _creatures.Values;

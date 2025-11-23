@@ -33,40 +33,53 @@ namespace OpenCombatEngine.Implementation.Actions
             // But ISpell.Cast currently takes ICreature target.
             // So we must enforce CreatureTarget for now.
             
-            ICreature? target = null;
-            if (context.Target is OpenCombatEngine.Core.Models.Actions.CreatureTarget creatureTarget)
-            {
-                target = creatureTarget.Creature;
-            }
-            // If target is null, maybe self cast? Or AOE?
-            // ISpell.Cast signature: Result<SpellResolution> Cast(ICreature caster, ICreature target);
-            // It requires a target.
-            
-            if (target == null)
-            {
-                // If spell allows null target (e.g. self buff implicit?), we pass null?
-                // But ISpell.Cast might throw.
-                // Let's assume target is required for now unless we change ISpell.
-                // Actually, let's check if target is required.
-                // For now, fail if not creature target.
-                return Result<ActionResult>.Failure("Target must be a creature for spellcasting (currently).");
-            }
-            
-            // LOS Check
-            if (context.Grid != null)
-            {
-                var sourcePos = context.Grid.GetPosition(source);
-                var targetPos = context.Grid.GetPosition(target);
+            // Determine Target
+            ICreature? creatureTarget = null;
+            OpenCombatEngine.Core.Models.Spatial.Position? positionTarget = null;
 
-                if (sourcePos != null && targetPos != null)
+            if (context.Target is OpenCombatEngine.Core.Models.Actions.CreatureTarget ct)
+            {
+                creatureTarget = ct.Creature;
+                if (context.Grid != null)
                 {
-                    if (!context.Grid.HasLineOfSight(sourcePos.Value, targetPos.Value))
-                    {
-                        return Result<ActionResult>.Failure("No line of sight to target.");
-                    }
+                    positionTarget = context.Grid.GetPosition(creatureTarget);
                 }
             }
-            
+            else if (context.Target is OpenCombatEngine.Core.Models.Actions.PositionTarget pt)
+            {
+                positionTarget = pt.Position;
+            }
+
+            // Validation based on Spell Type (AOE vs Single Target)
+            if (_spell.AreaOfEffect != null)
+            {
+                // AOE Spell
+                if (positionTarget == null && creatureTarget == null)
+                {
+                     // Some AOE spells originate from caster (Self)
+                     // If range is "Self", origin is caster position.
+                     if (_spell.Range.Equals("Self", StringComparison.OrdinalIgnoreCase))
+                     {
+                         if (context.Grid != null)
+                         {
+                             positionTarget = context.Grid.GetPosition(source);
+                         }
+                     }
+                     else
+                     {
+                         return Result<ActionResult>.Failure("AOE spell requires a target position or creature.");
+                     }
+                }
+            }
+            else
+            {
+                // Single Target Spell
+                if (creatureTarget == null)
+                {
+                    return Result<ActionResult>.Failure("Target must be a creature for this spell.");
+                }
+            }
+
             var spellcasting = source.Spellcasting;
             if (spellcasting == null)
             {
@@ -74,9 +87,6 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // Check preparation
-            // Note: We check by name for simplicity, or reference if possible.
-            // Spells are usually value objects or singletons?
-            // Let's check by Name.
             bool isPrepared = false;
             foreach (var prepared in spellcasting.PreparedSpells)
             {
@@ -105,15 +115,64 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure(consumeResult.Error);
             }
 
-            // Cast spell
-            var castResult = _spell.Cast(source, target);
-            if (!castResult.IsSuccess)
+            // Execute Spell
+            if (_spell.AreaOfEffect != null && context.Grid != null && positionTarget != null)
             {
-                return Result<ActionResult>.Failure($"Failed to cast {_spell.Name}: {castResult.Error}");
-            }
+                // AOE Execution
+                var origin = positionTarget.Value;
+                // If range is Self, origin is source. If range is distance, origin is target point.
+                // For now, assume origin is the target point.
+                
+                var targets = context.Grid.GetCreaturesInShape(origin, _spell.AreaOfEffect);
+                var messages = new System.Collections.Generic.List<string>();
+                int hitCount = 0;
 
-            var resolution = castResult.Value;
-            return Result<ActionResult>.Success(new ActionResult(true, resolution.Message));
+                foreach (var t in targets)
+                {
+                    // Skip caster if AOE excludes them? (Usually AOE includes everyone in area)
+                    // But if it's Self (Cone), caster is origin but not target?
+                    // Cone: Origin is caster, direction is target.
+                    // Sphere: Origin is center.
+                    // Let's assume Sphere for now (Fireball).
+                    
+                    var castResult = _spell.Cast(source, t);
+                    if (castResult.IsSuccess)
+                    {
+                        messages.Add($"{t.Name}: {castResult.Value.Message}");
+                        hitCount++;
+                    }
+                }
+                
+                return Result<ActionResult>.Success(new ActionResult(true, $"Cast {_spell.Name} (AOE). Hits: {hitCount}. Details: {string.Join("; ", messages)}"));
+            }
+            else
+            {
+                // Single Target Execution
+                
+                // LOS Check (only for single target or center of AOE if we checked it earlier, but let's keep it simple)
+                if (context.Grid != null && creatureTarget != null)
+                {
+                    var sourcePos = context.Grid.GetPosition(source);
+                    var targetPos = context.Grid.GetPosition(creatureTarget);
+
+                    if (sourcePos != null && targetPos != null)
+                    {
+                        if (!context.Grid.HasLineOfSight(sourcePos.Value, targetPos.Value))
+                        {
+                            return Result<ActionResult>.Failure("No line of sight to target.");
+                        }
+                    }
+                }
+
+                var castResult = _spell.Cast(source, creatureTarget);
+                if (!castResult.IsSuccess)
+                {
+                    return Result<ActionResult>.Failure($"Failed to cast {_spell.Name}: {castResult.Error}");
+                }
+
+                var resolution = castResult.Value;
+                return Result<ActionResult>.Success(new ActionResult(true, resolution.Message));
+            }
         }
     }
 }
