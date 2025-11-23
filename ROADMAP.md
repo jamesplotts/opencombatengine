@@ -85,43 +85,52 @@ This document tracks the progress of the OpenCombatEngine development, including
 - [x] **Unsupervised Cycle 1: Ability Checks & Saving Throws**
     - [x] Implement `RollCheck` and `RollSave`
     - [x] Verify with Tests
+- [x] [Save Ability Checks ADR](docs/adr/0010-ability-checks-and-saves.md)
 
 - [x] **Unsupervised Cycle 2: Damage Types & Resistances**
     - [x] Implement `DamageType` Enum
     - [x] Update `TakeDamage` logic
     - [x] Verify with Tests
+- [x] [Save Damage Types ADR](docs/adr/0011-damage-types-and-resistances.md)
 
 - [x] **Unsupervised Cycle 3: Death Saving Throws**
     - [x] Implement Death Save logic in `StartTurn`
     - [x] Verify with Tests
+- [x] [Save Death Saves ADR](docs/adr/0012-death-saving-throws.md)
 
 - [x] **Unsupervised Cycle 4: Combat Actions Integration**
     - [x] Implement `MoveAction`
     - [x] Update `AttackAction` to consume Action
     - [x] Verify with Tests
+- [x] [Save Combat Actions ADR](docs/adr/0013-combat-actions-integration.md)
 
 - [x] **Unsupervised Cycle 5: Concrete Conditions**
     - [x] Implement Standard Conditions (Blinded, etc.)
     - [x] Verify with Tests
+- [x] [Save Concrete Conditions ADR](docs/adr/0014-concrete-conditions.md)
 
 - [x] **Unsupervised Cycle 6: Serialization & Cleanup**
     - [x] Update Serialization (CombatStats, Conditions)
     - [x] Fix Warnings & Cleanup
     - [x] Verify with Tests
+- [x] [Save Serialization ADR](docs/adr/0015-serialization-and-cleanup.md)
 
 - [x] **Unsupervised Cycle 7: Inventory & Equipment**
     - [x] Implement Items, Weapons, Armor
     - [x] Integrate with CombatStats (AC) and AttackAction
     - [x] Verify with Tests
+- [x] [Save Inventory ADR](docs/adr/0016-inventory-and-equipment.md)
 
 - [x] **Unsupervised Cycle 8: Resting System**
     - [x] Implement Short/Long Rest
     - [x] Verify with Tests
+- [x] [Save Resting System ADR](docs/adr/0017-resting-system.md)
 
 - [x] **Unsupervised Cycle 9: Spellcasting Foundation**
     - [x] Implement Spells & Spellbook
     - [x] Implement CastSpellAction
     - [x] Verify with Tests
+- [x] [Save Spellcasting Foundation ADR](docs/adr/0018-spellcasting-foundation.md)
 
 - [x] **Cycle 10: Content Import System**
     - [x] Implement `IContentImporter`
