@@ -135,3 +135,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardCreature` for custom actions
     - [x] Verify with Tests
 - [x] [Save Monster Import System Architecture Record](docs/architecture/020-monster-import-system.md)
+
+- [x] **Cycle 12: Combat Resolution Refactor**
+    - [x] Implement "Attack Object" pattern (`AttackResult`)
+    - [x] Add `ResolveAttack` to `ICreature`
+    - [x] Refactor Actions to use new pipeline
+- [x] [Save Combat Resolution Pattern Architecture Record](docs/architecture/021-combat-resolution-pattern.md)

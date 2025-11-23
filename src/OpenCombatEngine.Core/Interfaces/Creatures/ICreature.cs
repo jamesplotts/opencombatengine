@@ -3,6 +3,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
+using OpenCombatEngine.Core.Models.Combat;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
@@ -85,6 +86,13 @@ public interface ICreature
     /// Gets the spellcasting component, if the creature is a spellcaster.
     /// </summary>
     ISpellCaster? Spellcasting { get; }
+
+    /// <summary>
+    /// Resolves an incoming attack.
+    /// </summary>
+    /// <param name="attack">The attack data.</param>
+    /// <returns>The outcome of the resolution.</returns>
+    AttackOutcome ResolveAttack(AttackResult attack);
 
     /// <summary>
     /// Performs a rest.

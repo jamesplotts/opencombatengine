@@ -44,26 +44,34 @@ namespace OpenCombatEngine.Implementation.Actions
             var d20 = new Random().Next(1, 21);
 #pragma warning restore CA5394
             var attackRoll = d20 + ToHitBonus;
+            bool isCrit = d20 == 20; // Simple crit check
 
-            // 3. Check vs AC
-            var hits = attackRoll >= target.CombatStats.ArmorClass;
-
-            // 4. Consume Action
-            source.ActionEconomy.UseAction();
-
-            if (hits)
+            // 3. Roll Damage
+            var damage = ParseAndRollDamage(DamageDice);
+            if (isCrit)
             {
-                // 5. Roll Damage
-                var damage = ParseAndRollDamage(DamageDice);
-                
-                target.HitPoints.TakeDamage(damage, DamageType);
+                // Roll again for crit
+                damage += ParseAndRollDamage(DamageDice);
+            }
 
-                return Result<ActionResult>.Success(new ActionResult(true, $"{Name} hit for {damage} {DamageType} damage."));
-            }
-            else
+            // 4. Create AttackResult
+            var damageRolls = new System.Collections.Generic.List<OpenCombatEngine.Core.Models.Combat.DamageRoll>
             {
-                return Result<ActionResult>.Success(new ActionResult(false, $"{Name} missed."));
-            }
+                new OpenCombatEngine.Core.Models.Combat.DamageRoll(damage, DamageType)
+            };
+
+            var attackResult = new OpenCombatEngine.Core.Models.Combat.AttackResult(
+                source,
+                target,
+                attackRoll,
+                isCrit,
+                damageRolls
+            );
+
+            // 5. Resolve
+            var outcome = target.ResolveAttack(attackResult);
+
+            return Result<ActionResult>.Success(new ActionResult(outcome.IsHit, outcome.Message, outcome.DamageDealt));
         }
 
         private static int ParseAndRollDamage(string diceString)

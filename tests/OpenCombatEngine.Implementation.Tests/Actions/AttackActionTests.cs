@@ -77,6 +77,10 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             _diceRoller.Roll("1d20+5").Returns(Result<DiceRollResult>.Success(
                 new DiceRollResult(14, "1d20+5", new List<int> { 9 }, 5, RollType.Normal)));
 
+            // Mock Damage Roll (even on miss, it's rolled now)
+            _diceRoller.Roll("1d8").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(6, "1d8", new List<int> { 6 }, 0, RollType.Normal)));
+
             // Act
             var result = action.Execute(_source, _target);
 
@@ -165,6 +169,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);
 
             _diceRoller.RollWithDisadvantage(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10, 5 }, 0, RollType.Disadvantage)));
+            _diceRoller.Roll("1d8").Returns(Result<DiceRollResult>.Success(new DiceRollResult(5, "1d8", new List<int> { 5 }, 0, RollType.Normal)));
 
             // Act
             var result = action.Execute(source, _target);
@@ -172,7 +177,8 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             // Assert
             result.IsSuccess.Should().BeTrue();
             _diceRoller.Received(1).RollWithDisadvantage(Arg.Any<string>());
-            _diceRoller.DidNotReceive().Roll(Arg.Any<string>());
+            _diceRoller.DidNotReceive().Roll(Arg.Is<string>(s => s.Contains("1d20"))); // Should not roll normal attack
+            _diceRoller.Received(1).Roll(Arg.Is<string>(s => s.Contains("1d8"))); // Should roll damage
         }
     }
 }

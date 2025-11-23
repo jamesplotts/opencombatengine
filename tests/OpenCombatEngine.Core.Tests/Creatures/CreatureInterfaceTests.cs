@@ -103,6 +103,10 @@ public class CreatureInterfaceTests
         public void StartTurn() { }
         public void EndTurn() { }
         public void Rest(RestType type, int hitDiceToSpend = 0) { }
+        public OpenCombatEngine.Core.Models.Combat.AttackOutcome ResolveAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)
+        {
+            return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(true, 0, "Stub Hit");
+        }
     }
 
     private class StubCheckManager : ICheckManager

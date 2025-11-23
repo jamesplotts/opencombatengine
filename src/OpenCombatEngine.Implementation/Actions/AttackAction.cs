@@ -73,11 +73,8 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // 1. Roll to Hit
-            // We use d20 + attackBonus
-            // Note: We should probably use a more robust dice notation builder, but string concat is fine for now.
             string attackNotation = $"1d20+{_attackBonus}";
             
-            // Check for Prone (Disadvantage)
             bool isProne = source.Conditions?.HasCondition(ConditionType.Prone) ?? false;
             
             Result<DiceRollResult> attackRollResult;
@@ -96,59 +93,27 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             var attackTotal = attackRollResult.Value.Total;
-            var targetAC = target.CombatStats.ArmorClass;
-
-            // 2. Check for Hit
-            // Meets it beats it
-            bool isHit = attackTotal >= targetAC;
-            
-            // Critical Hit check (Natural 20)
             bool isCrit = attackRollResult.Value.IsCriticalSuccess;
-            if (isCrit) isHit = true;
 
-            // Critical Miss check (Natural 1)
-            // If IsCriticalFailure is true (which usually means nat 1 on d20), it's a miss regardless of mods.
-            // We need to check if DiceRollResult has IsCriticalFailure. It does not in the previous view, 
-            // but let's check if we missed it or if we need to infer it.
-            // The DiceRollResult had IsCriticalSuccess. Let's assume standard rules: Nat 1 is auto miss.
-            // We can check IndividualRolls if needed, but let's stick to simple total >= AC for now unless we want to be strict.
-            // Actually, let's just use total >= AC.
-
-            if (!isHit)
-            {
-                return Result<ActionResult>.Success(new ActionResult(false, $"Missed! Rolled {attackTotal} vs AC {targetAC}"));
-            }
-
-            // 3. Roll Damage
-            // If crit, we roll double dice. 
-            // StandardDiceRoller doesn't natively support "Crit" flag to double dice, we have to manipulate notation.
-            // Determine damage dice and type
+            // 2. Roll Damage
             string damageDice = _damageDice;
             DamageType damageType = _damageType;
             int damageBonus = _damageBonus;
 
-            // Check for equipped weapon if using default "Attack"
             if (Name == "Attack" && source.Equipment?.MainHand != null)
             {
                 damageDice = source.Equipment.MainHand.DamageDice;
                 damageType = source.Equipment.MainHand.DamageType;
-                // Assuming weapon damage bonus is included in its DamageDice string or handled separately.
-                // For now, we'll just use the action's damageBonus if not overridden by weapon.
-                // If weapon has its own bonus, it should be added here.
-                // For simplicity, let's assume weapon damage dice string includes its bonus, or we add a flat bonus.
-                // For now, we'll keep the action's damageBonus.
             }
             
-            // Roll base damage
             var damageRollResult = _diceRoller.Roll(damageDice);
             if (!damageRollResult.IsSuccess)
             {
                  return Result<ActionResult>.Failure($"Failed to roll damage: {damageRollResult.Error}");
             }
-            int damage = damageRollResult.Value.Total + damageBonus;
-            if (damage < 0) damage = 0; // Minimum 0 damage
+            int damageAmount = damageRollResult.Value.Total + damageBonus;
+            if (damageAmount < 0) damageAmount = 0;
 
-            // Critical Hit: Roll damage dice again (double dice)
             if (isCrit)
             {
                 var critRollResult = _diceRoller.Roll(damageDice);
@@ -156,18 +121,27 @@ namespace OpenCombatEngine.Implementation.Actions
                 {
                     return Result<ActionResult>.Failure($"Failed to roll critical damage: {critRollResult.Error}");
                 }
-                damage += critRollResult.Value.Total;
+                damageAmount += critRollResult.Value.Total;
             }
 
-            // 4. Apply Damage
-            // Assuming ICreature.HitPoints.TakeDamage has an overload for DamageType
-            target.HitPoints.TakeDamage(damage, damageType);
+            // 3. Create AttackResult
+            var damageRolls = new System.Collections.Generic.List<OpenCombatEngine.Core.Models.Combat.DamageRoll>
+            {
+                new OpenCombatEngine.Core.Models.Combat.DamageRoll(damageAmount, damageType)
+            };
 
-            string message = isCrit 
-                ? $"CRITICAL HIT! Dealt {damage} {damageType} damage." 
-                : $"Hit! Dealt {damage} {damageType} damage.";
+            var attackResult = new OpenCombatEngine.Core.Models.Combat.AttackResult(
+                source,
+                target,
+                attackTotal,
+                isCrit,
+                damageRolls
+            );
 
-            return Result<ActionResult>.Success(new ActionResult(true, message, damage));
+            // 4. Resolve
+            var outcome = target.ResolveAttack(attackResult);
+
+            return Result<ActionResult>.Success(new ActionResult(outcome.IsHit, outcome.Message, outcome.DamageDealt));
         }
     }
 }

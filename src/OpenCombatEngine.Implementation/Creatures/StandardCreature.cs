@@ -285,5 +285,81 @@ namespace OpenCombatEngine.Implementation.Creatures
                 yield return action;
             }
         }
+
+        public OpenCombatEngine.Core.Models.Combat.AttackOutcome ResolveAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)
+        {
+            ArgumentNullException.ThrowIfNull(attack);
+
+            var targetAC = CombatStats.ArmorClass;
+            bool isHit = attack.AttackRoll >= targetAC || attack.IsCritical;
+
+            // Critical Miss logic could be passed in AttackResult or handled here if we knew the raw roll.
+            // AttackResult has AttackRoll (total). If we want nat 1 logic, we need IsCriticalFailure flag in AttackResult.
+            // For now, we assume the caller handled "Nat 1 = Miss" by passing a low roll or we trust total < AC.
+            // Actually, if Nat 20 hits regardless of AC, we rely on IsCritical.
+            
+            if (!isHit)
+            {
+                return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(false, 0, "Missed.");
+            }
+
+            int totalDamage = 0;
+            foreach (var damageRoll in attack.Damage)
+            {
+                // Future: Apply Resistance/Vulnerability here based on damageRoll.Type
+                // e.g. if (Resistances.Contains(damageRoll.Type)) damage /= 2;
+                
+                totalDamage += damageRoll.Amount;
+            }
+
+            // HitPoints.TakeDamage(totalDamage); // REMOVED duplicate call
+            
+            // Refined logic:
+            // Iterate and apply.
+            // But wait, if I have 5 Fire and 5 Slashing.
+            // I apply 5 Fire. HP reduces.
+            // I apply 5 Slashing. HP reduces.
+            // Total 10. Correct.
+            
+            // Re-implementing loop to call TakeDamage per roll.
+            // But wait, AttackResult.Damage is a list of rolls.
+            // If we have 2d6 Slashing (rolled as 3 and 4), we have two entries? Or one entry of 7?
+            // The caller (AttackAction) aggregates?
+            // AttackAction rolls damage. "1d6+2". It returns one total.
+            // So usually one entry per type.
+            
+            // However, if we just call TakeDamage, we are modifying state.
+            // We should calculate total first? No, TakeDamage handles death logic.
+            
+            // Let's do this:
+            // We need to return total damage dealt for the message.
+            int actualDamageDealt = 0;
+            
+            // We need to be careful about overkilling? No, damage is damage.
+            
+            // Issue: If we call TakeDamage multiple times, we get multiple events.
+            // Is that desired? "Took 5 Fire damage", "Took 5 Slashing damage". Yes, that's good.
+            
+            // But for the AttackOutcome, we want the sum.
+            
+            foreach (var damageRoll in attack.Damage)
+            {
+                // Apply mitigation (Resistance)
+                int amount = damageRoll.Amount;
+                // TODO: Apply resistance
+                
+                if (amount > 0)
+                {
+                    HitPoints.TakeDamage(amount, damageRoll.Type);
+                    actualDamageDealt += amount;
+                }
+            }
+
+            string message = attack.IsCritical 
+                ? $"CRITICAL HIT! Dealt {actualDamageDealt} damage." 
+                : $"Hit! Dealt {actualDamageDealt} damage.";
+
+            return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(true, actualDamageDealt, message);
+        }
     }
 }
