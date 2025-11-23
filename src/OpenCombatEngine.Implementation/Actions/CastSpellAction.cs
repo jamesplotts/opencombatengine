@@ -33,6 +33,25 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure($"{source.Name} cannot cast spells.");
             }
 
+            // Check preparation
+            // Note: We check by name for simplicity, or reference if possible.
+            // Spells are usually value objects or singletons?
+            // Let's check by Name.
+            bool isPrepared = false;
+            foreach (var prepared in spellcasting.PreparedSpells)
+            {
+                if (prepared.Name == _spell.Name)
+                {
+                    isPrepared = true;
+                    break;
+                }
+            }
+
+            if (!isPrepared)
+            {
+                return Result<ActionResult>.Failure($"Spell {_spell.Name} is not prepared.");
+            }
+
             // Check slots
             if (!spellcasting.HasSlot(_slotLevel))
             {

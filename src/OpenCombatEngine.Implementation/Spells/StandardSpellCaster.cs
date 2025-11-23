@@ -9,47 +9,39 @@ namespace OpenCombatEngine.Implementation.Spells
     public class StandardSpellCaster : ISpellCaster
     {
         private readonly List<ISpell> _knownSpells = new();
-        private readonly Dictionary<int, int> _maxSlots = new();
-        private readonly Dictionary<int, int> _currentSlots = new();
+        private readonly List<ISpell> _preparedSpells = new();
+        private readonly SpellSlotManager _slotManager = new();
+        private readonly OpenCombatEngine.Core.Interfaces.Creatures.IAbilityScores _abilityScores;
+        private readonly int _proficiencyBonus;
+        private readonly OpenCombatEngine.Core.Enums.Ability _spellcastingAbility;
+
+        private readonly bool _isPreparedCaster;
 
         public IReadOnlyList<ISpell> KnownSpells => _knownSpells.AsReadOnly();
+        public IReadOnlyList<ISpell> PreparedSpells => _isPreparedCaster ? _preparedSpells.AsReadOnly() : _knownSpells.AsReadOnly();
 
-        public bool HasSlot(int level)
+        public int SpellSaveDC => 8 + _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+        public int SpellAttackBonus => _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+
+        public StandardSpellCaster(
+            OpenCombatEngine.Core.Interfaces.Creatures.IAbilityScores abilityScores,
+            int proficiencyBonus,
+            OpenCombatEngine.Core.Enums.Ability spellcastingAbility,
+            bool isPreparedCaster = false)
         {
-            if (level == 0) return true; // Cantrips don't use slots
-            return _currentSlots.TryGetValue(level, out int slots) && slots > 0;
+            ArgumentNullException.ThrowIfNull(abilityScores);
+            _abilityScores = abilityScores;
+            _proficiencyBonus = proficiencyBonus;
+            _spellcastingAbility = spellcastingAbility;
+            _isPreparedCaster = isPreparedCaster;
         }
 
-        public int GetSlots(int level)
-        {
-            return _currentSlots.TryGetValue(level, out int slots) ? slots : 0;
-        }
-
-        public int GetMaxSlots(int level)
-        {
-            return _maxSlots.TryGetValue(level, out int slots) ? slots : 0;
-        }
-
-        public Result<bool> ConsumeSlot(int level)
-        {
-            if (level == 0) return Result<bool>.Success(true); // Cantrips
-
-            if (!HasSlot(level))
-            {
-                return Result<bool>.Failure($"No spell slots available for level {level}.");
-            }
-
-            _currentSlots[level]--;
-            return Result<bool>.Success(true);
-        }
-
-        public void RestoreAllSlots()
-        {
-            foreach (var level in _maxSlots.Keys)
-            {
-                _currentSlots[level] = _maxSlots[level];
-            }
-        }
+        public bool HasSlot(int level) => _slotManager.HasSlot(level);
+        public int GetSlots(int level) => _slotManager.GetCurrentSlots(level);
+        public int GetMaxSlots(int level) => _slotManager.GetMaxSlots(level);
+        public Result<bool> ConsumeSlot(int level) => _slotManager.ConsumeSlot(level);
+        public void RestoreAllSlots() => _slotManager.RestoreAllSlots();
+        public void SetSlots(int level, int max) => _slotManager.SetSlots(level, max);
 
         public void LearnSpell(ISpell spell)
         {
@@ -60,20 +52,28 @@ namespace OpenCombatEngine.Implementation.Spells
             }
         }
 
-        public void SetSlots(int level, int max)
+        public Result<bool> PrepareSpell(ISpell spell)
         {
-            if (level < 1 || level > 9) throw new ArgumentOutOfRangeException(nameof(level), "Slot level must be between 1 and 9.");
-            if (max < 0) throw new ArgumentOutOfRangeException(nameof(max), "Max slots cannot be negative.");
+            ArgumentNullException.ThrowIfNull(spell);
+            if (!_knownSpells.Any(s => s.Name == spell.Name))
+            {
+                return Result<bool>.Failure($"Cannot prepare unknown spell: {spell.Name}");
+            }
+            if (!_preparedSpells.Any(s => s.Name == spell.Name))
+            {
+                _preparedSpells.Add(spell);
+            }
+            return Result<bool>.Success(true);
+        }
 
-            _maxSlots[level] = max;
-            // If we increase max, should we increase current? Usually yes on level up.
-            // If we decrease, we clamp.
-            // For simplicity, let's reset current to max when setting max, assuming this happens on initialization or level up.
-            // Or should we preserve current?
-            // If we are just setting capacity, maybe preserve.
-            // But if we are initializing, we want full.
-            // Let's set current to max for now.
-            _currentSlots[level] = max;
+        public void UnprepareSpell(ISpell spell)
+        {
+            ArgumentNullException.ThrowIfNull(spell);
+            var existing = _preparedSpells.FirstOrDefault(s => s.Name == spell.Name);
+            if (existing != null)
+            {
+                _preparedSpells.Remove(existing);
+            }
         }
     }
 }
