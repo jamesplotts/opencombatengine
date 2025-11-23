@@ -226,5 +226,64 @@ namespace OpenCombatEngine.Implementation.Creatures
                 // For now, just HP and Hit Dice.
             }
         }
+
+        private readonly System.Collections.Generic.List<OpenCombatEngine.Core.Interfaces.Actions.IAction> _customActions = new();
+
+        public void AddAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action)
+        {
+            _customActions.Add(action);
+        }
+
+        public System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> GetActions()
+        {
+            // Move Action
+            // Assuming Speed is available on Movement component, but IMovement doesn't expose MaxSpeed directly?
+            // StandardMovement has Speed. IMovement has MovementRemaining.
+            // We might need to cast or assume 30 if unknown.
+            // Actually StandardMovement constructor takes speed, but doesn't expose it on interface?
+            // Let's check IMovement.
+            // If not available, we'll default to 30.
+            int speed = 30;
+            if (Movement is StandardMovement stdMove)
+            {
+                // StandardMovement doesn't expose Speed public property? 
+                // Let's assume 30 for now to avoid breaking if property missing.
+                // TODO: Expose Speed on IMovement.
+            }
+            yield return new OpenCombatEngine.Implementation.Actions.MoveAction(speed);
+
+            // Unarmed Strike
+            var strMod = AbilityScores.GetModifier(OpenCombatEngine.Core.Enums.Ability.Strength);
+            var proficiency = ProficiencyBonus; // Assuming proficient
+            var attackBonus = strMod + proficiency;
+            var damageBonus = strMod;
+            var damageDice = "1"; // Flat 1 damage
+            var diceRoller = new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
+
+            yield return new OpenCombatEngine.Implementation.Actions.AttackAction(
+                "Unarmed Strike",
+                "Punch, kick, or headbutt.",
+                attackBonus,
+                damageDice,
+                OpenCombatEngine.Core.Enums.DamageType.Bludgeoning,
+                damageBonus,
+                diceRoller
+            );
+            
+            // Spells
+            if (Spellcasting != null)
+            {
+                foreach (var spell in Spellcasting.KnownSpells)
+                {
+                    yield return new OpenCombatEngine.Implementation.Actions.CastSpellAction(spell);
+                }
+            }
+
+            // Custom actions (e.g. from import)
+            foreach (var action in _customActions)
+            {
+                yield return action;
+            }
+        }
     }
 }

@@ -128,3 +128,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement `JsonSpellImporter` (5eTools format)
     - [x] Verify with Tests
 - [x] [Save Content Import System Architecture Record](docs/architecture/019-content-import-system.md)
+
+- [x] **Cycle 11: Monster Import System**
+    - [x] Implement `JsonMonsterImporter`
+    - [x] Implement `MonsterAttackAction`
+    - [x] Update `StandardCreature` for custom actions
+    - [x] Verify with Tests
+- [x] [Save Monster Import System Architecture Record](docs/architecture/020-monster-import-system.md)

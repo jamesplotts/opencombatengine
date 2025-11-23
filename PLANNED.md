@@ -3,7 +3,7 @@
 This document outlines the future direction of the OpenCombatEngine.
 
 ## Phase 3: Content System
-- [x] **5e.tools Import**: Support for importing content from 5e.tools JSON format.
+- [x] **5e.tools Import**: Support for importing content from 5e.tools JSON format (Spells, Monsters).
 - [ ] **Open5e API**: Integration with Open5e API for SRD content.
 - [ ] **Foundry VTT**: Compatibility with Foundry VTT data structures.
 - [ ] **Native Format**: Definition of a `.ocf` (Open Combat Format) for portable content.
