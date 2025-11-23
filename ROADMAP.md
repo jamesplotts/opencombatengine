@@ -122,3 +122,8 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement Spells & Spellbook
     - [x] Implement CastSpellAction
     - [x] Verify with Tests
+
+- [x] **Cycle 10: Content Import System**
+    - [x] Implement `IContentImporter`
+    - [x] Implement `JsonSpellImporter` (5eTools format)
+    - [x] Verify with Tests
