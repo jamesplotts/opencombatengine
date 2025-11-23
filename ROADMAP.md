@@ -187,3 +187,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `ResolveAttack` for Cover/Visibility
     - [x] Verify with Tests
 - [x] [Save Environmental Effects ADR](docs/adr/0027-environmental-effects.md)
+
+- [x] **Cycle 19: Grid System**
+    - [x] Implement `Position` Struct
+    - [x] Implement `IGridManager` & `StandardGridManager`
+    - [x] Implement Distance Calculation (5e Rules)
+    - [x] Verify with Tests
+- [x] [Save Grid System ADR](docs/adr/0028-grid-system.md)
