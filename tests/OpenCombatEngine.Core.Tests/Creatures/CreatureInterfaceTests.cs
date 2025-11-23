@@ -109,6 +109,8 @@ public class CreatureInterfaceTests
         }
 
         public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack) { }
+        public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
+        public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
     }
 
     private class StubCheckManager : ICheckManager

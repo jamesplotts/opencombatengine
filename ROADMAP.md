@@ -158,3 +158,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `CastSpellAction`
     - [x] Verify with Tests
 - [x] [Save Spell Resolution Architecture Record](docs/architecture/024-spell-resolution.md)
+
+- [x] **Cycle 16: Magic Items (Attunement & Passive Bonuses)**
+    - [x] Implement `IMagicItem` and `MagicItem`
+    - [x] Implement Attunement Logic in `IEquipmentManager`
+    - [x] Implement Passive Bonuses (Features/Conditions)
+    - [x] Verify with Tests
+- [x] [Save Magic Items Architecture Record](docs/architecture/025-magic-items.md)

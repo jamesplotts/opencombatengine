@@ -106,4 +106,16 @@ public interface ICreature
     /// <param name="type">The type of rest.</param>
     /// <param name="hitDiceToSpend">Number of hit dice to spend (Short Rest only).</param>
     void Rest(RestType type, int hitDiceToSpend = 0);
+
+    /// <summary>
+    /// Adds a feature to the creature.
+    /// </summary>
+    /// <param name="feature">The feature to add.</param>
+    void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature);
+
+    /// <summary>
+    /// Removes a feature from the creature.
+    /// </summary>
+    /// <param name="feature">The feature to remove.</param>
+    void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature);
 }

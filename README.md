@@ -44,6 +44,10 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - Spell Slots & Preparation (Wizard/Sorcerer style support)
   - Spell Resolution (Attack Rolls, Saving Throws, Damage)
   - Content Import (JSON support for Spells)
+- **Magic Items**:
+  - Attunement System (Max 3 items)
+  - Passive Bonuses (Features/Conditions applied automatically)
+  - Item Types (Weapons, Armor, Rings, Wondrous Items)
 - **Extensible Design**:
   - Interface-driven architecture
   - Dependency Injection friendly

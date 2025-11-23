@@ -66,7 +66,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             HitPoints = hitPoints ?? new StandardHitPoints(10, combatStats, diceRoller: diceRoller);
             
             Inventory = new StandardInventory();
-            Equipment = new StandardEquipmentManager();
+            Equipment = new StandardEquipmentManager(this);
 
             CombatStats = combatStats ?? new StandardCombatStats(equipment: Equipment, abilities: AbilityScores);
             
@@ -92,7 +92,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             HitPoints = new StandardHitPoints(state.HitPoints);
             
             Inventory = new StandardInventory();
-            Equipment = new StandardEquipmentManager();
+            Equipment = new StandardEquipmentManager(this);
 
             // Handle legacy state or new state with CombatStats
             // Note: If restoring from state, we might lose the dynamic link if we just use state.CombatStats properties.
@@ -388,6 +388,11 @@ namespace OpenCombatEngine.Implementation.Creatures
         public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature)
         {
             _features.Add(feature);
+        }
+
+        public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature)
+        {
+            _features.Remove(feature);
         }
 
         public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)

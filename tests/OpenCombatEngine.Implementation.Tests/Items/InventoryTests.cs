@@ -1,5 +1,7 @@
 using FluentAssertions;
+using NSubstitute;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Implementation.Items;
 using Xunit;
@@ -38,7 +40,7 @@ namespace OpenCombatEngine.Implementation.Tests.Items
         [Fact]
         public void Should_Equip_And_Unequip_Weapon()
         {
-            var equipment = new StandardEquipmentManager();
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
             var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
 
             equipment.EquipMainHand(sword).IsSuccess.Should().BeTrue();
@@ -49,9 +51,44 @@ namespace OpenCombatEngine.Implementation.Tests.Items
         }
 
         [Fact]
+        public void Equip_Should_Update_Equipment()
+        {
+            var inventory = new StandardInventory();
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
+            var weapon = Substitute.For<IWeapon>();
+            
+            inventory.AddItem(weapon);
+            equipment.EquipMainHand(weapon);
+
+            equipment.MainHand.Should().Be(weapon);
+        }
+
+        [Fact]
+        public void Unequip_Should_Clear_Equipment()
+        {
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
+            var weapon = Substitute.For<IWeapon>();
+            
+            equipment.EquipMainHand(weapon);
+            equipment.UnequipMainHand();
+
+            equipment.MainHand.Should().BeNull();
+        }
+
+        [Fact]
+        public void Equip_Should_Fail_If_Item_Not_In_Inventory()
+        {
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
+            var weapon = Substitute.For<IWeapon>();
+
+            var result = equipment.EquipMainHand(weapon);
+            result.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
         public void Should_Equip_And_Unequip_Armor()
         {
-            var equipment = new StandardEquipmentManager();
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
             var mail = new Armor("Chain Mail", 16, ArmorCategory.Heavy);
 
             equipment.EquipArmor(mail).IsSuccess.Should().BeTrue();
@@ -64,7 +101,7 @@ namespace OpenCombatEngine.Implementation.Tests.Items
         [Fact]
         public void Should_Not_Equip_Shield_As_Armor()
         {
-            var equipment = new StandardEquipmentManager();
+            var equipment = new StandardEquipmentManager(Substitute.For<ICreature>());
             var shield = new Armor("Shield", 2, ArmorCategory.Shield);
 
             equipment.EquipArmor(shield).IsSuccess.Should().BeFalse();
