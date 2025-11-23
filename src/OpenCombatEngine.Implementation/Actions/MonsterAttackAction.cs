@@ -14,18 +14,20 @@ namespace OpenCombatEngine.Implementation.Actions
         public string Name { get; }
         public string Description { get; }
         public ActionType Type => ActionType.Action;
+        public int Range { get; }
 
         public int ToHitBonus { get; }
         public string DamageDice { get; } // e.g. "1d6+2"
         public DamageType DamageType { get; }
 
-        public MonsterAttackAction(string name, string description, int toHitBonus, string damageDice, DamageType damageType)
+        public MonsterAttackAction(string name, string description, int toHitBonus, string damageDice, DamageType damageType, int range = 5)
         {
             Name = name;
             Description = description;
             ToHitBonus = toHitBonus;
             DamageDice = damageDice;
             DamageType = damageType;
+            Range = range;
         }
 
         public Result<ActionResult> Execute(IActionContext context)
@@ -38,6 +40,22 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure("Target must be a creature.");
             }
             var target = creatureTarget.Creature;
+
+            // Range Validation
+            if (context.Grid != null)
+            {
+                var sourcePos = context.Grid.GetPosition(source);
+                var targetPos = context.Grid.GetPosition(target);
+
+                if (sourcePos == null) return Result<ActionResult>.Failure("Attacker is not on the grid.");
+                if (targetPos == null) return Result<ActionResult>.Failure("Target is not on the grid.");
+
+                var distance = context.Grid.GetDistance(sourcePos.Value, targetPos.Value);
+                if (distance > Range)
+                {
+                    return Result<ActionResult>.Failure($"Target is out of range. Distance: {distance}, Range: {Range}");
+                }
+            }
 
             // 1. Check Action Economy
             if (!source.ActionEconomy.HasAction)

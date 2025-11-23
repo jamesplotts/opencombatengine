@@ -208,3 +208,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `MoveAction`
     - [x] Verify with Tests
 - [x] [Save Action Context ADR](docs/adr/0030-action-context.md)
+
+- [x] **Cycle 22: Range Validation**
+    - [x] Add `Range` property to Actions
+    - [x] Implement Range Validation
+    - [x] Verify with Tests
+- [x] [Save Range Validation ADR](docs/adr/0031-range-validation.md)

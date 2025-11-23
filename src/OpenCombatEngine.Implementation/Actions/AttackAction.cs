@@ -13,6 +13,7 @@ namespace OpenCombatEngine.Implementation.Actions
         public string Name { get; }
         public string Description { get; }
         public ActionType Type { get; }
+        public int Range { get; }
 
         private readonly int _attackBonus;
         private readonly string _damageDice;
@@ -20,7 +21,7 @@ namespace OpenCombatEngine.Implementation.Actions
         private readonly int _damageBonus;
         private readonly IDiceRoller _diceRoller;
 
-        public AttackAction(string name, string description, int attackBonus, string damageDice, DamageType damageType, int damageBonus, IDiceRoller diceRoller, ActionType type = ActionType.Action)
+        public AttackAction(string name, string description, int attackBonus, string damageDice, DamageType damageType, int damageBonus, IDiceRoller diceRoller, ActionType type = ActionType.Action, int range = 5)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             if (string.IsNullOrWhiteSpace(damageDice)) throw new ArgumentException("Damage dice cannot be empty", nameof(damageDice));
@@ -34,6 +35,7 @@ namespace OpenCombatEngine.Implementation.Actions
             _damageBonus = damageBonus;
             _diceRoller = diceRoller;
             Type = type;
+            Range = range;
         }
 
         public Result<ActionResult> Execute(IActionContext context)
@@ -46,6 +48,22 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure("Target must be a creature for an attack.");
             }
             var target = creatureTarget.Creature;
+
+            // Range Validation
+            if (context.Grid != null)
+            {
+                var sourcePos = context.Grid.GetPosition(source);
+                var targetPos = context.Grid.GetPosition(target);
+
+                if (sourcePos == null) return Result<ActionResult>.Failure("Attacker is not on the grid.");
+                if (targetPos == null) return Result<ActionResult>.Failure("Target is not on the grid.");
+
+                var distance = context.Grid.GetDistance(sourcePos.Value, targetPos.Value);
+                if (distance > Range)
+                {
+                    return Result<ActionResult>.Failure($"Target is out of range. Distance: {distance}, Range: {Range}");
+                }
+            }
 
             // 0. Check Action Economy
             if (source.ActionEconomy != null)
