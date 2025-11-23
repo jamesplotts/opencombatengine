@@ -1,3 +1,5 @@
+using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Effects;
 using System.Collections.Generic;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures
@@ -7,6 +9,7 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
     /// </summary>
     public interface ICombatStats
     {
+        void SetEffectManager(IEffectManager effects);
         /// <summary>
         /// Gets the Armor Class (AC) of the creature.
         /// Represents how difficult it is to hit the creature.

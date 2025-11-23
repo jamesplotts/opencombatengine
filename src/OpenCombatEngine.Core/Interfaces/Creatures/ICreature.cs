@@ -23,6 +23,11 @@ public interface ICreature
     string Name { get; }
 
     /// <summary>
+    /// Gets the team the creature belongs to.
+    /// </summary>
+    string Team { get; } // e.g. "Player", "Monster"
+
+    /// <summary>
     /// Gets the ability scores for the creature.
     /// </summary>
     IAbilityScores AbilityScores { get; }
@@ -56,6 +61,11 @@ public interface ICreature
     /// Gets the action economy manager for the creature.
     /// </summary>
     IActionEconomy ActionEconomy { get; }
+
+    /// <summary>
+    /// Gets the active effects manager for the creature.
+    /// </summary>
+    OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; }
 
     /// <summary>
     /// Gets the movement manager for the creature.

@@ -102,6 +102,7 @@ namespace OpenCombatEngine.Implementation.Tests
                 name,
                 new StandardAbilityScores(dexterity: dex),
                 new StandardHitPoints(10),
+                "Neutral",
                 new StandardCombatStats(initiativeBonus: initBonus)
             );
         }

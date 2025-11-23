@@ -1,10 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Actions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Spatial;
 using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Models.Spatial;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Actions.Contexts;
 
 namespace OpenCombatEngine.Implementation.Actions
 {
@@ -15,11 +20,13 @@ namespace OpenCombatEngine.Implementation.Actions
         public ActionType Type => ActionType.Movement;
 
         private readonly int _distance;
+        private readonly IDiceRoller? _diceRoller;
 
-        public MoveAction(int distance)
+        public MoveAction(int distance, IDiceRoller? diceRoller = null)
         {
             if (distance <= 0) throw new ArgumentOutOfRangeException(nameof(distance), "Distance must be positive.");
             _distance = distance;
+            _diceRoller = diceRoller;
         }
 
         public Result<ActionResult> Execute(IActionContext context)
@@ -48,45 +55,103 @@ namespace OpenCombatEngine.Implementation.Actions
 
                 var targetPos = positionTarget.Position;
                 
-                // Calculate PATH COST instead of simple distance
-                var movementCost = context.Grid.GetPathCost(currentPos.Value, targetPos);
-
-                // We still check if the "distance" (cost) is within the action's limit?
-                // MoveAction(30) means "Move up to 30 feet".
-                // If terrain is difficult, 30 feet of movement might only get you 15 feet of distance.
-                // So we check if cost <= _distance (action limit) AND cost <= MovementRemaining.
+                // Get Path
+                var path = context.Grid.GetPath(currentPos.Value, targetPos).ToList();
                 
-                if (movementCost > _distance)
+                // Path includes start. We want steps.
+                // If path is just start, we didn't move.
+                if (path.Count <= 1)
                 {
-                    return Result<ActionResult>.Failure($"Movement cost {movementCost} exceeds action limit {_distance}.");
+                     return Result<ActionResult>.Success(new ActionResult(true, "Did not move."));
                 }
 
-                if (source.Movement.MovementRemaining < movementCost)
+                int totalCost = 0;
+                Position lastPos = currentPos.Value;
+                
+                // Iterate steps
+                // Skip the first one (start)
+                for (int i = 1; i < path.Count; i++)
                 {
-                    return Result<ActionResult>.Failure($"Not enough movement. Required: {movementCost}, Remaining: {source.Movement.MovementRemaining}");
+                    var nextPos = path[i];
+                    var stepCost = context.Grid.GetPathCost(lastPos, nextPos);
+                    
+                    // Check limits
+                    if (totalCost + stepCost > _distance)
+                    {
+                        // Can't move further with this action
+                        break; 
+                    }
+                    if (source.Movement.MovementRemaining < stepCost)
+                    {
+                        // Can't move further this turn
+                        break;
+                    }
+
+                    // OPPORTUNITY ATTACK CHECK
+                    // Before moving from lastPos to nextPos, check if we provoke.
+                    // We provoke if we leave a hostile's reach.
+                    
+                    // 1. Find all hostiles
+                    // Optimization: Get creatures within max reach (10ft) of lastPos?
+                    // Or just get all creatures and filter.
+                    // Grid.GetCreaturesWithin(lastPos, 10) is good.
+                    var potentialAttackers = context.Grid.GetCreaturesWithin(lastPos, 15); // 15 to be safe
+                    
+                    foreach (var attacker in potentialAttackers)
+                    {
+                        if (attacker.Id == source.Id) continue; // Skip self
+                        if (attacker.Team == source.Team) continue; // Skip allies (assuming Team string match)
+                        if (!attacker.ActionEconomy.HasReaction) continue; // No reaction
+                        
+                        // Check if we are currently in reach
+                        int reach = context.Grid.GetReach(attacker);
+                        
+                        var attackerPos = context.Grid.GetPosition(attacker);
+                        if (attackerPos == null) continue;
+                        
+                        int distToCurrentStep = context.Grid.GetDistance(attackerPos.Value, lastPos);
+                        
+                        if (distToCurrentStep <= reach)
+                        {
+                            // We are in reach. Are we leaving it?
+                            int distToNextStep = context.Grid.GetDistance(attackerPos.Value, nextPos);
+                            if (distToNextStep > reach)
+                            {
+                                // PROVOKED!
+                                // Resolve Attack
+                                ResolveOpportunityAttack(attacker, source, context.Grid);
+                                
+                                // Did we die?
+                                if (source.HitPoints.Current <= 0)
+                                {
+                                    // Dead/Unconscious. Stop movement.
+                                    // Update grid to lastPos (where we died? or do we fall prone there?)
+                                    // Let's assume we stop at lastPos.
+                                    // But we haven't updated grid yet.
+                                    // So we just return.
+                                    return Result<ActionResult>.Success(new ActionResult(true, $"Moved to {lastPos} and was stopped by Opportunity Attack (Unconscious). Cost: {totalCost}."));
+                                }
+                            }
+                        }
+                    }
+
+                    // Move successful (so far)
+                    var moveResult = context.Grid.MoveCreature(source, nextPos);
+                    if (!moveResult.IsSuccess)
+                    {
+                        return Result<ActionResult>.Failure(moveResult.Error);
+                    }
+                    
+                    source.Movement.Move(stepCost);
+                    totalCost += stepCost;
+                    lastPos = nextPos;
                 }
 
-                var moveResult = context.Grid.MoveCreature(source, targetPos);
-                if (!moveResult.IsSuccess)
-                {
-                    return Result<ActionResult>.Failure(moveResult.Error);
-                }
-
-                source.Movement.Move(movementCost);
-                return Result<ActionResult>.Success(new ActionResult(true, $"Moved to {targetPos}. Cost: {movementCost}."));
+                return Result<ActionResult>.Success(new ActionResult(true, $"Moved to {lastPos}. Cost: {totalCost}."));
             }
             else
             {
-                // Fallback for non-grid movement (abstract)
-                // Just deduct distance? But we don't know "how far" unless target is abstract distance?
-                // For now, assume full distance used if no grid? Or just succeed?
-                // Let's assume non-grid movement just deducts the max distance of the action?
-                // Or maybe we shouldn't support non-grid movement in MoveAction anymore if it takes a distance?
-                // MoveAction(30) usually means "Move up to 30".
-                // Without grid, we can't validate "where".
-                // So we just deduct 0? Or assume success?
-                // Let's just deduct _distance for now to simulate "I moved 30ft".
-                
+                // Fallback for non-grid movement
                 if (source.Movement.MovementRemaining < _distance)
                 {
                     return Result<ActionResult>.Failure($"Not enough movement. Required: {_distance}, Remaining: {source.Movement.MovementRemaining}");
@@ -94,6 +159,32 @@ namespace OpenCombatEngine.Implementation.Actions
                 source.Movement.Move(_distance);
                 return Result<ActionResult>.Success(new ActionResult(true, $"Moved {_distance} feet (Abstract)."));
             }
+        }
+
+        private void ResolveOpportunityAttack(ICreature attacker, ICreature target, IGridManager grid)
+        {
+            if (_diceRoller == null) return; // Can't roll without roller
+
+            // Create Attack Action
+            // We assume a basic melee attack.
+            // We need weapon info.
+            string damageDice = "1d4"; // Default unarmed
+            DamageType damageType = DamageType.Bludgeoning;
+            
+            if (attacker.Equipment?.MainHand != null)
+            {
+                damageDice = attacker.Equipment.MainHand.DamageDice;
+                damageType = attacker.Equipment.MainHand.DamageType;
+            }
+            
+            // Construct temporary action
+            // Note: This bypasses the creature's own action list, which is a simplification.
+            // We pass ActionType.Reaction so AttackAction handles the resource consumption.
+            int reach = grid.GetReach(attacker);
+            var attackAction = new AttackAction("Opportunity Attack", "Reaction Attack", 5, damageDice, damageType, 1, _diceRoller, ActionType.Reaction, reach);
+            
+            var context = new StandardActionContext(attacker, new CreatureTarget(target), grid);
+            attackAction.Execute(context);
         }
     }
 }

@@ -27,6 +27,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Rogue",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
+                "Neutral",
                 new StandardCombatStats()
             );
 

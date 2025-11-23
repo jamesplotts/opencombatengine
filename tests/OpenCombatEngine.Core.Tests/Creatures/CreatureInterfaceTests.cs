@@ -73,6 +73,7 @@ public class CreatureInterfaceTests
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
+        public string Team { get; set; } = "Neutral";
         public IAbilityScores AbilityScores { get; set; }
         public IHitPoints HitPoints { get; set; }
         public ICombatStats CombatStats { get; set; }

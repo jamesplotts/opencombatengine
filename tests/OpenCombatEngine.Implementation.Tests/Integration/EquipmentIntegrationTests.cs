@@ -22,7 +22,8 @@ namespace OpenCombatEngine.Implementation.Tests.Integration
             // StandardCombatStats default base is 10. With Dex +2, it should be 10 (if using base) or 12 (if using unarmored logic).
             // Current implementation: Fallback returns _baseArmorClass (10). It ignores Dex if no armor.
             // Let's verify current behavior first.
-            creature.CombatStats.ArmorClass.Should().Be(10);
+            // UPDATE: Cycle 28 fixed this to correctly add Dex to unarmored AC (10 + Dex).
+            creature.CombatStats.ArmorClass.Should().Be(12);
 
             // Act - Equip Leather Armor (11 + Dex)
             var leather = new Armor("Leather", 11, ArmorCategory.Light);

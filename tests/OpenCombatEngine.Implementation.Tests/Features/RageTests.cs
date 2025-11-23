@@ -21,6 +21,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
+                "Neutral",
                 new StandardCombatStats()
             );
             var action = new RageAction();
@@ -50,6 +51,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
+                "Neutral",
                 new StandardCombatStats()
             );
             
@@ -84,6 +86,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
+                "Neutral",
                 new StandardCombatStats()
             );
             

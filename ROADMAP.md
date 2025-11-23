@@ -232,3 +232,25 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update MoveAction for Cost
     - [x] Verify with Tests
 - [x] [Save Movement Cost ADR](docs/adr/0034-movement-cost.md)
+
+- [x] **Cycle 26: Flanking**
+    - [x] Add `Team` to `ICreature`
+    - [x] Implement `IsFlanked` in `GridManager`
+    - [x] Update `AttackAction` for Advantage
+    - [x] Verify with Tests
+- [x] [Save Flanking ADR](docs/adr/0035-flanking.md)
+
+- [x] **Cycle 27: Opportunity Attacks**
+    - [x] Implement `GetReach` in `IGridManager`
+    - [x] Update `MoveAction` to detect leaving threatened squares
+    - [x] Implement `OpportunityAttack` logic
+    - [x] Verify with Tests
+- [x] [Save Opportunity Attacks ADR](docs/adr/0036-opportunity-attacks.md)
+
+- [x] **Cycle 28: Active Effects System**
+    - [x] Define `IActiveEffect` and `IEffectManager`
+    - [x] Implement `StandardEffectManager`
+    - [x] Integrate with `StandardCreature` and `StandardCombatStats`
+    - [x] Implement `StatBonusEffect`
+    - [x] Verify with Tests
+- [x] [Save Active Effects ADR](docs/adr/0037-active-effects-system.md)

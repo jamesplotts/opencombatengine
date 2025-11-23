@@ -292,6 +292,79 @@ namespace OpenCombatEngine.Implementation.Spatial
             return totalCost;
         }
 
+        public bool IsFlanked(ICreature target, ICreature attacker)
+        {
+            if (target == null || attacker == null) return false;
+
+            var targetPos = GetPosition(target);
+            var attackerPos = GetPosition(attacker);
+
+            if (targetPos == null || attackerPos == null) return false;
+
+            // 1. Check adjacency (distance 5)
+            // Note: GetDistance returns 5 for adjacent (including diagonal)
+            if (GetDistance(targetPos.Value, attackerPos.Value) > 5) return false;
+
+            // 2. Calculate opposite position
+            // Vector from Attacker to Target
+            int dx = targetPos.Value.X - attackerPos.Value.X;
+            int dy = targetPos.Value.Y - attackerPos.Value.Y;
+            int dz = targetPos.Value.Z - attackerPos.Value.Z;
+
+            // Opposite is Target + Vector
+            var oppositePos = new Position(
+                targetPos.Value.X + dx,
+                targetPos.Value.Y + dy,
+                targetPos.Value.Z + dz
+            );
+
+            // 3. Check for ally at opposite position
+            var ally = GetCreatureAt(oppositePos);
+            if (ally != null)
+            {
+                // Check if ally is on same team as attacker
+                // And ally is not the attacker (though position check handles that usually)
+                // And ally is not the target (position check handles that)
+                
+                if (ally.Team == attacker.Team && ally != target)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public int GetReach(ICreature creature)
+        {
+            if (creature == null) return 5;
+
+            // Check equipped weapons for Reach property
+            bool hasReachWeapon = false;
+            
+            if (creature.Equipment?.MainHand != null)
+            {
+                if (creature.Equipment.MainHand.Properties.Contains(OpenCombatEngine.Core.Enums.WeaponProperty.Reach))
+                    hasReachWeapon = true;
+            }
+            
+            if (!hasReachWeapon && creature.Equipment?.OffHand != null)
+            {
+                if (creature.Equipment.OffHand.Properties.Contains(OpenCombatEngine.Core.Enums.WeaponProperty.Reach))
+                    hasReachWeapon = true;
+            }
+
+            return hasReachWeapon ? 10 : 5;
+        }
+
+        public IEnumerable<Position> GetPath(Position start, Position destination)
+        {
+            // Re-use the simple interpolation logic from GetLinePoints/HasLineOfSight
+            // In a real implementation, this might use A* if obstacles are involved.
+            // For now, we assume direct movement (Chebyshev line).
+            return GetLinePoints(start, destination);
+        }
+
         // Helper to expose line points (refactored from HasLineOfSight or duplicated for now)
         private static System.Collections.Generic.IEnumerable<Position> GetLinePoints(Position p1, Position p2)
         {

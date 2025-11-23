@@ -17,7 +17,7 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             var scores = new StandardAbilityScores(18, 14, 12, 10, 8, 16);
             var hp = new StandardHitPoints(50, 45, 5);
             var combatStats = new StandardCombatStats(armorClass: 18, initiativeBonus: 2, speed: 40);
-            var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp, combatStats);
+            var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp, "Neutral", combatStats);
             
             // Add a condition
             original.Conditions.AddCondition(new Condition("Blinded", "Cannot see", 3, ConditionType.Blinded));

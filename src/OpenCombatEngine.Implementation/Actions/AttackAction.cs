@@ -106,8 +106,28 @@ namespace OpenCombatEngine.Implementation.Actions
             
             bool isProne = source.Conditions?.HasCondition(ConditionType.Prone) ?? false;
             
+            // Flanking Check
+            bool isFlanking = false;
+            if (context.Grid != null)
+            {
+                isFlanking = context.Grid.IsFlanked(target, source);
+            }
+            
+            bool hasAdvantage = isFlanking; // Add other sources of advantage here
+            bool hasDisadvantage = isProne; // Add other sources of disadvantage here
+
             Result<DiceRollResult> attackRollResult;
-            if (isProne)
+            
+            if (hasAdvantage && hasDisadvantage)
+            {
+                // Cancel out
+                attackRollResult = _diceRoller.Roll(attackNotation);
+            }
+            else if (hasAdvantage)
+            {
+                attackRollResult = _diceRoller.RollWithAdvantage(attackNotation);
+            }
+            else if (hasDisadvantage)
             {
                 attackRollResult = _diceRoller.RollWithDisadvantage(attackNotation);
             }
@@ -164,8 +184,8 @@ namespace OpenCombatEngine.Implementation.Actions
                 target,
                 attackTotal,
                 isCrit,
-                false, // HasAdvantage (placeholder)
-                isProne, // HasDisadvantage
+                hasAdvantage,
+                hasDisadvantage,
                 damageRolls
             );
             

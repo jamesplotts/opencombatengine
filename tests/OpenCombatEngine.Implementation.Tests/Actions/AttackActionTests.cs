@@ -28,6 +28,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 "Attacker",
                 new StandardAbilityScores(),
                 new StandardHitPoints(10),
+                "Neutral",
                 new StandardCombatStats()
             );
 
@@ -37,6 +38,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 "Defender",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
+                "Neutral",
                 new StandardCombatStats(armorClass: 15)
             );
         }
