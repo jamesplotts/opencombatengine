@@ -297,6 +297,27 @@ namespace OpenCombatEngine.Implementation.Creatures
             ArgumentNullException.ThrowIfNull(attack);
 
             var targetAC = CombatStats.ArmorClass;
+            
+            // Apply Cover bonuses
+            if (attack.TargetCover == CoverType.Half) targetAC += 2;
+            else if (attack.TargetCover == CoverType.ThreeQuarters) targetAC += 5;
+            else if (attack.TargetCover == CoverType.Total)
+            {
+                // Total cover prevents attack unless specific exception (not handled here yet)
+                return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(false, 0, "Target has Total Cover.");
+            }
+
+            // Apply Obscurement logic (Heavily Obscured = Disadvantage for attacker)
+            // Note: Disadvantage affects the roll itself, which is passed in AttackResult.
+            // However, if we want to ENFORCE it, we should check if HasDisadvantage is true.
+            // But the roll is already made. We can't re-roll here.
+            // Ideally, the caller (AttackAction) should have checked Obscurement before rolling.
+            // But if we want to validate, we could warn or fail?
+            // For now, we assume the caller handled the roll mechanics (Adv/Disadv).
+            // But we can add a check: if TargetObscurement == Heavily and !HasDisadvantage, maybe we should have?
+            // But maybe they had Advantage canceling it out.
+            // So we just trust the roll for now, but we handle the Cover AC bonus here because that's a target property.
+
             bool isHit = attack.AttackRoll >= targetAC || attack.IsCritical;
 
             // Critical Miss logic could be passed in AttackResult or handled here if we knew the raw roll.

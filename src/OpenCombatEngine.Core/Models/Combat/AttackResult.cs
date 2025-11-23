@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 
 namespace OpenCombatEngine.Core.Models.Combat
@@ -15,10 +16,21 @@ namespace OpenCombatEngine.Core.Models.Combat
         public bool IsCritical { get; }
         public bool HasAdvantage { get; }
         public bool HasDisadvantage { get; }
+        public CoverType TargetCover { get; }
+        public ObscurementType TargetObscurement { get; }
         private readonly List<DamageRoll> _damage;
         public IReadOnlyList<DamageRoll> Damage => _damage;
 
-        public AttackResult(ICreature source, ICreature target, int attackRoll, bool isCritical, bool hasAdvantage, bool hasDisadvantage, IEnumerable<DamageRoll> damage)
+        public AttackResult(
+            ICreature source, 
+            ICreature target, 
+            int attackRoll, 
+            bool isCritical, 
+            bool hasAdvantage, 
+            bool hasDisadvantage, 
+            IEnumerable<DamageRoll> damage,
+            CoverType targetCover = CoverType.None,
+            ObscurementType targetObscurement = ObscurementType.None)
         {
             Source = source;
             Target = target;
@@ -26,6 +38,8 @@ namespace OpenCombatEngine.Core.Models.Combat
             IsCritical = isCritical;
             HasAdvantage = hasAdvantage;
             HasDisadvantage = hasDisadvantage;
+            TargetCover = targetCover;
+            TargetObscurement = targetObscurement;
             _damage = damage?.ToList() ?? new List<DamageRoll>();
         }
 

@@ -180,3 +180,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement `JsonMagicItemImporter`
     - [x] Verify with Tests
 - [x] [Save Magic Item Import ADR](docs/adr/0026-magic-item-import.md)
+
+- [x] **Cycle 18: Environmental Effects**
+    - [x] Implement `Cover` (Enum & Logic)
+    - [x] Implement `Obscurement` (Enum & Logic)
+    - [x] Update `ResolveAttack` for Cover/Visibility
+    - [x] Verify with Tests
+- [x] [Save Environmental Effects ADR](docs/adr/0027-environmental-effects.md)
