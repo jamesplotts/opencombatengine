@@ -174,3 +174,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement Passive Bonuses (Features/Conditions)
     - [x] Verify with Tests
 - [x] [Save Magic Items Architecture Record](docs/architecture/025-magic-items.md)
+
+- [x] **Cycle 17: Content Import Expansion (Magic Items)**
+    - [x] Define `MagicItemDto`
+    - [x] Implement `JsonMagicItemImporter`
+    - [x] Verify with Tests
+- [x] [Save Magic Item Import ADR](docs/adr/0026-magic-item-import.md)

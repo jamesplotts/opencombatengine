@@ -14,7 +14,7 @@ namespace OpenCombatEngine.Implementation.Items
         public string Description { get; }
         public double Weight { get; }
         public int Value { get; }
-        public ItemType ItemType { get; }
+        public ItemType Type { get; }
         public bool RequiresAttunement { get; }
         public ICreature? AttunedCreature { get; private set; }
         
@@ -39,7 +39,7 @@ namespace OpenCombatEngine.Implementation.Items
             Description = description;
             Weight = weight;
             Value = value;
-            ItemType = itemType;
+            Type = itemType;
             RequiresAttunement = requiresAttunement;
             
             if (features != null) _features.AddRange(features);

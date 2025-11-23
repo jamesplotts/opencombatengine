@@ -1,3 +1,4 @@
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Results;
 
@@ -12,6 +13,8 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// Gets whether this item requires attunement to function.
         /// </summary>
         bool RequiresAttunement { get; }
+
+        ItemType Type { get; }
 
         /// <summary>
         /// Gets the creature currently attuned to this item, if any.
