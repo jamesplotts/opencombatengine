@@ -135,8 +135,13 @@ namespace OpenCombatEngine.Implementation.Actions
                 target,
                 attackTotal,
                 isCrit,
+                false, // HasAdvantage (placeholder)
+                isProne, // HasDisadvantage
                 damageRolls
             );
+            
+            // 3.5 Modify Outgoing Attack (Features)
+            source.ModifyOutgoingAttack(attackResult);
 
             // 4. Resolve
             var outcome = target.ResolveAttack(attackResult);

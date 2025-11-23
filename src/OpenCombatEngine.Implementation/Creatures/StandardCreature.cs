@@ -3,6 +3,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Features;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
@@ -154,13 +155,18 @@ namespace OpenCombatEngine.Implementation.Creatures
             return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState);
         }
 
+        private readonly System.Collections.Generic.List<IFeature> _features = new();
+
         /// <inheritdoc />
         public void StartTurn()
         {
-            Conditions.Tick();
             ActionEconomy.ResetTurn();
             Movement.ResetTurn();
-
+            Conditions.Tick();
+            foreach (var feature in _features)
+            {
+                feature.OnStartTurn(this);
+            }
             // Death Saving Throws
             if (HitPoints.Current <= 0 && !HitPoints.IsDead && !HitPoints.IsStable)
             {
@@ -333,7 +339,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             // Let's do this:
             // We need to return total damage dealt for the message.
-            int actualDamageDealt = 0;
+
             
             // We need to be careful about overkilling? No, damage is damage.
             
@@ -342,11 +348,29 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             // But for the AttackOutcome, we want the sum.
             
+            // But for the AttackOutcome, we want the sum.
+            
+            int actualDamageDealt = 0;
             foreach (var damageRoll in attack.Damage)
             {
-                // Apply mitigation (Resistance)
                 int amount = damageRoll.Amount;
-                // TODO: Apply resistance
+                
+                if (CombatStats.Immunities.Contains(damageRoll.Type))
+                {
+                    amount = 0;
+                }
+                else
+                {
+                    if (CombatStats.Resistances.Contains(damageRoll.Type))
+                    {
+                        amount /= 2;
+                    }
+                    
+                    if (CombatStats.Vulnerabilities.Contains(damageRoll.Type))
+                    {
+                        amount *= 2;
+                    }
+                }
                 
                 if (amount > 0)
                 {
@@ -355,11 +379,23 @@ namespace OpenCombatEngine.Implementation.Creatures
                 }
             }
 
-            string message = attack.IsCritical 
-                ? $"CRITICAL HIT! Dealt {actualDamageDealt} damage." 
-                : $"Hit! Dealt {actualDamageDealt} damage.";
+            string message = isHit ? $"Hit for {actualDamageDealt} damage!" : "Missed!";
+            if (attack.IsCritical) message = $"Critical Hit! {actualDamageDealt} damage!"; 
 
             return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(true, actualDamageDealt, message);
+        }
+
+        public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature)
+        {
+            _features.Add(feature);
+        }
+
+        public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)
+        {
+            foreach (var feature in _features)
+            {
+                feature.OnOutgoingAttack(this, attack);
+            }
         }
     }
 }

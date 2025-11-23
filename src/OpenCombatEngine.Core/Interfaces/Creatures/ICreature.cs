@@ -95,6 +95,12 @@ public interface ICreature
     AttackOutcome ResolveAttack(AttackResult attack);
 
     /// <summary>
+    /// Modifies an outgoing attack before it is resolved.
+    /// </summary>
+    /// <param name="attack">The attack data.</param>
+    void ModifyOutgoingAttack(AttackResult attack);
+
+    /// <summary>
     /// Performs a rest.
     /// </summary>
     /// <param name="type">The type of rest.</param>

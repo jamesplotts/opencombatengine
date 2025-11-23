@@ -13,15 +13,25 @@ namespace OpenCombatEngine.Core.Models.Combat
         public ICreature Target { get; }
         public int AttackRoll { get; }
         public bool IsCritical { get; }
-        public IReadOnlyList<DamageRoll> Damage { get; }
+        public bool HasAdvantage { get; }
+        public bool HasDisadvantage { get; }
+        private readonly List<DamageRoll> _damage;
+        public IReadOnlyList<DamageRoll> Damage => _damage;
 
-        public AttackResult(ICreature source, ICreature target, int attackRoll, bool isCritical, IEnumerable<DamageRoll> damage)
+        public AttackResult(ICreature source, ICreature target, int attackRoll, bool isCritical, bool hasAdvantage, bool hasDisadvantage, IEnumerable<DamageRoll> damage)
         {
             Source = source;
             Target = target;
             AttackRoll = attackRoll;
             IsCritical = isCritical;
-            Damage = damage?.ToList().AsReadOnly() ?? new List<DamageRoll>().AsReadOnly();
+            HasAdvantage = hasAdvantage;
+            HasDisadvantage = hasDisadvantage;
+            _damage = damage?.ToList() ?? new List<DamageRoll>();
+        }
+
+        public void AddDamage(DamageRoll damage)
+        {
+            _damage.Add(damage);
         }
     }
 }

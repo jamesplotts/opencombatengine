@@ -23,6 +23,7 @@ namespace OpenCombatEngine.Core.Enums
         Stunned,
         Unconscious,
         Exhaustion,
+        Custom,
         
         LastValue
     }

@@ -38,5 +38,17 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// Gets the set of damage types the creature is immune to (no damage).
         /// </summary>
         IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Immunities { get; }
+
+        /// <summary>
+        /// Adds a resistance to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to add resistance for.</param>
+        void AddResistance(OpenCombatEngine.Core.Enums.DamageType type);
+
+        /// <summary>
+        /// Removes a resistance to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to remove resistance for.</param>
+        void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type);
     }
 }

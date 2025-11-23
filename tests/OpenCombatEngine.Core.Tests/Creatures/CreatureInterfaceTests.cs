@@ -107,6 +107,8 @@ public class CreatureInterfaceTests
         {
             return new OpenCombatEngine.Core.Models.Combat.AttackOutcome(true, 0, "Stub Hit");
         }
+
+        public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack) { }
     }
 
     private class StubCheckManager : ICheckManager
@@ -153,6 +155,9 @@ public class CreatureInterfaceTests
         public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Resistances { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
         public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Vulnerabilities { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
         public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Immunities { get; } = new HashSet<OpenCombatEngine.Core.Enums.DamageType>();
+
+        public void AddResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
     }
 
     [Fact]

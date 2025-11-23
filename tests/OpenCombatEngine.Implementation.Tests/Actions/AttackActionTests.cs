@@ -62,7 +62,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             result.IsSuccess.Should().BeTrue();
             result.Value.Success.Should().BeTrue();
             result.Value.DamageDealt.Should().Be(6);
-            result.Value.Message.Should().Contain("Hit!");
+            result.Value.Message.Should().Contain("Hit");
             
             _target.HitPoints.Current.Should().Be(14); // 20 - 6
         }

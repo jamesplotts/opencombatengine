@@ -50,9 +50,15 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public int InitiativeBonus { get; }
         public int Speed { get; }
-        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Resistances { get; }
-        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Vulnerabilities { get; }
-        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Immunities { get; }
+        
+        private readonly HashSet<OpenCombatEngine.Core.Enums.DamageType> _resistances;
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Resistances => _resistances;
+        
+        private readonly HashSet<OpenCombatEngine.Core.Enums.DamageType> _vulnerabilities;
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Vulnerabilities => _vulnerabilities;
+        
+        private readonly HashSet<OpenCombatEngine.Core.Enums.DamageType> _immunities;
+        public IReadOnlySet<OpenCombatEngine.Core.Enums.DamageType> Immunities => _immunities;
 
         public StandardCombatStats(
             int armorClass = 10, 
@@ -67,9 +73,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             _baseArmorClass = armorClass;
             InitiativeBonus = initiativeBonus;
             Speed = speed;
-            Resistances = (resistances ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
-            Vulnerabilities = (vulnerabilities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
-            Immunities = (immunities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _resistances = (resistances ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _vulnerabilities = (vulnerabilities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _immunities = (immunities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
             _equipment = equipment;
             _abilities = abilities;
         }
@@ -80,22 +86,30 @@ namespace OpenCombatEngine.Implementation.Creatures
             _baseArmorClass = state.ArmorClass;
             InitiativeBonus = state.InitiativeBonus;
             Speed = state.Speed;
-            Resistances = (state.Resistances ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
-            Vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
-            Immunities = (state.Immunities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _resistances = (state.Resistances ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+            _immunities = (state.Immunities ?? Enumerable.Empty<OpenCombatEngine.Core.Enums.DamageType>()).ToHashSet();
+        }
+
+        public void AddResistance(OpenCombatEngine.Core.Enums.DamageType type)
+        {
+            _resistances.Add(type);
+        }
+
+        public void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type)
+        {
+            _resistances.Remove(type);
         }
 
         public CombatStatsState GetState()
         {
             return new CombatStatsState(
-                ArmorClass, // Serialize the *current* AC? Or base? 
-                // If we serialize current, and then deserialize without equipment context, it becomes the new base.
-                // That seems correct for a snapshot.
+                ArmorClass, 
                 InitiativeBonus, 
                 Speed, 
-                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Resistances.ToList()), 
-                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Vulnerabilities.ToList()), 
-                new Collection<OpenCombatEngine.Core.Enums.DamageType>(Immunities.ToList())
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(_resistances.ToList()), 
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(_vulnerabilities.ToList()), 
+                new Collection<OpenCombatEngine.Core.Enums.DamageType>(_immunities.ToList())
             );
         }
     }

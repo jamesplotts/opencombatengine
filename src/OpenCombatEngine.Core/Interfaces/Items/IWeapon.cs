@@ -7,6 +7,6 @@ namespace OpenCombatEngine.Core.Interfaces.Items
     {
         string DamageDice { get; }
         DamageType DamageType { get; }
-        IEnumerable<string> Properties { get; }
+        IEnumerable<WeaponProperty> Properties { get; }
     }
 }
