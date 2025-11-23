@@ -14,9 +14,10 @@ namespace OpenCombatEngine.Implementation.Actions
         public string Description => "Enter a rage for 1 minute.";
         public ActionType Type => ActionType.BonusAction;
 
-        public Result<ActionResult> Execute(ICreature source, ICreature target)
+        public Result<ActionResult> Execute(IActionContext context)
         {
-            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(context);
+            var source = context.Source;
             // Target is irrelevant, self-buff.
 
             if (source.ActionEconomy != null)

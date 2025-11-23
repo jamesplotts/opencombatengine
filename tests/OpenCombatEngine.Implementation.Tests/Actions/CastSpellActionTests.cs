@@ -22,7 +22,11 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns((ISpellCaster?)null);
 
-            var result = action.Execute(creature, Substitute.For<ICreature>());
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
 
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("cannot cast spells");
@@ -41,7 +45,11 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
 
-            var result = action.Execute(creature, Substitute.For<ICreature>());
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
 
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("No spell slots");
@@ -66,7 +74,11 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
 
-            var result = action.Execute(creature, Substitute.For<ICreature>());
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
 
             result.IsSuccess.Should().BeTrue();
             casted.Should().BeTrue();
@@ -85,7 +97,11 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
 
-            var result = action.Execute(creature, Substitute.For<ICreature>());
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
 
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("not prepared");

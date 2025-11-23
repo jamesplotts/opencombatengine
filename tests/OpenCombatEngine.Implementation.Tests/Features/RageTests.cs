@@ -26,7 +26,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var action = new RageAction();
 
             // Act
-            var result = action.Execute(creature, null);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(creature) // Self target
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue();

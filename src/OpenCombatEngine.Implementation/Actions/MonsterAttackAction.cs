@@ -28,10 +28,16 @@ namespace OpenCombatEngine.Implementation.Actions
             DamageType = damageType;
         }
 
-        public Result<ActionResult> Execute(ICreature source, ICreature target)
+        public Result<ActionResult> Execute(IActionContext context)
         {
-            if (source == null) return Result<ActionResult>.Failure("Source is null.");
-            if (target == null) return Result<ActionResult>.Failure("Target is null.");
+            if (context == null) return Result<ActionResult>.Failure("Context is null.");
+            var source = context.Source;
+            
+            if (context.Target is not OpenCombatEngine.Core.Models.Actions.CreatureTarget creatureTarget)
+            {
+                return Result<ActionResult>.Failure("Target must be a creature.");
+            }
+            var target = creatureTarget.Creature;
 
             // 1. Check Action Economy
             if (!source.ActionEconomy.HasAction)

@@ -201,3 +201,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardTurnManager`
     - [x] Verify with Tests
 - [x] [Save Initiative Refinement ADR](docs/adr/0029-initiative-refinement.md)
+
+- [x] **Cycle 21: Movement Validation**
+    - [x] Define `IActionContext` & `IActionTarget`
+    - [x] Refactor `IAction.Execute`
+    - [x] Update `MoveAction`
+    - [x] Verify with Tests
+- [x] [Save Action Context ADR](docs/adr/0030-action-context.md)

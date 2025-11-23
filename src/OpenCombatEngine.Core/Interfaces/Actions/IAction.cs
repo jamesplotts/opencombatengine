@@ -26,11 +26,10 @@ namespace OpenCombatEngine.Core.Interfaces.Actions
         ActionType Type { get; }
 
         /// <summary>
-        /// Executes the action against a target.
+        /// Executes the action within the given context.
         /// </summary>
-        /// <param name="source">The creature performing the action.</param>
-        /// <param name="target">The target of the action.</param>
+        /// <param name="context">The context for the action.</param>
         /// <returns>The result of the action.</returns>
-        Result<ActionResult> Execute(ICreature source, ICreature target);
+        Result<ActionResult> Execute(IActionContext context);
     }
 }

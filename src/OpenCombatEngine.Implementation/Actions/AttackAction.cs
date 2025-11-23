@@ -36,10 +36,16 @@ namespace OpenCombatEngine.Implementation.Actions
             Type = type;
         }
 
-        public Result<ActionResult> Execute(ICreature source, ICreature target)
+        public Result<ActionResult> Execute(IActionContext context)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentNullException.ThrowIfNull(target);
+            ArgumentNullException.ThrowIfNull(context);
+            var source = context.Source;
+            
+            if (context.Target is not OpenCombatEngine.Core.Models.Actions.CreatureTarget creatureTarget)
+            {
+                return Result<ActionResult>.Failure("Target must be a creature for an attack.");
+            }
+            var target = creatureTarget.Creature;
 
             // 0. Check Action Economy
             if (source.ActionEconomy != null)

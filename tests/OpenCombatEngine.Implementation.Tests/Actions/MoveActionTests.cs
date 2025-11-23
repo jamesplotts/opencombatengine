@@ -23,7 +23,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new MoveAction(15);
 
             // Act
-            var result = action.Execute(creature, null!);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.PositionTarget(new OpenCombatEngine.Core.Models.Spatial.Position(0,0))
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -43,7 +48,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new MoveAction(15);
 
             // Act
-            var result = action.Execute(creature, null!);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.PositionTarget(new OpenCombatEngine.Core.Models.Spatial.Position(0,0))
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -61,7 +71,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new MoveAction(15);
 
             // Act
-            var result = action.Execute(creature, null!);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature, 
+                new OpenCombatEngine.Core.Models.Actions.PositionTarget(new OpenCombatEngine.Core.Models.Spatial.Position(0,0))
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeFalse();

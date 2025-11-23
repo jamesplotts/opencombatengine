@@ -56,7 +56,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 new DiceRollResult(6, "1d8", new List<int> { 6 }, 0, RollType.Normal)));
 
             // Act
-            var result = action.Execute(_source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                _source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -82,7 +87,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 new DiceRollResult(6, "1d8", new List<int> { 6 }, 0, RollType.Normal)));
 
             // Act
-            var result = action.Execute(_source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                _source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue(); // The *execution* succeeded (didn't crash)
@@ -102,7 +112,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             _diceRoller.Roll("1d20+5").Returns(Result<DiceRollResult>.Failure("Dice error"));
 
             // Act
-            var result = action.Execute(_source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                _source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -125,7 +140,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(15, "1d20", new List<int> { 15 }, 0, RollType.Normal)));
 
             // Act
-            var result = action.Execute(source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -145,7 +165,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);
 
             // Act
-            var result = action.Execute(source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeFalse();
@@ -172,7 +197,12 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             _diceRoller.Roll("1d8").Returns(Result<DiceRollResult>.Success(new DiceRollResult(5, "1d8", new List<int> { 5 }, 0, RollType.Normal)));
 
             // Act
-            var result = action.Execute(source, _target);
+            // Act
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                source, 
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
