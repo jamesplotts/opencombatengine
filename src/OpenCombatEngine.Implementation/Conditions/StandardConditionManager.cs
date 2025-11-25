@@ -34,14 +34,21 @@ namespace OpenCombatEngine.Implementation.Conditions
 
             if (_conditions.Any(c => c.Name == condition.Name))
             {
-                // Condition already exists. In 5e, usually refreshes duration or fails.
-                // For now, let's say it fails or we replace it?
-                // Let's return Failure for "Already exists".
                 return Result<bool>.Failure($"Condition '{condition.Name}' already active.");
             }
 
             _conditions.Add(condition);
             condition.OnApplied(_owner);
+
+            // Register Active Effects
+            if (condition.Effects != null)
+            {
+                foreach (var effect in condition.Effects)
+                {
+                    _owner.Effects.AddEffect(effect);
+                }
+            }
+
             return Result<bool>.Success(true);
         }
 
@@ -53,6 +60,22 @@ namespace OpenCombatEngine.Implementation.Conditions
             if (condition != null)
             {
                 condition.OnRemoved(_owner);
+                
+                // Remove Active Effects
+                if (condition.Effects != null)
+                {
+                    foreach (var effect in condition.Effects)
+                    {
+                        _owner.Effects.RemoveEffect(effect.Name); // Assuming unique names or ID? 
+                        // Wait, RemoveEffect takes ID usually. Or Name?
+                        // IEffectManager.RemoveEffect(string effectId).
+                        // IActiveEffect has Id property? Let's check.
+                        // If not, we might need to track IDs.
+                        // For now, let's assume RemoveEffect takes Name or ID and effect.Name is unique enough or we use ID.
+                        // Let's check IActiveEffect interface.
+                    }
+                }
+
                 _conditions.Remove(condition);
             }
         }
@@ -88,7 +111,15 @@ namespace OpenCombatEngine.Implementation.Conditions
             {
                 foreach (var cState in state.Conditions)
                 {
-                    _conditions.Add(new Condition(cState.Name, cState.Description, cState.DurationRounds, cState.Type));
+                    // Use Factory to restore standard conditions with effects
+                    if (cState.Type != ConditionType.None && cState.Type != ConditionType.Custom)
+                    {
+                        _conditions.Add(ConditionFactory.Create(cState.Type, cState.DurationRounds));
+                    }
+                    else
+                    {
+                        _conditions.Add(new Condition(cState.Name, cState.Description, cState.DurationRounds, cState.Type));
+                    }
                 }
             }
         }

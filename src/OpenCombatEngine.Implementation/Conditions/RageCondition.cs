@@ -13,6 +13,7 @@ namespace OpenCombatEngine.Implementation.Conditions
         public string Description => "You have resistance to bludgeoning, piercing, and slashing damage.";
         public ConditionType Type => ConditionType.Custom; // Or define a Rage type if needed
         public int DurationRounds { get; private set; } = 10; // 1 minute
+        public System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect> Effects => System.Linq.Enumerable.Empty<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect>();
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Interface implementation")]
         public bool IsPermanent => false;
 

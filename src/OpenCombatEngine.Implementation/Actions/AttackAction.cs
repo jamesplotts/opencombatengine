@@ -113,8 +113,22 @@ namespace OpenCombatEngine.Implementation.Actions
                 isFlanking = context.Grid.IsFlanked(target, source);
             }
             
-            bool hasAdvantage = isFlanking; // Add other sources of advantage here
-            bool hasDisadvantage = isProne; // Add other sources of disadvantage here
+            bool hasAdvantage = isFlanking; 
+            bool hasDisadvantage = isProne; 
+
+            // Check Active Effects (Source)
+            if (source.Effects != null)
+            {
+                if (source.Effects.ApplyStatBonuses(StatType.AttackAdvantage, 0) > 0) hasAdvantage = true;
+                if (source.Effects.ApplyStatBonuses(StatType.AttackDisadvantage, 0) > 0) hasDisadvantage = true;
+            }
+
+            // Check Active Effects (Target)
+            if (target.Effects != null)
+            {
+                if (target.Effects.ApplyStatBonuses(StatType.IncomingAttackAdvantage, 0) > 0) hasAdvantage = true;
+                if (target.Effects.ApplyStatBonuses(StatType.IncomingAttackDisadvantage, 0) > 0) hasDisadvantage = true;
+            }
 
             Result<DiceRollResult> attackRollResult;
             

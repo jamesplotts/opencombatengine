@@ -61,7 +61,7 @@ namespace OpenCombatEngine.Implementation.Tests
             // Arrange
             var creature = Substitute.For<ICreature>();
             var manager = new StandardConditionManager(creature);
-            var condition = Substitute.For<Condition>("Prone", "Lying down", 1, ConditionType.Prone);
+            var condition = Substitute.For<Condition>("Prone", "Lying down", 1, ConditionType.Prone, null);
 
             // Act
             manager.AddCondition(condition);

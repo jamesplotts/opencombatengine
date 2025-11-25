@@ -12,13 +12,16 @@ namespace OpenCombatEngine.Implementation.Conditions
         public int DurationRounds { get; private set; }
         public ConditionType Type { get; }
 
-        public Condition(string name, string description, int durationRounds, ConditionType type = ConditionType.None)
+        public System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect> Effects { get; }
+
+        public Condition(string name, string description, int durationRounds, ConditionType type = ConditionType.None, System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect>? effects = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             Name = name;
             Description = description;
             DurationRounds = durationRounds;
             Type = type;
+            Effects = effects ?? System.Linq.Enumerable.Empty<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect>();
         }
 
         public virtual void OnApplied(ICreature target) { }

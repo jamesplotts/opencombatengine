@@ -31,6 +31,11 @@ namespace OpenCombatEngine.Core.Interfaces.Conditions
         int DurationRounds { get; }
 
         /// <summary>
+        /// Gets the active effects associated with this condition.
+        /// </summary>
+        System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Effects.IActiveEffect> Effects { get; }
+
+        /// <summary>
         /// Called when the condition is applied to a creature.
         /// </summary>
         /// <param name="target">The creature receiving the condition.</param>

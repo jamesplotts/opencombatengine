@@ -273,3 +273,18 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update SpellDto & Importer
     - [x] Verify with Tests
 - [x] [Save Spell Import Refinement ADR](docs/adr/0040-spell-import-refinement.md)
+- [x] **Cycle 32: Concentration**
+    - [x] Implement Concentration Mechanic
+    - [x] Update `ISpellCaster` and `CastSpellAction`
+    - [x] Implement Constitution Save on Damage
+    - [x] Verify with Tests
+- [x] [Save Concentration ADR](docs/adr/0041-concentration.md)
+
+- [x] **Cycle 33: Spell Effects (Damage/Healing)**
+    - [x] Implement `DamageFormula` and `SaveEffect`
+    - [x] Update `ISpell` for damage/healing
+    - [x] Update `CastSpellAction` to apply effects
+    - [x] Verify with Tests
+- [x] [Save Spell Effects ADR](docs/adr/0042-spell-effects.md)
+
+- [x] **Cycle 34: Condition Effects**
