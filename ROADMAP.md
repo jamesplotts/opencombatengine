@@ -289,3 +289,4 @@ This document tracks the progress of the OpenCombatEngine development, including
 
 - [x] **Cycle 34: Condition Effects**
 - [x] **Cycle 35: Magic Item Passive Bonuses**
+- [ ] **Cycle 36: Magic Item Charges & Active Abilities**

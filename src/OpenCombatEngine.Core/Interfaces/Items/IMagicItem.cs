@@ -40,6 +40,35 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Features.IFeature> Features { get; }
 
         /// <summary>
+        /// Gets the current number of charges.
+        /// </summary>
+        int Charges { get; }
+
+        /// <summary>
+        /// Gets the maximum number of charges.
+        /// </summary>
+        int MaxCharges { get; }
+
+        /// <summary>
+        /// Gets the recharge rate description (e.g. "1d6+1 at dawn").
+        /// </summary>
+        string RechargeRate { get; }
+
+        /// <summary>
+        /// Consumes the specified number of charges.
+        /// </summary>
+        /// <param name="amount">Amount to consume.</param>
+        /// <returns>Success if enough charges available.</returns>
+        Result<int> ConsumeCharges(int amount);
+
+        /// <summary>
+        /// Recharges the item by the specified amount.
+        /// </summary>
+        /// <param name="amount">Amount to add.</param>
+        /// <returns>New charge count.</returns>
+        Result<int> Recharge(int amount);
+
+        /// <summary>
         /// Gets the conditions applied by this item.
         /// </summary>
         System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition> Conditions { get; }

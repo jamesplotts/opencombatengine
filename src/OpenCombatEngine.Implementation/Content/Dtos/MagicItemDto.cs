@@ -36,6 +36,12 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         
         [JsonPropertyName("value")]
         public long? Value { get; set; } // Often in cp or gp, need to handle parsing
+
+        [JsonPropertyName("charges")]
+        public int? Charges { get; set; }
+
+        [JsonPropertyName("recharge")]
+        public string? Recharge { get; set; }
     }
     
     public class MagicItemCompendiumDto

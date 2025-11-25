@@ -24,6 +24,10 @@ namespace OpenCombatEngine.Implementation.Items
         private readonly List<OpenCombatEngine.Core.Interfaces.Conditions.ICondition> _conditions = new();
         public IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition> Conditions => _conditions;
 
+        public int Charges { get; private set; }
+        public int MaxCharges { get; }
+        public string RechargeRate { get; }
+
         public MagicItem(
             string name, 
             string description, 
@@ -32,7 +36,9 @@ namespace OpenCombatEngine.Implementation.Items
             ItemType itemType, 
             bool requiresAttunement,
             IEnumerable<OpenCombatEngine.Core.Interfaces.Features.IFeature>? features = null,
-            IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition>? conditions = null)
+            IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition>? conditions = null,
+            int maxCharges = 0,
+            string rechargeRate = "")
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             Name = name;
@@ -41,6 +47,9 @@ namespace OpenCombatEngine.Implementation.Items
             Value = value;
             Type = itemType;
             RequiresAttunement = requiresAttunement;
+            MaxCharges = maxCharges;
+            Charges = maxCharges; // Start full
+            RechargeRate = rechargeRate;
             
             if (features != null) _features.AddRange(features);
             if (conditions != null) _conditions.AddRange(conditions);
@@ -62,6 +71,23 @@ namespace OpenCombatEngine.Implementation.Items
             
             AttunedCreature = null;
             return Result<bool>.Success(true);
+        }
+
+        public Result<int> ConsumeCharges(int amount)
+        {
+            if (amount <= 0) return Result<int>.Failure("Amount must be positive.");
+            if (Charges < amount) return Result<int>.Failure($"Not enough charges. Has {Charges}, needs {amount}.");
+
+            Charges -= amount;
+            return Result<int>.Success(Charges);
+        }
+
+        public Result<int> Recharge(int amount)
+        {
+            if (amount < 0) return Result<int>.Failure("Amount cannot be negative.");
+            
+            Charges = Math.Min(MaxCharges, Charges + amount);
+            return Result<int>.Success(Charges);
         }
     }
 }

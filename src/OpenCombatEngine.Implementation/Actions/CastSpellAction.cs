@@ -10,11 +10,12 @@ namespace OpenCombatEngine.Implementation.Actions
 {
     public class CastSpellAction : IAction
     {
-        public string Name => "Cast Spell";
-        public string Description => "Cast a spell from your known spells.";
+        public virtual string Name => "Cast Spell";
+        public virtual string Description => "Cast a spell from your known spells.";
         public ActionType Type => ActionType.Action; // Simplified for now, should depend on spell.CastingTime
 
         private readonly ISpell _spell;
+        protected ISpell Spell => _spell;
         private readonly int _slotLevel;
         private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
 
@@ -23,6 +24,38 @@ namespace OpenCombatEngine.Implementation.Actions
             _spell = spell ?? throw new ArgumentNullException(nameof(spell));
             _slotLevel = slotLevel ?? spell.Level;
             _diceRoller = diceRoller ?? new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
+        }
+
+        // ... (Execute method omitted for brevity) ...
+
+        protected virtual bool CheckPreparation(ICreature source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            var spellcasting = source.Spellcasting;
+            if (spellcasting == null) return false;
+
+            foreach (var prepared in spellcasting.PreparedSpells)
+            {
+                if (prepared.Name == _spell.Name)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        protected virtual Result<bool> ConsumeResources(ICreature source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            var spellcasting = source.Spellcasting;
+            if (spellcasting == null) return Result<bool>.Failure("No spellcasting ability.");
+
+            if (!spellcasting.HasSlot(_slotLevel))
+            {
+                return Result<bool>.Failure($"No spell slots available for level {_slotLevel}.");
+            }
+
+            return spellcasting.ConsumeSlot(_slotLevel);
         }
 
         public Result<ActionResult> Execute(IActionContext context)
@@ -89,29 +122,13 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // Check preparation
-            bool isPrepared = false;
-            foreach (var prepared in spellcasting.PreparedSpells)
-            {
-                if (prepared.Name == _spell.Name)
-                {
-                    isPrepared = true;
-                    break;
-                }
-            }
-
-            if (!isPrepared)
+            if (!CheckPreparation(source))
             {
                 return Result<ActionResult>.Failure($"Spell {_spell.Name} is not prepared.");
             }
 
-            // Check slots
-            if (!spellcasting.HasSlot(_slotLevel))
-            {
-                return Result<ActionResult>.Failure($"No spell slots available for level {_slotLevel}.");
-            }
-
-            // Consume slot
-            var consumeResult = spellcasting.ConsumeSlot(_slotLevel);
+            // Consume Resources
+            var consumeResult = ConsumeResources(source);
             if (!consumeResult.IsSuccess)
             {
                 return Result<ActionResult>.Failure(consumeResult.Error);
@@ -254,5 +271,6 @@ namespace OpenCombatEngine.Implementation.Actions
                 }
             }
         }
+
     }
 }

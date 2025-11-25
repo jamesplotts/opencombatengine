@@ -124,7 +124,10 @@ namespace OpenCombatEngine.Implementation.Content
                 (int)value, // Casting long to int for now, might need to update IItem
                 type,
                 reqAttunement,
-                features
+                features,
+                null, // conditions
+                dto.Charges ?? 0,
+                dto.Recharge ?? ""
             );
         }
 
