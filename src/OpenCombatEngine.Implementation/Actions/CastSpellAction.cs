@@ -16,11 +16,13 @@ namespace OpenCombatEngine.Implementation.Actions
 
         private readonly ISpell _spell;
         private readonly int _slotLevel;
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
 
-        public CastSpellAction(ISpell spell, int? slotLevel = null)
+        public CastSpellAction(ISpell spell, int? slotLevel = null, OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller? diceRoller = null)
         {
             _spell = spell ?? throw new ArgumentNullException(nameof(spell));
             _slotLevel = slotLevel ?? spell.Level;
+            _diceRoller = diceRoller ?? new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
         }
 
         public Result<ActionResult> Execute(IActionContext context)
@@ -122,29 +124,23 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // Execute Spell
+            // Execute Spell
             if (_spell.AreaOfEffect != null && context.Grid != null && positionTarget != null)
             {
                 // AOE Execution
                 var origin = positionTarget.Value;
-                // If range is Self, origin is source. If range is distance, origin is target point.
-                // For now, assume origin is the target point.
-                
                 var targets = context.Grid.GetCreaturesInShape(origin, _spell.AreaOfEffect);
                 var messages = new System.Collections.Generic.List<string>();
                 int hitCount = 0;
 
                 foreach (var t in targets)
                 {
-                    // Skip caster if AOE excludes them? (Usually AOE includes everyone in area)
-                    // But if it's Self (Cone), caster is origin but not target?
-                    // Cone: Origin is caster, direction is target.
-                    // Sphere: Origin is center.
-                    // Let's assume Sphere for now (Fireball).
-                    
                     var castResult = _spell.Cast(source, t);
                     if (castResult.IsSuccess)
                     {
-                        messages.Add($"{t.Name}: {castResult.Value.Message}");
+                        var targetMessages = new System.Collections.Generic.List<string>();
+                        ApplySpellEffects(source, t, targetMessages);
+                        messages.Add($"{t.Name}: {string.Join(", ", targetMessages)}");
                         hitCount++;
                     }
                 }
@@ -154,8 +150,7 @@ namespace OpenCombatEngine.Implementation.Actions
             else
             {
                 // Single Target Execution
-                
-                // LOS Check (only for single target or center of AOE if we checked it earlier, but let's keep it simple)
+                // LOS Check
                 if (context.Grid != null && creatureTarget != null)
                 {
                     var sourcePos = context.Grid.GetPosition(source);
@@ -176,8 +171,87 @@ namespace OpenCombatEngine.Implementation.Actions
                     return Result<ActionResult>.Failure($"Failed to cast {_spell.Name}: {castResult.Error}");
                 }
 
+                var messages = new System.Collections.Generic.List<string>();
+                if (creatureTarget != null)
+                {
+                    ApplySpellEffects(source, creatureTarget, messages);
+                }
+
                 var resolution = castResult.Value;
-                return Result<ActionResult>.Success(new ActionResult(true, resolution.Message));
+                return Result<ActionResult>.Success(new ActionResult(true, $"{resolution.Message} {string.Join("; ", messages)}"));
+            }
+        }
+
+        private void ApplySpellEffects(ICreature source, ICreature target, System.Collections.Generic.List<string> messages)
+        {
+            // 1. Saving Throw
+            bool saveSuccess = false;
+            if (_spell.SaveAbility.HasValue)
+            {
+                var saveResult = target.Checks.RollSavingThrow(_spell.SaveAbility.Value);
+                // DC calculation: 8 + proficiency + casting ability mod.
+                // We need caster's DC. Spellcasting component should have it.
+                // StandardSpellCaster doesn't expose DC directly yet?
+                // Let's assume 10 + mod for now or add DC property to ISpellCaster.
+                // Actually StandardSpellCaster has SaveDC property? No.
+                // Let's calculate it: 8 + Prof + Mod.
+                // We need caster's casting ability.
+                // StandardSpellCaster has CastingAbility property.
+                
+                int dc = 10; // Default
+                if (source.Spellcasting is OpenCombatEngine.Implementation.Spells.StandardSpellCaster ssc)
+                {
+                    int prof = source.ProficiencyBonus;
+                    int mod = source.AbilityScores.GetModifier(ssc.CastingAbility);
+                    dc = 8 + prof + mod;
+                }
+                
+                if (saveResult.IsSuccess)
+                {
+                    saveSuccess = saveResult.Value >= dc;
+                    messages.Add(saveSuccess ? "Saved!" : "Failed save.");
+                }
+            }
+
+            // 2. Damage
+            if (_spell.DamageRolls.Count > 0)
+            {
+                if (saveSuccess && _spell.SaveEffect == SaveEffect.Negate)
+                {
+                    messages.Add("Damage negated by save.");
+                }
+                else
+                {
+                    int totalDamage = 0;
+                    
+                    foreach (var rollDef in _spell.DamageRolls)
+                    {
+                        var roll = _diceRoller.Roll(rollDef.Dice);
+                        if (roll.IsSuccess)
+                        {
+                            int amount = roll.Value.Total;
+                            if (saveSuccess && _spell.SaveEffect == SaveEffect.HalfDamage)
+                            {
+                                amount /= 2;
+                            }
+                            
+                            target.HitPoints.TakeDamage(amount, rollDef.Type);
+                            totalDamage += amount;
+                        }
+                    }
+                    messages.Add($"Dealt {totalDamage} damage.");
+                }
+            }
+
+            // 3. Healing
+            if (!string.IsNullOrWhiteSpace(_spell.HealingDice))
+            {
+                var roll = _diceRoller.Roll(_spell.HealingDice);
+                if (roll.IsSuccess)
+                {
+                    target.HitPoints.Heal(roll.Value.Total);
+                    messages.Add($"Healed {roll.Value.Total} HP.");
+                }
             }
         }
     }

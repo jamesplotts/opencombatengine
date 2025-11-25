@@ -18,8 +18,15 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         bool RequiresAttackRoll { get; }
         bool RequiresConcentration { get; }
         Ability? SaveAbility { get; } // Null if no save
-        string? DamageDice { get; } // e.g. "8d6"
-        DamageType? DamageType { get; }
+        OpenCombatEngine.Core.Enums.SaveEffect SaveEffect { get; }
+        
+        // Deprecating single DamageDice/Type in favor of list
+        // string? DamageDice { get; } 
+        // DamageType? DamageType { get; }
+        
+        System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula> DamageRolls { get; }
+        string? HealingDice { get; }
+        
         OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
         /// <summary>

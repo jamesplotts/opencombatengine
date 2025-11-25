@@ -39,9 +39,10 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         {
             // Arrange
             var shape = Substitute.For<IShape>();
+            var damageRolls = new List<DamageFormula> { new DamageFormula("8d6", DamageType.Fire) };
             var spell = new Spell(
                 "Fireball", 3, SpellSchool.Evocation, "1 Action", "150 feet", "V, S, M", "Instantaneous", "Boom",
-                _diceRoller, areaOfEffect: shape, damageDice: "8d6", damageType: DamageType.Fire
+                _diceRoller, areaOfEffect: shape, damageRolls: damageRolls
             );
 
             // Prepare spell
@@ -59,7 +60,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             _grid.GetCreaturesInShape(targetPos, shape).Returns(targets);
 
             // Mock Dice for Damage
-            _diceRoller.Roll("8d6").Returns(Result<DiceRollResult>.Success(new DiceRollResult(20, "8d6", new List<int> { 20 }, 0, RollType.Normal)));
+            _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(20, "8d6", new List<int> { 20 }, 0, RollType.Normal)));
 
             // Context
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
@@ -68,7 +69,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 _grid
             );
 
-            var action = new CastSpellAction(spell);
+            var action = new CastSpellAction(spell, diceRoller: _diceRoller);
 
             // Act
             var result = action.Execute(context);

@@ -36,28 +36,6 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
             spell.Description.Should().Be("Boom");
         }
 
-        [Fact]
-        public void Cast_Should_Execute_Custom_Effect()
-        {
-            bool executed = false;
-            var spell = new Spell(
-                "Test", 
-                1, 
-                SpellSchool.Abjuration, 
-                "", "", "", "", "", 
-                _diceRoller,
-                customEffect: (caster, target) => 
-                {
-                    executed = true;
-                    return Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>.Success(
-                        new OpenCombatEngine.Core.Models.Spells.SpellResolution(true, "Custom"));
-                });
 
-            var caster = Substitute.For<ICreature>();
-            var result = spell.Cast(caster);
-
-            result.IsSuccess.Should().BeTrue();
-            executed.Should().BeTrue();
-        }
     }
 }

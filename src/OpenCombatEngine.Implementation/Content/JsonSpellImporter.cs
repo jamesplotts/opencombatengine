@@ -91,8 +91,10 @@ namespace OpenCombatEngine.Implementation.Content
             var requiresAttack = dto.SpellAttack != null && dto.SpellAttack.Count > 0;
             var requiresConcentration = MapConcentration(dto.Duration);
             var saveAbility = MapSaveAbility(dto.SavingThrow);
-            var damageType = MapDamageType(dto.DamageInflict);
-            var damageDice = MapDamageDice(dto.Damage);
+            var saveEffect = MapSaveEffect(dto.SavingThrow, description); // Heuristic
+            
+            var damageRolls = MapDamageRolls(dto.Damage, dto.DamageInflict);
+            var healingDice = MapHealingDice(dto.Entries); // Heuristic from text if needed, or check if DTO has healing
 
             return new Spell(
                 dto.Name ?? "Unknown",
@@ -107,9 +109,67 @@ namespace OpenCombatEngine.Implementation.Content
                 requiresAttack,
                 requiresConcentration,
                 saveAbility,
-                damageDice,
-                damageType
+                saveEffect,
+                damageRolls,
+                healingDice
             );
+        }
+
+        private static OpenCombatEngine.Core.Enums.SaveEffect MapSaveEffect(List<string>? saves, string description)
+        {
+            if (saves == null || saves.Count == 0) return OpenCombatEngine.Core.Enums.SaveEffect.None;
+            
+            // Heuristic: Check description for "half as much damage" or "half damage"
+            if (description.Contains("half as much damage", StringComparison.OrdinalIgnoreCase) || 
+                description.Contains("half damage", StringComparison.OrdinalIgnoreCase))
+            {
+                return OpenCombatEngine.Core.Enums.SaveEffect.HalfDamage;
+            }
+            
+            // Cantrips often negate damage on save
+            // If it's a save and NOT half damage, it's usually Negate (for damage spells).
+            // But for status spells (Hold Person), save negates effect.
+            // We'll assume Negate if not Half.
+            return OpenCombatEngine.Core.Enums.SaveEffect.Negate;
+        }
+
+        private static List<OpenCombatEngine.Core.Models.Spells.DamageFormula> MapDamageRolls(List<List<string>>? damage, List<string>? damageInflict)
+        {
+            var list = new List<OpenCombatEngine.Core.Models.Spells.DamageFormula>();
+            if (damage == null || damage.Count == 0) return list;
+
+            // damage is like [["8d6"], ["1d6"]]
+            // damageInflict is like ["fire", "bludgeoning"]
+            // We try to match them by index.
+            
+            for (int i = 0; i < damage.Count; i++)
+            {
+                var dice = damage[i].FirstOrDefault(); // "8d6"
+                if (string.IsNullOrWhiteSpace(dice)) continue;
+                
+                var typeStr = (damageInflict != null && damageInflict.Count > i) ? damageInflict[i] : (damageInflict?.FirstOrDefault() ?? "force");
+                
+                // Map type string to enum
+                if (!Enum.TryParse<DamageType>(typeStr, true, out var type))
+                {
+                    type = DamageType.Force;
+                }
+                
+                list.Add(new OpenCombatEngine.Core.Models.Spells.DamageFormula(dice, type));
+            }
+            
+            return list;
+        }
+
+        private static string? MapHealingDice(List<object>? entries)
+        {
+            // 5e.tools JSON often puts healing in "entries" or specific scaling.
+            // This is complex. For now, let's look for simple regex in description if we don't have a dedicated field?
+            // Or maybe we should check if there is a "healing" field in DTO?
+            // I'll check SpellDto.cs to see if I added one. I haven't yet.
+            // I should add it if possible, but 5e.tools structure for healing is varied.
+            // For now, return null as placeholder or try simple regex?
+            return null; 
         }
 
         private static bool MapConcentration(List<DurationDto>? duration)

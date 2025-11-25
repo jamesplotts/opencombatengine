@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Core.Enums;
 
 namespace OpenCombatEngine.Implementation.Spells
 {
@@ -54,6 +55,7 @@ namespace OpenCombatEngine.Implementation.Spells
         }
 
         public ISpell? ConcentratingOn { get; private set; }
+        public Ability CastingAbility { get; }
 
         public void BreakConcentration()
         {
@@ -88,6 +90,7 @@ namespace OpenCombatEngine.Implementation.Spells
             _proficiencyBonus = proficiencyBonus;
             _spellcastingAbility = spellcastingAbility;
             _isPreparedCaster = isPreparedCaster;
+            CastingAbility = spellcastingAbility;
         }
 
         public bool HasSlot(int level) => _slotManager.HasSlot(level);

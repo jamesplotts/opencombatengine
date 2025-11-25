@@ -47,8 +47,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             spell.Name.Should().Be("Fireball");
             spell.RequiresAttackRoll.Should().BeFalse();
             spell.SaveAbility.Should().Be(Ability.Dexterity);
-            spell.DamageType.Should().Be(DamageType.Fire);
-            spell.DamageDice.Should().Be("8d6");
+            spell.DamageRolls.Should().Contain(d => d.Dice == "8d6" && d.Type == DamageType.Fire);
         }
 
         [Fact]
@@ -79,8 +78,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             spell.Name.Should().Be("Scorching Ray");
             spell.RequiresAttackRoll.Should().BeTrue();
             spell.SaveAbility.Should().BeNull();
-            spell.DamageType.Should().Be(DamageType.Fire);
-            spell.DamageDice.Should().Be("2d6");
+            spell.DamageRolls.Should().Contain(d => d.Dice == "2d6" && d.Type == DamageType.Fire);
         }
     }
 }
