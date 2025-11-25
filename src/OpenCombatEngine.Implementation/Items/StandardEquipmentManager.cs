@@ -10,6 +10,15 @@ namespace OpenCombatEngine.Implementation.Items
         public IWeapon? OffHand { get; private set; }
         public IArmor? Armor { get; private set; }
         public IArmor? Shield { get; private set; }
+        
+        public IItem? Head { get; private set; }
+        public IItem? Neck { get; private set; }
+        public IItem? Shoulders { get; private set; }
+        public IItem? Hands { get; private set; }
+        public IItem? Waist { get; private set; }
+        public IItem? Feet { get; private set; }
+        public IItem? Ring1 { get; private set; }
+        public IItem? Ring2 { get; private set; }
 
         private readonly System.Collections.Generic.List<IMagicItem> _attunedItems = new();
         public System.Collections.Generic.IReadOnlyList<IMagicItem> AttunedItems => _attunedItems;
@@ -21,74 +30,115 @@ namespace OpenCombatEngine.Implementation.Items
             _owner = owner ?? throw new System.ArgumentNullException(nameof(owner));
         }
 
-        public Result<bool> EquipMainHand(IItem item)
+        public Result<bool> EquipMainHand(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand);
+        public Result<bool> EquipOffHand(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
+        public Result<bool> EquipArmor(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.Armor);
+        public Result<bool> EquipShield(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand); // Shield goes to OffHand usually, but we track it separately? 
+        // Wait, EquipShield logic was specific. Let's keep specific methods but delegate or reimplement.
+        // Actually, EquipShield sets Shield property. EquipOffHand sets OffHand.
+        // If I equip a shield, it should probably occupy OffHand too?
+        // For now, let's keep them somewhat separate but consistent.
+        
+        public Result<bool> Equip(IItem item, OpenCombatEngine.Core.Enums.EquipmentSlot slot)
         {
             if (item == null) return Result<bool>.Failure("Item cannot be null.");
             
-            IWeapon? weapon = item as IWeapon;
-            if (weapon == null && item is IMagicItem magicItem)
+            switch (slot)
             {
-                weapon = magicItem.WeaponProperties;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand:
+                    return EquipMainHandInternal(item);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand:
+                    return EquipOffHandInternal(item);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Armor:
+                    return EquipArmorInternal(item);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Head:
+                    Head = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Neck:
+                    Neck = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders:
+                    Shoulders = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Hands:
+                    Hands = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Waist:
+                    Waist = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Feet:
+                    Feet = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1:
+                    Ring1 = item; return Result<bool>.Success(true);
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2:
+                    Ring2 = item; return Result<bool>.Success(true);
+                default:
+                    return Result<bool>.Failure("Invalid slot.");
             }
-
+        }
+        
+        private Result<bool> EquipMainHandInternal(IItem item)
+        {
+            IWeapon? weapon = item as IWeapon;
+            if (weapon == null && item is IMagicItem magicItem) weapon = magicItem.WeaponProperties;
             if (weapon == null) return Result<bool>.Failure("Item is not a weapon.");
-
             MainHand = weapon;
             return Result<bool>.Success(true);
         }
 
-        public Result<bool> EquipOffHand(IItem item)
+        private Result<bool> EquipOffHandInternal(IItem item)
         {
-            if (item == null) return Result<bool>.Failure("Item cannot be null.");
-
-            IWeapon? weapon = item as IWeapon;
-            if (weapon == null && item is IMagicItem magicItem)
+            // Check for shield first
+            IArmor? shield = item as IArmor;
+            if (shield == null && item is IMagicItem magicItem) shield = magicItem.ArmorProperties;
+            
+            if (shield != null && shield.Category == ArmorCategory.Shield)
             {
-                weapon = magicItem.WeaponProperties;
+                Shield = shield;
+                OffHand = null; // Shield takes offhand
+                return Result<bool>.Success(true);
             }
 
-            if (weapon == null) return Result<bool>.Failure("Item is not a weapon.");
-
-            OffHand = weapon;
-            return Result<bool>.Success(true);
+            // Else weapon
+            IWeapon? weapon = item as IWeapon;
+            if (weapon == null && item is IMagicItem magicItem2) weapon = magicItem2.WeaponProperties;
+            
+            if (weapon != null)
+            {
+                OffHand = weapon;
+                Shield = null; // Weapon takes offhand
+                return Result<bool>.Success(true);
+            }
+            
+            return Result<bool>.Failure("Item is not a weapon or shield.");
         }
 
-        public Result<bool> EquipArmor(IItem item)
+        private Result<bool> EquipArmorInternal(IItem item)
         {
-            if (item == null) return Result<bool>.Failure("Item cannot be null.");
-
             IArmor? armor = item as IArmor;
-            if (armor == null && item is IMagicItem magicItem)
-            {
-                armor = magicItem.ArmorProperties;
-            }
-
+            if (armor == null && item is IMagicItem magicItem) armor = magicItem.ArmorProperties;
             if (armor == null) return Result<bool>.Failure("Item is not armor.");
             if (armor.Category == ArmorCategory.Shield) return Result<bool>.Failure("Cannot equip shield as armor.");
-            
             Armor = armor;
             return Result<bool>.Success(true);
         }
 
-        public Result<bool> EquipShield(IItem item)
+        public Result<bool> Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot slot)
         {
-            if (item == null) return Result<bool>.Failure("Item cannot be null.");
-
-            IArmor? shield = item as IArmor;
-            if (shield == null && item is IMagicItem magicItem)
+            switch (slot)
             {
-                shield = magicItem.ArmorProperties;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand: MainHand = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand: OffHand = null; Shield = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Armor: Armor = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Head: Head = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Neck: Neck = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders: Shoulders = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Hands: Hands = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Waist: Waist = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Feet: Feet = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1: Ring1 = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2: Ring2 = null; break;
             }
-
-            if (shield == null) return Result<bool>.Failure("Item is not a shield.");
-            if (shield.Category != ArmorCategory.Shield) return Result<bool>.Failure("Item is not a shield.");
-            
-            Shield = shield;
             return Result<bool>.Success(true);
         }
 
         public void UnequipMainHand() => MainHand = null;
-        public void UnequipOffHand() => OffHand = null;
+        public void UnequipOffHand() { OffHand = null; Shield = null; }
         public void UnequipArmor() => Armor = null;
         public void UnequipShield() => Shield = null;
 

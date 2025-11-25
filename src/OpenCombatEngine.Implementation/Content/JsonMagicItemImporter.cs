@@ -176,6 +176,28 @@ namespace OpenCombatEngine.Implementation.Content
                 }
             }
 
+            // Infer Default Slot
+            OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null;
+            if (dto.Type == "RG") defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1; // Or Ring2, generic Ring
+            else if (dto.Type == "M" || dto.Type == "R") defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand;
+            else if (dto.Type == "HA" || dto.Type == "MA" || dto.Type == "LA") defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Armor;
+            else if (dto.Type == "S") defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand;
+            else if (dto.Name != null)
+            {
+                var lowerName = dto.Name; // No need to lower if we use OrdinalIgnoreCase, but wait, Contains(string, StringComparison) is standard in .NET?
+                // Actually, .NET Standard 2.0 / .NET Framework might not have Contains(string, StringComparison).
+                // But we are likely on .NET 6/8.
+                // Let's assume we can use it.
+                // If not, we use IndexOf >= 0.
+                
+                if (dto.Name.Contains("boots", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("shoes", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("slippers", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Feet;
+                else if (dto.Name.Contains("cloak", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("cape", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("mantle", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders;
+                else if (dto.Name.Contains("amulet", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("necklace", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("periapt", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("scarf", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Neck;
+                else if (dto.Name.Contains("helm", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("hat", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("cap", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("circlet", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("crown", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Head;
+                else if (dto.Name.Contains("gloves", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("gauntlets", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("bracers", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Hands;
+                else if (dto.Name.Contains("belt", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("girdle", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Waist;
+            }
+
             return new MagicItem(
                 dto.Name ?? "Unknown Item",
                 description,
@@ -188,7 +210,8 @@ namespace OpenCombatEngine.Implementation.Content
                 dto.Charges ?? 0,
                 dto.Recharge ?? "",
                 weaponProps,
-                armorProps
+                armorProps,
+                defaultSlot
             );
         }
 
