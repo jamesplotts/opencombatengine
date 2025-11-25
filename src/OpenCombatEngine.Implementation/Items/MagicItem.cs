@@ -28,6 +28,9 @@ namespace OpenCombatEngine.Implementation.Items
         public int MaxCharges { get; }
         public string RechargeRate { get; }
 
+        public IWeapon? WeaponProperties { get; }
+        public IArmor? ArmorProperties { get; }
+
         public MagicItem(
             string name, 
             string description, 
@@ -38,7 +41,9 @@ namespace OpenCombatEngine.Implementation.Items
             IEnumerable<OpenCombatEngine.Core.Interfaces.Features.IFeature>? features = null,
             IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition>? conditions = null,
             int maxCharges = 0,
-            string rechargeRate = "")
+            string rechargeRate = "",
+            IWeapon? weaponProperties = null,
+            IArmor? armorProperties = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             Name = name;
@@ -50,6 +55,8 @@ namespace OpenCombatEngine.Implementation.Items
             MaxCharges = maxCharges;
             Charges = maxCharges; // Start full
             RechargeRate = rechargeRate;
+            WeaponProperties = weaponProperties;
+            ArmorProperties = armorProperties;
             
             if (features != null) _features.AddRange(features);
             if (conditions != null) _conditions.AddRange(conditions);

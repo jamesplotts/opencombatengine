@@ -117,17 +117,78 @@ namespace OpenCombatEngine.Implementation.Content
                 ));
             }
 
+            IWeapon? weaponProps = null;
+            IArmor? armorProps = null;
+
+            // Determine if it's a weapon
+            if (dto.Type == "M" || dto.Type == "R") // Melee or Ranged
+            {
+                if (!string.IsNullOrWhiteSpace(dto.Dmg1))
+                {
+                    // Damage Type Mapping
+                    OpenCombatEngine.Core.Enums.DamageType dmgTypeEnum = OpenCombatEngine.Core.Enums.DamageType.Slashing; // Default
+                    if (!string.IsNullOrWhiteSpace(dto.DmgType))
+                    {
+                         switch(dto.DmgType.ToUpperInvariant())
+                         {
+                             case "P": dmgTypeEnum = OpenCombatEngine.Core.Enums.DamageType.Piercing; break;
+                             case "B": dmgTypeEnum = OpenCombatEngine.Core.Enums.DamageType.Bludgeoning; break;
+                             case "S": dmgTypeEnum = OpenCombatEngine.Core.Enums.DamageType.Slashing; break;
+                         }
+                    }
+                    
+                    weaponProps = new OpenCombatEngine.Implementation.Items.Weapon(
+                        dto.Name ?? "Weapon",
+                        dto.Dmg1,
+                        dmgTypeEnum,
+                        new List<OpenCombatEngine.Core.Enums.WeaponProperty>(), // properties
+                        description,
+                        weight,
+                        (int)value
+                    );
+                }
+            }
+            
+            // Determine if it's armor
+            if (dto.Type == "HA" || dto.Type == "MA" || dto.Type == "LA" || dto.Type == "S")
+            {
+                if (dto.Ac.HasValue)
+                {
+                    OpenCombatEngine.Core.Interfaces.Items.ArmorCategory armorCategory = OpenCombatEngine.Core.Interfaces.Items.ArmorCategory.Light;
+                    if (dto.Type == "HA") armorCategory = OpenCombatEngine.Core.Interfaces.Items.ArmorCategory.Heavy;
+                    else if (dto.Type == "MA") armorCategory = OpenCombatEngine.Core.Interfaces.Items.ArmorCategory.Medium;
+                    else if (dto.Type == "S") armorCategory = OpenCombatEngine.Core.Interfaces.Items.ArmorCategory.Shield;
+                    
+                    int strReq = 0;
+                    if (!string.IsNullOrWhiteSpace(dto.Strength)) _ = int.TryParse(dto.Strength, out strReq);
+                    
+                    armorProps = new OpenCombatEngine.Implementation.Items.Armor(
+                        dto.Name ?? "Armor",
+                        dto.Ac.Value,
+                        armorCategory,
+                        null, // dex cap
+                        strReq,
+                        dto.Stealth == true,
+                        description,
+                        weight,
+                        (int)value
+                    );
+                }
+            }
+
             return new MagicItem(
                 dto.Name ?? "Unknown Item",
                 description,
                 weight,
-                (int)value, // Casting long to int for now, might need to update IItem
+                (int)value,
                 type,
                 reqAttunement,
                 features,
                 null, // conditions
                 dto.Charges ?? 0,
-                dto.Recharge ?? ""
+                dto.Recharge ?? "",
+                weaponProps,
+                armorProps
             );
         }
 

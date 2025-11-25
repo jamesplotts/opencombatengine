@@ -72,5 +72,15 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// Gets the conditions applied by this item.
         /// </summary>
         System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition> Conditions { get; }
+
+        /// <summary>
+        /// Gets the weapon properties if this item is a weapon.
+        /// </summary>
+        IWeapon? WeaponProperties { get; }
+
+        /// <summary>
+        /// Gets the armor properties if this item is armor.
+        /// </summary>
+        IArmor? ArmorProperties { get; }
     }
 }

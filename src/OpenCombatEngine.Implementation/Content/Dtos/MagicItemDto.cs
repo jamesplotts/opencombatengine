@@ -42,6 +42,26 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("recharge")]
         public string? Recharge { get; set; }
+
+        // Weapon properties
+        [JsonPropertyName("dmg1")]
+        public string? Dmg1 { get; set; } // Damage dice (e.g. "1d8")
+        
+        [JsonPropertyName("dmgType")]
+        public string? DmgType { get; set; } // Damage type (e.g. "S")
+        
+        [JsonPropertyName("range")]
+        public string? Range { get; set; } // Range (e.g. "20/60")
+
+        // Armor properties
+        [JsonPropertyName("ac")]
+        public int? Ac { get; set; } // Base AC
+        
+        [JsonPropertyName("strength")]
+        public string? Strength { get; set; } // Strength requirement
+        
+        [JsonPropertyName("stealth")]
+        public bool? Stealth { get; set; } // Disadvantage on stealth?
     }
     
     public class MagicItemCompendiumDto

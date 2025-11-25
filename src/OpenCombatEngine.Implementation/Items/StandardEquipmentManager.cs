@@ -21,32 +21,68 @@ namespace OpenCombatEngine.Implementation.Items
             _owner = owner ?? throw new System.ArgumentNullException(nameof(owner));
         }
 
-        public Result<bool> EquipMainHand(IWeapon weapon)
+        public Result<bool> EquipMainHand(IItem item)
         {
-            if (weapon == null) return Result<bool>.Failure("Weapon cannot be null.");
+            if (item == null) return Result<bool>.Failure("Item cannot be null.");
+            
+            IWeapon? weapon = item as IWeapon;
+            if (weapon == null && item is IMagicItem magicItem)
+            {
+                weapon = magicItem.WeaponProperties;
+            }
+
+            if (weapon == null) return Result<bool>.Failure("Item is not a weapon.");
+
             MainHand = weapon;
             return Result<bool>.Success(true);
         }
 
-        public Result<bool> EquipOffHand(IWeapon weapon)
+        public Result<bool> EquipOffHand(IItem item)
         {
-            if (weapon == null) return Result<bool>.Failure("Weapon cannot be null.");
+            if (item == null) return Result<bool>.Failure("Item cannot be null.");
+
+            IWeapon? weapon = item as IWeapon;
+            if (weapon == null && item is IMagicItem magicItem)
+            {
+                weapon = magicItem.WeaponProperties;
+            }
+
+            if (weapon == null) return Result<bool>.Failure("Item is not a weapon.");
+
             OffHand = weapon;
             return Result<bool>.Success(true);
         }
 
-        public Result<bool> EquipArmor(IArmor armor)
+        public Result<bool> EquipArmor(IItem item)
         {
-            if (armor == null) return Result<bool>.Failure("Armor cannot be null.");
+            if (item == null) return Result<bool>.Failure("Item cannot be null.");
+
+            IArmor? armor = item as IArmor;
+            if (armor == null && item is IMagicItem magicItem)
+            {
+                armor = magicItem.ArmorProperties;
+            }
+
+            if (armor == null) return Result<bool>.Failure("Item is not armor.");
             if (armor.Category == ArmorCategory.Shield) return Result<bool>.Failure("Cannot equip shield as armor.");
+            
             Armor = armor;
             return Result<bool>.Success(true);
         }
 
-        public Result<bool> EquipShield(IArmor shield)
+        public Result<bool> EquipShield(IItem item)
         {
-            if (shield == null) return Result<bool>.Failure("Shield cannot be null.");
+            if (item == null) return Result<bool>.Failure("Item cannot be null.");
+
+            IArmor? shield = item as IArmor;
+            if (shield == null && item is IMagicItem magicItem)
+            {
+                shield = magicItem.ArmorProperties;
+            }
+
+            if (shield == null) return Result<bool>.Failure("Item is not a shield.");
             if (shield.Category != ArmorCategory.Shield) return Result<bool>.Failure("Item is not a shield.");
+            
             Shield = shield;
             return Result<bool>.Success(true);
         }

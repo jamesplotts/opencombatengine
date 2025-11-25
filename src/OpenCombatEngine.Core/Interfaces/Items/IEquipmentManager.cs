@@ -9,10 +9,10 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         IArmor? Armor { get; }
         IArmor? Shield { get; }
 
-        Result<bool> EquipMainHand(IWeapon weapon);
-        Result<bool> EquipOffHand(IWeapon weapon);
-        Result<bool> EquipArmor(IArmor armor);
-        Result<bool> EquipShield(IArmor shield);
+        Result<bool> EquipMainHand(IItem item);
+        Result<bool> EquipOffHand(IItem item);
+        Result<bool> EquipArmor(IItem item);
+        Result<bool> EquipShield(IItem item);
 
         void UnequipMainHand();
         void UnequipOffHand();
