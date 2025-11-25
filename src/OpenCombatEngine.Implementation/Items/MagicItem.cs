@@ -30,6 +30,7 @@ namespace OpenCombatEngine.Implementation.Items
 
         public IWeapon? WeaponProperties { get; }
         public IArmor? ArmorProperties { get; }
+        public IContainer? ContainerProperties { get; }
         public OpenCombatEngine.Core.Enums.EquipmentSlot? DefaultSlot { get; }
 
         public MagicItem(
@@ -45,6 +46,7 @@ namespace OpenCombatEngine.Implementation.Items
             string rechargeRate = "",
             IWeapon? weaponProperties = null,
             IArmor? armorProperties = null,
+            IContainer? containerProperties = null,
             OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -59,6 +61,7 @@ namespace OpenCombatEngine.Implementation.Items
             RechargeRate = rechargeRate;
             WeaponProperties = weaponProperties;
             ArmorProperties = armorProperties;
+            ContainerProperties = containerProperties;
             DefaultSlot = defaultSlot;
             
             if (features != null) _features.AddRange(features);

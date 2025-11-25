@@ -176,6 +176,37 @@ namespace OpenCombatEngine.Implementation.Content
                 }
             }
 
+            // Determine if it's a container
+            IContainer? containerProps = null;
+            if (dto.Name != null)
+            {
+                var lowerName = dto.Name; // Using OrdinalIgnoreCase below
+                if (dto.Name.Contains("Bag of Holding", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Bag of Holding: 15 lbs base, 500 lbs capacity, 0 weight multiplier (contents don't add weight)
+                    containerProps = new OpenCombatEngine.Implementation.Items.ContainerItem(
+                        dto.Name,
+                        15,
+                        500,
+                        0.0,
+                        description,
+                        (int)value
+                    );
+                }
+                else if (dto.Name.Contains("Handy Haversack", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Heward's Handy Haversack: 5 lbs base, ~120 lbs capacity (simplified), 0 weight multiplier
+                    containerProps = new OpenCombatEngine.Implementation.Items.ContainerItem(
+                        dto.Name,
+                        5,
+                        120,
+                        0.0,
+                        description,
+                        (int)value
+                    );
+                }
+            }
+
             // Infer Default Slot
             OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null;
             if (dto.Type == "RG") defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1; // Or Ring2, generic Ring
@@ -211,6 +242,7 @@ namespace OpenCombatEngine.Implementation.Content
                 dto.Recharge ?? "",
                 weaponProps,
                 armorProps,
+                containerProps,
                 defaultSlot
             );
         }

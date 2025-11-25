@@ -82,5 +82,15 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// Gets the armor properties if this item is armor.
         /// </summary>
         IArmor? ArmorProperties { get; }
+
+        /// <summary>
+        /// Gets the container properties if this item is a container.
+        /// </summary>
+        IContainer? ContainerProperties { get; }
+
+        /// <summary>
+        /// Gets the default equipment slot for this item, if any.
+        /// </summary>
+        OpenCombatEngine.Core.Enums.EquipmentSlot? DefaultSlot { get; }
     }
 }

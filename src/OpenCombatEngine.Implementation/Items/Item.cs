@@ -8,7 +8,7 @@ namespace OpenCombatEngine.Implementation.Items
         public Guid Id { get; } = Guid.NewGuid();
         public string Name { get; }
         public string Description { get; }
-        public double Weight { get; }
+        public virtual double Weight { get; }
         public int Value { get; }
 
         public Item(string name, string description = "", double weight = 0, int value = 0)
