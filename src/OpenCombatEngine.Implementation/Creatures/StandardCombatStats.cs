@@ -64,7 +64,19 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
         }
 
-        public int InitiativeBonus { get; }
+        public int InitiativeBonus
+        {
+            get
+            {
+                int bonus = _baseInitiativeBonus;
+                if (_effects != null)
+                {
+                    bonus = _effects.ApplyStatBonuses(StatType.Initiative, bonus);
+                }
+                return bonus;
+            }
+        }
+        private readonly int _baseInitiativeBonus;
         
         public int Speed 
         { 
@@ -100,7 +112,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             IAbilityScores? abilities = null)
         {
             _baseArmorClass = armorClass;
-            InitiativeBonus = initiativeBonus;
+            _baseInitiativeBonus = initiativeBonus;
             _baseSpeed = speed;
             _resistances = (resistances ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _vulnerabilities = (vulnerabilities ?? Enumerable.Empty<DamageType>()).ToHashSet();
@@ -113,7 +125,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         {
             System.ArgumentNullException.ThrowIfNull(state);
             _baseArmorClass = state.ArmorClass;
-            InitiativeBonus = state.InitiativeBonus;
+            _baseInitiativeBonus = state.InitiativeBonus;
             _baseSpeed = state.Speed;
             _resistances = (state.Resistances ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<DamageType>()).ToHashSet();

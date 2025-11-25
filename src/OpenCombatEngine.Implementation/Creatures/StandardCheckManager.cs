@@ -29,7 +29,13 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
             
-            return Result<int>.Success(roll.Value.Total);
+            int total = roll.Value.Total;
+            if (_creature.Effects != null)
+            {
+                total = _creature.Effects.ApplyStatBonuses(StatType.AbilityCheck, total);
+            }
+            
+            return Result<int>.Success(total);
         }
 
         public Result<int> RollSavingThrow(Ability ability)
@@ -49,7 +55,13 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
 
-            return Result<int>.Success(roll.Value.Total);
+            int total = roll.Value.Total;
+            if (_creature.Effects != null)
+            {
+                total = _creature.Effects.ApplyStatBonuses(StatType.SavingThrow, total);
+            }
+
+            return Result<int>.Success(total);
         }
 
         public Result<int> RollDeathSave()

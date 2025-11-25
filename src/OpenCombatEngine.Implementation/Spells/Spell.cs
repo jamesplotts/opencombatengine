@@ -16,8 +16,9 @@ namespace OpenCombatEngine.Implementation.Spells
         public string Components { get; }
         public string Duration { get; }
         public string Description { get; }
-
+        
         public bool RequiresAttackRoll { get; }
+        public bool RequiresConcentration { get; }
         public Ability? SaveAbility { get; }
         public string? DamageDice { get; }
         public DamageType? DamageType { get; }
@@ -37,6 +38,7 @@ namespace OpenCombatEngine.Implementation.Spells
             string description,
             OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller diceRoller,
             bool requiresAttackRoll = false,
+            bool requiresConcentration = false,
             Ability? saveAbility = null,
             string? damageDice = null,
             DamageType? damageType = null,
@@ -56,7 +58,9 @@ namespace OpenCombatEngine.Implementation.Spells
             Duration = duration;
             Description = description;
             _diceRoller = diceRoller;
+            _diceRoller = diceRoller;
             RequiresAttackRoll = requiresAttackRoll;
+            RequiresConcentration = requiresConcentration;
             SaveAbility = saveAbility;
             DamageDice = damageDice;
             DamageType = damageType;

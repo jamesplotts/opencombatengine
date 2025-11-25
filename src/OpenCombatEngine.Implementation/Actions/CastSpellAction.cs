@@ -115,6 +115,12 @@ namespace OpenCombatEngine.Implementation.Actions
                 return Result<ActionResult>.Failure(consumeResult.Error);
             }
 
+            // Set Concentration
+            if (_spell.RequiresConcentration)
+            {
+                spellcasting.SetConcentration(_spell);
+            }
+
             // Execute Spell
             if (_spell.AreaOfEffect != null && context.Grid != null && positionTarget != null)
             {

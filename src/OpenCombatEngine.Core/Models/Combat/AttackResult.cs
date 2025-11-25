@@ -12,7 +12,7 @@ namespace OpenCombatEngine.Core.Models.Combat
     {
         public ICreature Source { get; }
         public ICreature Target { get; }
-        public int AttackRoll { get; }
+        public int AttackRoll { get; set; }
         public bool IsCritical { get; }
         public bool HasAdvantage { get; }
         public bool HasDisadvantage { get; }

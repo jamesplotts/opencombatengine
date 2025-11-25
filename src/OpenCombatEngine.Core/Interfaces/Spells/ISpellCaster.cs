@@ -70,5 +70,26 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         /// Sets the number of slots for a level (e.g. on level up).
         /// </summary>
         void SetSlots(int level, int max);
+
+        /// <summary>
+        /// Sets the effect manager for calculating dynamic bonuses.
+        /// </summary>
+        void SetEffectManager(OpenCombatEngine.Core.Interfaces.Effects.IEffectManager effects);
+
+        /// <summary>
+        /// Gets the spell currently being concentrated on, if any.
+        /// </summary>
+        ISpell? ConcentratingOn { get; }
+
+        /// <summary>
+        /// Breaks concentration on the current spell.
+        /// </summary>
+        void BreakConcentration();
+
+        /// <summary>
+        /// Sets concentration on a spell, breaking any existing concentration.
+        /// </summary>
+        /// <param name="spell">The spell to concentrate on.</param>
+        void SetConcentration(ISpell spell);
     }
 }

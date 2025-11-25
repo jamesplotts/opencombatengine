@@ -20,8 +20,62 @@ namespace OpenCombatEngine.Implementation.Spells
         public IReadOnlyList<ISpell> KnownSpells => _knownSpells.AsReadOnly();
         public IReadOnlyList<ISpell> PreparedSpells => _isPreparedCaster ? _preparedSpells.AsReadOnly() : _knownSpells.AsReadOnly();
 
-        public int SpellSaveDC => 8 + _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
-        public int SpellAttackBonus => _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+        public int SpellSaveDC
+        {
+            get
+            {
+                int dc = 8 + _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+                if (_effects != null)
+                {
+                    dc = _effects.ApplyStatBonuses(OpenCombatEngine.Core.Enums.StatType.SpellSaveDC, dc);
+                }
+                return dc;
+            }
+        }
+
+        public int SpellAttackBonus
+        {
+            get
+            {
+                int bonus = _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+                if (_effects != null)
+                {
+                    bonus = _effects.ApplyStatBonuses(OpenCombatEngine.Core.Enums.StatType.AttackRoll, bonus);
+                }
+                return bonus;
+            }
+        }
+
+        private OpenCombatEngine.Core.Interfaces.Effects.IEffectManager? _effects;
+
+        public void SetEffectManager(OpenCombatEngine.Core.Interfaces.Effects.IEffectManager effects)
+        {
+            _effects = effects;
+        }
+
+        public ISpell? ConcentratingOn { get; private set; }
+
+        public void BreakConcentration()
+        {
+            if (ConcentratingOn != null)
+            {
+                // TODO: Notify that concentration ended?
+                // For now just clear it.
+                ConcentratingOn = null;
+            }
+        }
+
+        public void SetConcentration(ISpell spell)
+        {
+            ArgumentNullException.ThrowIfNull(spell);
+            
+            if (ConcentratingOn != null)
+            {
+                BreakConcentration();
+            }
+            
+            ConcentratingOn = spell;
+        }
 
         public StandardSpellCaster(
             OpenCombatEngine.Core.Interfaces.Creatures.IAbilityScores abilityScores,

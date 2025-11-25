@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Implementation.Creatures;
 using System.Collections.Generic;
 using Xunit;
@@ -25,6 +26,7 @@ namespace OpenCombatEngine.Implementation.Tests
             ));
 
             var creature = Substitute.For<ICreature>();
+            creature.Effects.Returns((IEffectManager)null);
             
             var manager = new StandardCheckManager(abilityScores, diceRoller, creature);
             
@@ -47,6 +49,7 @@ namespace OpenCombatEngine.Implementation.Tests
             ));
 
             var creature = Substitute.For<ICreature>();
+            creature.Effects.Returns((IEffectManager)null);
             
             var manager = new StandardCheckManager(abilityScores, diceRoller, creature);
             

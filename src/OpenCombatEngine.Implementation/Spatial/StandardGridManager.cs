@@ -275,20 +275,18 @@ namespace OpenCombatEngine.Implementation.Spatial
 
         public int GetPathCost(Position start, Position destination)
         {
-            // Simplified path cost: Straight line (Bresenham)
-            // Cost = Sum of costs of entering each cell.
-            // Start cell cost is NOT included (you are already there).
+            // Use A* path to calculate actual cost
+            var path = GetPath(start, destination).ToList();
             
-            var points = GetLinePoints(start, destination);
+            if (path.Count == 0) return int.MaxValue; // Unreachable
+            
             int totalCost = 0;
-
-            // Skip the first point (start)
-            foreach (var point in System.Linq.Enumerable.Skip(points, 1))
+            // Skip start
+            foreach (var point in path.Skip(1))
             {
                 int stepCost = IsDifficultTerrain(point) ? 10 : 5;
                 totalCost += stepCost;
             }
-
             return totalCost;
         }
 
@@ -359,12 +357,107 @@ namespace OpenCombatEngine.Implementation.Spatial
 
         public IEnumerable<Position> GetPath(Position start, Position destination)
         {
-            // Re-use the simple interpolation logic from GetLinePoints/HasLineOfSight
-            // In a real implementation, this might use A* if obstacles are involved.
-            // For now, we assume direct movement (Chebyshev line).
-            return GetLinePoints(start, destination);
+            // A* Algorithm
+            var openSet = new PriorityQueue<Position, int>();
+            var cameFrom = new Dictionary<Position, Position>();
+            var gScore = new Dictionary<Position, int>();
+
+            gScore[start] = 0;
+            openSet.Enqueue(start, 0);
+
+            while (openSet.Count > 0)
+            {
+                var current = openSet.Dequeue();
+
+                if (current.Equals(destination))
+                {
+                    return ReconstructPath(cameFrom, current);
+                }
+
+                foreach (var neighbor in GetNeighbors(current))
+                {
+                    // Check if neighbor is passable
+                    // We allow the destination to be returned even if occupied? 
+                    // Usually you can't move INTO an occupied square.
+                    // But if we are calculating a path TO a creature, we might want the path to end adjacent.
+                    // However, the input is 'destination'. If destination is blocked, A* won't find a path.
+                    // The caller should probably pick an adjacent square if they want to attack.
+                    // For now, strict passability.
+                    
+                    if (IsBlocked(neighbor) && !neighbor.Equals(destination)) continue;
+                    
+                    // Calculate cost
+                    int moveCost = IsDifficultTerrain(neighbor) ? 10 : 5;
+                    int tentativeGScore = gScore[current] + moveCost;
+
+                    if (!gScore.TryGetValue(neighbor, out int currentGScore) || tentativeGScore < currentGScore)
+                    {
+                        cameFrom[neighbor] = current;
+                        gScore[neighbor] = tentativeGScore;
+                        int fScore = tentativeGScore + GetHeuristic(neighbor, destination);
+                        openSet.Enqueue(neighbor, fScore);
+                    }
+                }
+            }
+
+            // No path found
+            return Enumerable.Empty<Position>();
         }
 
+        private static List<Position> ReconstructPath(Dictionary<Position, Position> cameFrom, Position current)
+        {
+            var totalPath = new List<Position> { current };
+            while (cameFrom.ContainsKey(current))
+            {
+                current = cameFrom[current];
+                totalPath.Add(current);
+            }
+            totalPath.Reverse();
+            return totalPath;
+        }
+
+        private static IEnumerable<Position> GetNeighbors(Position center)
+        {
+            // 3D Neighbors (26 directions)
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        if (x == 0 && y == 0 && z == 0) continue;
+                        yield return new Position(center.X + x, center.Y + y, center.Z + z);
+                    }
+                }
+            }
+        }
+
+        private static int GetHeuristic(Position a, Position b)
+        {
+            // Chebyshev distance * 5
+            return Math.Max(Math.Abs(a.X - b.X), Math.Max(Math.Abs(a.Y - b.Y), Math.Abs(a.Z - b.Z))) * 5;
+        }
+
+        private bool IsBlocked(Position position)
+        {
+            if (IsObstructed(position)) return true;
+            if (_positionCreatures.ContainsKey(position)) return true;
+            return false;
+        }
+
+        // Kept for internal use if needed, or we can remove it if unused.
+        // HasLineOfSight uses its own logic.
+        // GetPathCost uses GetLinePoints currently. We should update GetPathCost to use the path?
+        // Or keep GetPathCost as a simple estimator?
+        // The interface says GetPathCost(start, dest). If we use A*, we already calculated cost.
+        // But GetPathCost might be called separately.
+        // If we want accurate cost, we should run A*. But that's expensive for just a check.
+        // However, if we move along the path, we consume movement.
+        // Let's update GetPathCost to use A*? Or keep it simple?
+        // If we keep it simple, it might underestimate cost through obstacles (which it ignores).
+        // Let's leave GetPathCost as is for now (simple line) or update it to use the path if we want accuracy.
+        // Given the scope, let's update GetPathCost to use the path found by GetPath.
+        
         // Helper to expose line points (refactored from HasLineOfSight or duplicated for now)
         private static System.Collections.Generic.IEnumerable<Position> GetLinePoints(Position p1, Position p2)
         {
@@ -375,41 +468,14 @@ namespace OpenCombatEngine.Implementation.Spatial
             int dy = Math.Abs(y2 - y1);
             int dz = Math.Abs(z2 - z1);
 
-            int xs = x1 < x2 ? 1 : -1;
-            int ys = y1 < y2 ? 1 : -1;
-            int zs = z1 < z2 ? 1 : -1;
-
-            // 3D Bresenham is complex.
-            // Let's use a simpler approach: Max(dx, dy, dz) steps.
-            // This is equivalent to Chebyshev distance steps.
-            
             int steps = Math.Max(dx, Math.Max(dy, dz));
             
-            // Yield start
             yield return p1;
 
             if (steps == 0) yield break;
 
             for (int i = 1; i <= steps; i++)
             {
-                // Interpolate
-                // Note: This is a rough approximation for grid movement.
-                // Ideally we'd use a proper 3D line algorithm.
-                // But for "Chebyshev" movement (diagonals are free), we just need to visit cells.
-                
-                int x = x1 + (dx == 0 ? 0 : (int)Math.Round((double)dx * i / steps) * xs);
-                // Wait, simple interpolation:
-                // x = x1 + i * (x2 - x1) / steps ?? No, integer division issues.
-                
-                // Let's stick to the logic used in HasLineOfSight if possible, or a standard one.
-                // Actually, let's just use the same logic as HasLineOfSight but yield points.
-                
-                // Re-implementing Bresenham cleanly:
-                // For 3D, we can drive by the major axis.
-                
-                // But wait, if we use Chebyshev distance (5-5-5), we just take 'steps' moves.
-                // Each move brings us closer.
-                
                 int cx = x1 + (int)Math.Round((double)(x2 - x1) * i / steps);
                 int cy = y1 + (int)Math.Round((double)(y2 - y1) * i / steps);
                 int cz = z1 + (int)Math.Round((double)(z2 - z1) * i / steps);

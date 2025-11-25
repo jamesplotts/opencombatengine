@@ -254,3 +254,22 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement `StatBonusEffect`
     - [x] Verify with Tests
 - [x] [Save Active Effects ADR](docs/adr/0037-active-effects-system.md)
+
+- [x] **Cycle 29: Integrating Active Effects with Rolls**
+    - [x] Update `StandardCombatStats` (Initiative)
+    - [x] Update `StandardCheckManager` (Checks/Saves)
+    - [x] Update `StandardCreature` (Attack/Damage)
+    - [x] Update `StandardSpellCaster` (DC/Attack Bonus)
+    - [x] Verify with Tests
+- [x] [Save Active Effects Integration ADR](docs/adr/0038-active-effects-integration.md)
+
+- [x] **Cycle 30: Pathfinding (A*)**
+    - [x] Implement A* Algorithm
+    - [x] Handle Difficult Terrain & Obstacles
+    - [x] Verify with Tests
+- [x] [Save Pathfinding ADR](docs/adr/0039-pathfinding-astar.md)
+
+- [x] **Cycle 31: Spell Import Refinement**
+    - [x] Update SpellDto & Importer
+    - [x] Verify with Tests
+- [x] [Save Spell Import Refinement ADR](docs/adr/0040-spell-import-refinement.md)

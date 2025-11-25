@@ -37,6 +37,21 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("entries")]
         public List<object> Entries { get; set; } = new(); // Entries can be strings or objects
+
+        [JsonPropertyName("spellAttack")]
+        public List<string>? SpellAttack { get; set; }
+
+        [JsonPropertyName("savingThrow")]
+        public List<string>? SavingThrow { get; set; }
+
+        [JsonPropertyName("damageInflict")]
+        public List<string>? DamageInflict { get; set; }
+
+        // damage is often [ ["8d6"] ] or [ ["1d10"], ["1d10"] ]
+        // It's a list of lists of strings? Or objects?
+        // Usually strings.
+        [JsonPropertyName("damage")]
+        public List<List<string>>? Damage { get; set; }
     }
 #pragma warning restore CA2227
 #pragma warning restore CA1002
@@ -87,6 +102,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("duration")]
         public DurationAmountDto? Duration { get; set; }
+
+        [JsonPropertyName("concentration")]
+        public bool Concentration { get; set; }
     }
 
     public class DurationAmountDto

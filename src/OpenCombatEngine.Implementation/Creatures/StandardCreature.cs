@@ -10,6 +10,8 @@ using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Items;
+using OpenCombatEngine.Core.Models.Combat;
+using System.Linq;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
@@ -84,6 +86,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             Checks = checkManager ?? new StandardCheckManager(AbilityScores, diceRoller, this);
             Spellcasting = spellCaster;
+            Spellcasting?.SetEffectManager(Effects);
+            
+            HitPoints.DamageTaken += OnDamageTaken;
         }
 
         /// <summary>
@@ -141,9 +146,32 @@ namespace OpenCombatEngine.Implementation.Creatures
             Movement = new StandardMovement(CombatStats, Conditions);
             Effects = new global::OpenCombatEngine.Implementation.Effects.StandardEffectManager(this);
             CombatStats.SetEffectManager(Effects);
+            Spellcasting?.SetEffectManager(Effects);
             
             // Subscribe to events
             Checks = new StandardCheckManager(AbilityScores, new OpenCombatEngine.Implementation.Dice.StandardDiceRoller(), this);
+            HitPoints.DamageTaken += OnDamageTaken;
+        }
+
+        private void OnDamageTaken(object? sender, OpenCombatEngine.Core.Models.Events.DamageTakenEventArgs e)
+        {
+            if (Spellcasting?.ConcentratingOn != null)
+            {
+                // Concentration Check
+                // DC = max(10, damage / 2)
+                int dc = Math.Max(10, e.Amount / 2);
+                
+                var saveResult = Checks.RollSavingThrow(Ability.Constitution);
+                if (saveResult.IsSuccess)
+                {
+                    if (saveResult.Value < dc)
+                    {
+                        // Failed
+                        Spellcasting.BreakConcentration();
+                        // Ideally log this somewhere?
+                    }
+                }
+            }
         }
 
         /// <inheritdoc />
@@ -482,6 +510,22 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)
         {
+            ArgumentNullException.ThrowIfNull(attack);
+
+            if (Effects != null)
+            {
+                // Apply Attack Roll bonuses
+                attack.AttackRoll = Effects.ApplyStatBonuses(StatType.AttackRoll, attack.AttackRoll);
+                
+                // Apply Damage Roll bonuses
+                int damageBonus = Effects.ApplyStatBonuses(StatType.DamageRoll, 0);
+                if (damageBonus > 0)
+                {
+                    var type = attack.Damage.Count > 0 ? attack.Damage[0].Type : DamageType.Force;
+                    attack.AddDamage(new DamageRoll(damageBonus, type));
+                }
+            }
+
             foreach (var feature in _features)
             {
                 feature.OnOutgoingAttack(this, attack);

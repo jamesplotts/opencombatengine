@@ -88,7 +88,12 @@ namespace OpenCombatEngine.Implementation.Content
             var duration = MapDuration(dto.Duration);
             var description = MapEntries(dto.Entries);
 
-            // TODO: Parse attack/save/damage from DTO
+            var requiresAttack = dto.SpellAttack != null && dto.SpellAttack.Count > 0;
+            var requiresConcentration = MapConcentration(dto.Duration);
+            var saveAbility = MapSaveAbility(dto.SavingThrow);
+            var damageType = MapDamageType(dto.DamageInflict);
+            var damageDice = MapDamageDice(dto.Damage);
+
             return new Spell(
                 dto.Name ?? "Unknown",
                 dto.Level,
@@ -98,8 +103,69 @@ namespace OpenCombatEngine.Implementation.Content
                 components,
                 duration,
                 description,
-                _diceRoller
+                _diceRoller,
+                requiresAttack,
+                requiresConcentration,
+                saveAbility,
+                damageDice,
+                damageType
             );
+        }
+
+        private static bool MapConcentration(List<DurationDto>? duration)
+        {
+            if (duration == null || duration.Count == 0) return false;
+            // Check if any duration entry has concentration = true
+            return duration.Any(d => d.Concentration);
+        }
+
+        private static Ability? MapSaveAbility(List<string>? saves)
+        {
+            if (saves == null || saves.Count == 0) return null;
+            var save = saves[0].ToUpperInvariant();
+            return save switch
+            {
+                "STR" => Ability.Strength,
+                "DEX" => Ability.Dexterity,
+                "CON" => Ability.Constitution,
+                "INT" => Ability.Intelligence,
+                "WIS" => Ability.Wisdom,
+                "CHA" => Ability.Charisma,
+                _ => null
+            };
+        }
+
+        private static DamageType? MapDamageType(List<string>? types)
+        {
+            if (types == null || types.Count == 0) return null;
+            var type = types[0].ToUpperInvariant();
+            // Simple mapping, expand as needed
+            return type switch
+            {
+                "ACID" => DamageType.Acid,
+                "BLUDGEONING" => DamageType.Bludgeoning,
+                "COLD" => DamageType.Cold,
+                "FIRE" => DamageType.Fire,
+                "FORCE" => DamageType.Force,
+                "LIGHTNING" => DamageType.Lightning,
+                "NECROTIC" => DamageType.Necrotic,
+                "PIERCING" => DamageType.Piercing,
+                "POISON" => DamageType.Poison,
+                "PSYCHIC" => DamageType.Psychic,
+                "RADIANT" => DamageType.Radiant,
+                "SLASHING" => DamageType.Slashing,
+                "THUNDER" => DamageType.Thunder,
+                _ => null
+            };
+        }
+
+        private static string? MapDamageDice(List<List<string>>? damage)
+        {
+            if (damage == null || damage.Count == 0) return null;
+            // Take first damage entry
+            var firstGroup = damage[0];
+            if (firstGroup == null || firstGroup.Count == 0) return null;
+            return firstGroup[0]; // e.g. "8d6"
         }
 
         private static SpellSchool MapSchool(string? code)

@@ -16,6 +16,7 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         string Description { get; }
 
         bool RequiresAttackRoll { get; }
+        bool RequiresConcentration { get; }
         Ability? SaveAbility { get; } // Null if no save
         string? DamageDice { get; } // e.g. "8d6"
         DamageType? DamageType { get; }
