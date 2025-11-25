@@ -288,3 +288,4 @@ This document tracks the progress of the OpenCombatEngine development, including
 - [x] [Save Spell Effects ADR](docs/adr/0042-spell-effects.md)
 
 - [x] **Cycle 34: Condition Effects**
+- [x] **Cycle 35: Magic Item Passive Bonuses**

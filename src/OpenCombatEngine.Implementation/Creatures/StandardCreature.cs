@@ -500,12 +500,18 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature)
         {
+            ArgumentNullException.ThrowIfNull(feature);
             _features.Add(feature);
+            feature.OnApplied(this);
         }
 
         public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature)
         {
-            _features.Remove(feature);
+            ArgumentNullException.ThrowIfNull(feature);
+            if (_features.Remove(feature))
+            {
+                feature.OnRemoved(this);
+            }
         }
 
         public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)

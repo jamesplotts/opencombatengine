@@ -1,6 +1,6 @@
 # 43. Condition Effects
 
-Date: 2025-11-24
+Date: 2025-11-25
 
 ## Status
 
@@ -8,29 +8,34 @@ Accepted
 
 ## Context
 
-The **Conditions System** (Cycle 5) allows creatures to have conditions like "Blinded" or "Prone", but these are currently just semantic flags. The **Active Effects System** (Cycle 28) provides a mechanism to modify rolls and stats (e.g., Advantage/Disadvantage). We need to link these two systems so that conditions automatically apply their rules-as-written mechanical effects.
+The OpenCombatEngine needs a way to automatically apply mechanical effects (like Advantage/Disadvantage on attacks) when standard conditions (Blinded, Prone, Restrained, etc.) are applied to a creature. Previously, conditions were just markers without mechanical impact. We recently implemented an Active Effects system (Cycle 28) which is capable of handling such modifiers.
 
 ## Decision
 
-We will integrate `ICondition` with `IActiveEffect` by:
+We will link the Conditions System with the Active Effects System.
 
-1.  Adding an `IEnumerable<IActiveEffect> Effects { get; }` property to the `ICondition` interface.
-2.  Updating `StandardConditionManager` to automatically register a condition's effects with the creature's `IEffectManager` when the condition is added, and remove them when the condition is removed.
-3.  Creating a `ConditionFactory` to generate standard conditions (Blinded, Prone, etc.) pre-populated with their specific `IActiveEffect` implementations.
-4.  Implementing specific `IActiveEffect` classes for common condition mechanics (e.g., `AdvantageOnIncomingAttacksEffect`, `DisadvantageOnOutgoingAttacksEffect`).
+1.  **Condition Factory**: We will create a `ConditionFactory` to centralize the creation of standard conditions. This factory will attach specific `IActiveEffect` instances to the `Condition` object upon creation.
+2.  **Condition Effects**: We will implement specific `IActiveEffect` classes for common condition mechanics:
+    *   `AdvantageOnIncomingAttacksEffect`: Grants advantage to attacks targeting the affected creature.
+    *   `DisadvantageOnOutgoingAttacksEffect`: Imposes disadvantage on attacks made by the affected creature.
+    *   `StatBonusEffect`: (Already exists) Can be used for simple stat changes if needed.
+3.  **Manager Integration**: The `StandardConditionManager` will be updated to:
+    *   Register the condition's effects with the creature's `IEffectManager` when a condition is added.
+    *   Unregister the effects when the condition is removed.
+4.  **Action Integration**: `AttackAction` will be updated to query the `IEffectManager` (via `StatType`s like `AttackAdvantage`, `IncomingAttackAdvantage`) to determine if advantage or disadvantage applies.
 
 ## Consequences
 
-### Positive
--   **Automation**: Conditions will automatically enforce their rules (e.g., a Blinded creature will automatically roll attacks with disadvantage).
--   **Consistency**: Leveraging the existing Active Effects system avoids duplicating logic for roll modification.
--   **Extensibility**: New conditions can be easily added by defining their effects.
+*   **Pros**:
+    *   Automates the application of condition mechanics, reducing manual bookkeeping.
+    *   Leverages the existing Active Effects system, avoiding code duplication.
+    *   Extensible: New conditions can be added by defining new effects and updating the factory.
+*   **Cons**:
+    *   Increases coupling between Conditions and Effects systems.
+    *   Requires careful management of effect lifecycles to ensure they are removed when conditions expire.
 
-### Negative
--   **Complexity**: `StandardConditionManager` now depends on `IEffectManager`.
--   **Circular Dependencies**: Must be careful not to create circular dependencies between Condition and Effect systems (though they should be separate enough).
+## Implementation Details
 
-## Alternatives Considered
-
--   **Hardcoding in Actions**: We could check `creature.Conditions.HasCondition("Blinded")` inside `AttackAction`, but this would scatter condition logic across many actions and be hard to maintain.
--   **Event-Based**: We could use events, but Active Effects are already designed for this exact "modify roll/stat" purpose.
+*   `ICondition` now has an `IEnumerable<IActiveEffect> Effects` property.
+*   `ConditionFactory.Create(ConditionType type)` returns a `Condition` with the appropriate effects populated.
+*   `StandardConditionManager` handles the synchronization between `ActiveConditions` and `IEffectManager`.

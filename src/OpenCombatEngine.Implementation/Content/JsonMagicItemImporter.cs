@@ -77,13 +77,44 @@ namespace OpenCombatEngine.Implementation.Content
             var weight = dto.Weight ?? 0;
             var value = dto.Value ?? 0; // Simplified value handling
 
-            // TODO: Parse bonuses into Features/Conditions
             var features = new List<IFeature>();
-            
-            // Very simple bonus parsing
+            var bonuses = new Dictionary<StatType, int>();
+
+            // AC Bonus
             if (!string.IsNullOrWhiteSpace(dto.BonusAc))
             {
-                // TODO: Add AC bonus feature
+                if (int.TryParse(dto.BonusAc, out int acBonus))
+                {
+                    bonuses[StatType.ArmorClass] = acBonus;
+                }
+            }
+
+            // Weapon Bonus (Attack and Damage)
+            if (!string.IsNullOrWhiteSpace(dto.BonusWeapon))
+            {
+                if (int.TryParse(dto.BonusWeapon, out int weaponBonus))
+                {
+                    bonuses[StatType.AttackRoll] = weaponBonus;
+                    bonuses[StatType.DamageRoll] = weaponBonus;
+                }
+            }
+
+            // Saving Throw Bonus
+            if (!string.IsNullOrWhiteSpace(dto.BonusSavingThrow))
+            {
+                 if (int.TryParse(dto.BonusSavingThrow, out int saveBonus))
+                {
+                    bonuses[StatType.SavingThrow] = saveBonus;
+                }
+            }
+
+            if (bonuses.Count > 0)
+            {
+                features.Add(new OpenCombatEngine.Implementation.Features.StatBonusFeature(
+                    $"Bonuses from {dto.Name}",
+                    "Passive bonuses",
+                    bonuses
+                ));
             }
 
             return new MagicItem(

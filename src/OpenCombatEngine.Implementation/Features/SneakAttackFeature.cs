@@ -32,6 +32,16 @@ namespace OpenCombatEngine.Implementation.Features
             _usedThisTurn = false;
         }
 
+        public void OnApplied(ICreature creature)
+        {
+            // No setup needed
+        }
+
+        public void OnRemoved(ICreature creature)
+        {
+            // No cleanup needed
+        }
+
         public void OnOutgoingAttack(ICreature source, AttackResult attack)
         {
             ArgumentNullException.ThrowIfNull(source);

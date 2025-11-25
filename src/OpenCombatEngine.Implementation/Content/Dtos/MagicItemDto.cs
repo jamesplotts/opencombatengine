@@ -27,6 +27,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("bonusWeapon")]
         public string? BonusWeapon { get; set; }
+
+        [JsonPropertyName("bonusSavingThrow")]
+        public string? BonusSavingThrow { get; set; }
         
         [JsonPropertyName("weight")]
         public double? Weight { get; set; }

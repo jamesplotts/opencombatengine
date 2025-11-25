@@ -86,6 +86,8 @@ public class CreatureInterfaceTests
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
         
+        public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
+        
         public StubCreature()
         {
             Id = Guid.NewGuid();
@@ -161,6 +163,7 @@ public class CreatureInterfaceTests
 
         public void AddResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
         public void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void SetEffectManager(OpenCombatEngine.Core.Interfaces.Effects.IEffectManager effects) { }
     }
 
     [Fact]
