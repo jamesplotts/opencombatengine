@@ -121,7 +121,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             _abilities = abilities;
         }
 
-        public StandardCombatStats(CombatStatsState state)
+        public StandardCombatStats(CombatStatsState state) : this(state, null, null) { }
+
+        public StandardCombatStats(CombatStatsState state, IEquipmentManager? equipment, IAbilityScores? abilities)
         {
             System.ArgumentNullException.ThrowIfNull(state);
             _baseArmorClass = state.ArmorClass;
@@ -130,6 +132,8 @@ namespace OpenCombatEngine.Implementation.Creatures
             _resistances = (state.Resistances ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _immunities = (state.Immunities ?? Enumerable.Empty<DamageType>()).ToHashSet();
+            _equipment = equipment;
+            _abilities = abilities;
         }
 
         public void SetEffectManager(IEffectManager effects)

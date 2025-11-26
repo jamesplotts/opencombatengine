@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Items;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -25,7 +26,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             // Arrange
             var scores = new StandardAbilityScores(10, 10, 14, 10, 10, 10); // Con +2
             var hp = new StandardHitPoints(20, 10, 0, hitDice: "1d8", hitDiceTotal: 2, diceRoller: _diceRoller);
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp, new StandardInventory(), new StandardTurnManager(_diceRoller));
 
             // Mock Dice Roll: 5
             _diceRoller.Roll("1d8").Returns(Result<DiceRollResult>.Success(
@@ -49,7 +50,7 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             _diceRoller.Roll("1d8").Returns(Result<DiceRollResult>.Success(new DiceRollResult(5, "1d8", new List<int> { 5 }, 0, RollType.Normal)));
             hp.UseHitDice(3); // Remaining: 1
             
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", new StandardAbilityScores(), hp);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", new StandardAbilityScores(), hp, new StandardInventory(), new StandardTurnManager(_diceRoller));
 
             // Act
             creature.Rest(RestType.LongRest);

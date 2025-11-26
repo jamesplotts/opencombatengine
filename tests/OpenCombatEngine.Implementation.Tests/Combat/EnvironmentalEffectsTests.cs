@@ -4,6 +4,8 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.Combat;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 using System.Collections.Generic;
 
@@ -16,7 +18,7 @@ namespace OpenCombatEngine.Implementation.Tests.Combat
         {
             // Arrange
             var attacker = Substitute.For<ICreature>();
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10));
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             // Base AC is 10 + Dex(0) = 10.
             
             // Attack roll of 11 hits AC 10.
@@ -45,7 +47,7 @@ namespace OpenCombatEngine.Implementation.Tests.Combat
         {
             // Arrange
             var attacker = Substitute.For<ICreature>();
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10));
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             // Base AC 10.
             
             // Attack roll of 14 hits AC 10.
@@ -74,7 +76,7 @@ namespace OpenCombatEngine.Implementation.Tests.Combat
         {
             // Arrange
             var attacker = Substitute.For<ICreature>();
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10));
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             
             // Attack roll of 30 (Critical!)
             // Total Cover prevents attack entirely.
@@ -103,7 +105,7 @@ namespace OpenCombatEngine.Implementation.Tests.Combat
         {
             // Arrange
             var attacker = Substitute.For<ICreature>();
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10));
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             // Base AC 10. Half Cover (+2) = 12.
             
             var attack = new AttackResult(

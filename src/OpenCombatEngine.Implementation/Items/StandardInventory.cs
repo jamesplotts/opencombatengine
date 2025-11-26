@@ -11,6 +11,8 @@ namespace OpenCombatEngine.Implementation.Items
 
         public IEnumerable<IItem> Items => _items.AsReadOnly();
 
+        public double TotalWeight => _items.Sum(i => i.Weight);
+
         public Result<bool> AddItem(IItem item)
         {
             if (item == null) return Result<bool>.Failure("Item cannot be null.");

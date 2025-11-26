@@ -6,6 +6,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Implementation.Content;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Items;
 using Xunit;
 
@@ -41,7 +42,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Attuning_Item_Should_Apply_Bonuses()
         {
             // Arrange
-            var creature = new StandardCreature("11111111-1111-1111-1111-111111111111", "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature("11111111-1111-1111-1111-111111111111", "Hero", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             
             var bonuses = new Dictionary<StatType, int>
             {
@@ -82,7 +83,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Removing_Feature_Should_Remove_Bonuses()
         {
             // Arrange
-            var creature = new StandardCreature("11111111-1111-1111-1111-111111111111", "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature("11111111-1111-1111-1111-111111111111", "Hero", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             var bonuses = new Dictionary<StatType, int> { { StatType.ArmorClass, 1 } };
             var feature = new OpenCombatEngine.Implementation.Features.StatBonusFeature("Ring Bonus", "Desc", bonuses);
             

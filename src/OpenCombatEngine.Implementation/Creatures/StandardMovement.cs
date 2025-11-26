@@ -9,15 +9,46 @@ namespace OpenCombatEngine.Implementation.Creatures
     {
         private readonly ICombatStats _stats;
         private readonly IConditionManager _conditions;
+        private int _movementUsed;
 
-        public int Speed => _stats.Speed;
-        public int MovementRemaining { get; private set; }
+        public ICreature? Creature { get; set; }
+
+        public int Speed
+        {
+            get
+            {
+                if (_conditions.HasCondition(ConditionType.Grappled) || 
+                    _conditions.HasCondition(ConditionType.Restrained) ||
+                    _conditions.HasCondition(ConditionType.Unconscious) ||
+                    _conditions.HasCondition(ConditionType.Paralyzed) ||
+                    _conditions.HasCondition(ConditionType.Petrified) ||
+                    _conditions.HasCondition(ConditionType.Stunned))
+                {
+                    return 0;
+                }
+
+                var baseSpeed = _stats.Speed;
+                
+                // Apply encumbrance penalties
+                if (Creature != null)
+                {
+                    var encumbrance = Creature.EncumbranceLevel;
+                    if (encumbrance == OpenCombatEngine.Core.Enums.EncumbranceLevel.OverCapacity) return 5;
+                    
+                    if (encumbrance == OpenCombatEngine.Core.Enums.EncumbranceLevel.HeavilyEncumbered) baseSpeed -= 20;
+                    else if (encumbrance == OpenCombatEngine.Core.Enums.EncumbranceLevel.Encumbered) baseSpeed -= 10;
+                }
+
+                return System.Math.Max(0, baseSpeed);
+            }
+        }
+
+        public int MovementRemaining => System.Math.Max(0, Speed - _movementUsed);
 
         public StandardMovement(ICombatStats stats, IConditionManager conditions)
         {
             _stats = stats ?? throw new ArgumentNullException(nameof(stats));
             _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
-            MovementRemaining = Speed;
         }
 
         public void Move(int distance)
@@ -34,20 +65,12 @@ namespace OpenCombatEngine.Implementation.Creatures
                 throw new InvalidOperationException($"Not enough movement remaining. Current: {MovementRemaining}, Requested: {distance}");
             }
 
-            MovementRemaining -= distance;
+            _movementUsed += distance;
         }
 
         public void ResetTurn()
         {
-            if (_conditions.HasCondition(ConditionType.Grappled))
-            {
-                MovementRemaining = 0;
-            }
-            else
-            {
-                // Reset to current speed (which might have changed due to buffs/debuffs affecting stats)
-                MovementRemaining = Speed;
-            }
+            _movementUsed = 0;
         }
     }
 }

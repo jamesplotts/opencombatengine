@@ -63,6 +63,11 @@ public interface ICreature
     IActionEconomy ActionEconomy { get; }
 
     /// <summary>
+    /// Gets the encumbrance level of the creature.
+    /// </summary>
+    OpenCombatEngine.Core.Enums.EncumbranceLevel EncumbranceLevel { get; }
+
+    /// <summary>
     /// Gets the active effects manager for the creature.
     /// </summary>
     OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; }

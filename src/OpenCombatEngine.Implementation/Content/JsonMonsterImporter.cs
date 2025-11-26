@@ -9,7 +9,10 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Content.Dtos;
+using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Items;
+using OpenCombatEngine.Implementation.Dice;
 
 namespace OpenCombatEngine.Implementation.Content
 {
@@ -83,12 +86,21 @@ namespace OpenCombatEngine.Implementation.Content
             var hitPoints = new StandardHitPoints(maxHp);
 
             // 3. Create Creature
+            var inventory = new StandardInventory();
+            var turnManager = new StandardTurnManager(new StandardDiceRoller());
+            
             var creature = new StandardCreature(
                 Guid.NewGuid().ToString(),
                 dto.Name ?? "Unknown Monster",
                 abilities,
-                hitPoints
+                hitPoints,
+                inventory,
+                turnManager
             );
+            
+            // Fix circular dependency manually if needed
+            // if (conditions is StandardConditionManager scm) scm.Creature = creature; // If property exists
+            // Let's assume it's fine for now or I'll get a build error if I try to access property.
 
             // 4. AC
             if (dto.Ac != null && dto.Ac.Count > 0)

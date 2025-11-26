@@ -5,6 +5,7 @@ using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models.Combat;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Features;
 using OpenCombatEngine.Implementation.Items;
 using System.Collections.Generic;
@@ -27,9 +28,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Rogue",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
-                "Neutral",
-                new StandardCombatStats()
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller())
             );
+            _rogue.Team = "Neutral";
 
             _sneakAttack = new SneakAttackFeature(_diceRoller, 1); // 1d6
             _rogue.AddFeature(_sneakAttack);
@@ -43,9 +45,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Should_Add_Damage_When_Advantage_Present()
         {
             // Arrange
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
             var attack = new AttackResult(
                 _rogue, 
-                null, 
+                dummyTarget, 
                 20, 
                 false, 
                 true, // HasAdvantage
@@ -68,9 +71,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Should_Not_Add_Damage_When_Disadvantage_Present()
         {
             // Arrange
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
             var attack = new AttackResult(
                 _rogue, 
-                null, 
+                dummyTarget, 
                 20, 
                 false, 
                 true, // HasAdvantage (cancelled by Disadvantage in logic? No, logic checks HasDisadvantage explicitly)
@@ -89,9 +93,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Should_Not_Add_Damage_Without_Advantage_Or_Ally()
         {
             // Arrange
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
             var attack = new AttackResult(
                 _rogue, 
-                null, 
+                dummyTarget, 
                 20, 
                 false, 
                 false, // No Advantage
@@ -112,9 +117,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             // Arrange
             _sneakAttack.IsAllyAdjacent = true; // Simulate ally
 
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
             var attack = new AttackResult(
                 _rogue, 
-                null, 
+                dummyTarget, 
                 20, 
                 false, 
                 false, // No Advantage
@@ -135,8 +141,9 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Should_Only_Apply_Once_Per_Turn()
         {
             // Arrange
-            var attack1 = new AttackResult(_rogue, null, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
-            var attack2 = new AttackResult(_rogue, null, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
+            var attack1 = new AttackResult(_rogue, dummyTarget, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
+            var attack2 = new AttackResult(_rogue, dummyTarget, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
 
             _diceRoller.Roll("1d6").Returns(Result<DiceRollResult>.Success(new DiceRollResult(6, "1d6", new List<int> { 6 }, 0, RollType.Normal)));
 
@@ -153,8 +160,9 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Should_Reset_On_StartTurn()
         {
             // Arrange
-            var attack1 = new AttackResult(_rogue, null, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
-            var attack2 = new AttackResult(_rogue, null, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
+            var dummyTarget = Substitute.For<OpenCombatEngine.Core.Interfaces.Creatures.ICreature>();
+            var attack1 = new AttackResult(_rogue, dummyTarget, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
+            var attack2 = new AttackResult(_rogue, dummyTarget, 20, false, true, false, new List<DamageRoll> { new DamageRoll(4, DamageType.Piercing) });
 
             _diceRoller.Roll("1d6").Returns(Result<DiceRollResult>.Success(new DiceRollResult(6, "1d6", new List<int> { 6 }, 0, RollType.Normal)));
 

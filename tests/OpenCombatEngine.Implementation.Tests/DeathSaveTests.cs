@@ -5,6 +5,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Items;
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -27,7 +28,8 @@ namespace OpenCombatEngine.Implementation.Tests
             
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
             
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, "Neutral", combatStats, checkManager);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
+            creature.Team = "Neutral";
             
             // Act
             creature.StartTurn();
@@ -100,7 +102,8 @@ namespace OpenCombatEngine.Implementation.Tests
             
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
             
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, "Neutral", combatStats, checkManager);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
+            creature.Team = "Neutral";
             
             // Act
             creature.StartTurn();
@@ -120,7 +123,8 @@ namespace OpenCombatEngine.Implementation.Tests
             hp.Stabilize();
             
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, "Neutral", null, checkManager);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
+            creature.Team = "Neutral";
             
             // Act
             creature.StartTurn();
@@ -140,7 +144,8 @@ namespace OpenCombatEngine.Implementation.Tests
             var abilityScores = Substitute.For<IAbilityScores>();
             var hp = new StandardHitPoints(10, 0, 0);
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, "Neutral", null, checkManager);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
+            creature.Team = "Neutral";
             
             // Act
             creature.StartTurn();
@@ -162,7 +167,8 @@ namespace OpenCombatEngine.Implementation.Tests
             var abilityScores = Substitute.For<IAbilityScores>();
             var hp = new StandardHitPoints(10, 0, 0);
             var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, "Neutral", null, checkManager);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
+            creature.Team = "Neutral";
             
             // Act
             creature.StartTurn();

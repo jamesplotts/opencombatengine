@@ -5,6 +5,8 @@ using OpenCombatEngine.Core.Models.Combat;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using System.Collections.Generic;
 using Xunit;
 
@@ -21,9 +23,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
-                "Neutral",
-                new StandardCombatStats()
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller())
             );
+            creature.Team = "Neutral";
             var action = new RageAction();
 
             // Act
@@ -51,9 +54,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
-                "Neutral",
-                new StandardCombatStats()
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller())
             );
+            creature.Team = "Neutral";
             
             // Apply Rage manually
             var rage = new RageCondition();
@@ -86,9 +90,10 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Barbarian",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
-                "Neutral",
-                new StandardCombatStats()
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller())
             );
+            creature.Team = "Neutral";
             
             var rage = new RageCondition();
             creature.Conditions.AddCondition(rage);

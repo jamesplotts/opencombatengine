@@ -3,11 +3,14 @@ using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests.Actions
@@ -15,8 +18,8 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
     public class AttackActionTests
     {
         private readonly IDiceRoller _diceRoller;
-        private readonly ICreature _source;
-        private readonly ICreature _target;
+        private readonly StandardCreature _source;
+        private readonly StandardCreature _target;
 
         public AttackActionTests()
         {
@@ -28,9 +31,10 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 "Attacker",
                 new StandardAbilityScores(),
                 new StandardHitPoints(10),
-                "Neutral",
-                new StandardCombatStats()
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller())
             );
+            _source.Team = "Neutral";
 
             // Setup Target with AC 15, HP 20
             _target = new StandardCreature(
@@ -38,9 +42,26 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
                 "Defender",
                 new StandardAbilityScores(),
                 new StandardHitPoints(20),
-                "Neutral",
-                new StandardCombatStats(armorClass: 15)
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller()),
+                equipmentManager: null // Can't easily set AC via constructor anymore without equipment
             );
+            _target.Team = "Neutral";
+            // Hack to set AC: StandardCombatStats defaults to 10 + Dex.
+            // We need 15.
+            // We can equip armor or add a bonus.
+            // Or we can just mock the target entirely?
+            // But the test uses StandardCreature.
+            // Let's equip armor.
+            // Chain Mail is 16.
+            // Scale Mail is 14 + Dex(0) = 14.
+            // We need 15.
+            // Half Plate is 15 + Dex(2 max).
+            // Let's use a custom armor.
+            var armor = Substitute.For<OpenCombatEngine.Core.Interfaces.Items.IArmor>();
+            armor.ArmorClass.Returns(15);
+            armor.Category.Returns(ArmorCategory.Heavy); // No Dex
+            _target.Equipment.EquipArmor(armor);
         }
 
         [Fact]

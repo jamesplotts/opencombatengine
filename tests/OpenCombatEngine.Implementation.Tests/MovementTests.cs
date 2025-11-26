@@ -5,6 +5,8 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests
@@ -107,7 +109,7 @@ namespace OpenCombatEngine.Implementation.Tests
         [Fact]
         public void StandardCreature_StartTurn_Should_Reset_Movement()
         {
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             // Default speed is 0 in StandardCombatStats if not set? 
             // Let's check StandardCombatStats default.
             // StandardCombatStats defaults: AC 10, Init 0, Speed 30.

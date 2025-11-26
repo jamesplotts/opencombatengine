@@ -7,6 +7,8 @@ using OpenCombatEngine.Core.Models.Spells;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Actions.Contexts;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Spells;
 using Xunit;
 using System.Collections.Generic;
@@ -23,9 +25,9 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         {
             var abilityScores = new StandardAbilityScores(intelligence: 18, constitution: 14); // Int +4, Con +2
             _spellCaster = new StandardSpellCaster(abilityScores, 2, Ability.Intelligence);
-            _caster = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, new StandardHitPoints(20), spellCaster: _spellCaster);
+            _caster = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: _spellCaster);
             
-            _target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20));
+            _target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             
             // Give slots
             _spellCaster.SetSlots(1, 4);
@@ -41,14 +43,6 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 damageRolls: damageRolls, 
                 saveAbility: Ability.Dexterity, 
                 saveEffect: SaveEffect.HalfDamage);
-
-            // Mock Dice Roller for Spell (Wait, Spell creates its own dice roller if not passed)
-            // But CastSpellAction creates a NEW dice roller for damage.
-            // I can't easily mock the dice roller inside CastSpellAction without dependency injection.
-            // I should update CastSpellAction to accept IDiceRoller or use the one from Source?
-            // StandardCreature doesn't expose DiceRoller directly?
-            // Actually, StandardDiceRoller is deterministic if I seed it? No.
-            // I'll rely on the fact that 8d6 > 0.
             
             _spellCaster.LearnSpell(spell);
             _spellCaster.SetSlots(3, 1);
@@ -92,7 +86,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var mockCheckManager = Substitute.For<ICheckManager>();
             mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(20)); // High roll
             
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), checkManager: mockCheckManager);
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), checkManager: mockCheckManager);
 
             var damageRolls = new List<DamageFormula> { new DamageFormula("10", DamageType.Fire) }; // Fixed damage for testing
             var spell = new Spell("TestFire", 1, SpellSchool.Evocation, "Action", "60 ft", "V", "Instant", "Burn",
@@ -118,7 +112,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var mockCheckManager = Substitute.For<ICheckManager>();
             mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(20)); 
             
-            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), checkManager: mockCheckManager);
+            var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), checkManager: mockCheckManager);
 
             var damageRolls = new List<DamageFormula> { new DamageFormula("10", DamageType.Radiant) };
             var spell = new Spell("Sacred Flame", 0, SpellSchool.Evocation, "Action", "60 ft", "V", "Instant", "Burn",

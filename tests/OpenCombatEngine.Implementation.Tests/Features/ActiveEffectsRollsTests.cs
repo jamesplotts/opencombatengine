@@ -8,7 +8,9 @@ using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Combat;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Effects;
+using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Spells;
 using Xunit;
 
@@ -44,10 +46,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Test Creature",
                 _abilityScores,
                 Substitute.For<IHitPoints>(),
-                team: "Neutral",
-                combatStats: combatStats,
-                spellCaster: _spellCaster
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller()),
+                spellcasting: _spellCaster,
+                equipmentManager: equipment
             );
+            _creature.Team = "Neutral";
 
             _effectManager = _creature.Effects;
         }

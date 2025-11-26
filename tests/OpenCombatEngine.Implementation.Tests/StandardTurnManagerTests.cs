@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models;
@@ -97,14 +98,21 @@ namespace OpenCombatEngine.Implementation.Tests
 
         private ICreature CreateCreature(string name, int dex, int initBonus)
         {
-            return new StandardCreature(
-                Guid.NewGuid().ToString(),
-                name,
-                new StandardAbilityScores(dexterity: dex),
-                new StandardHitPoints(10),
-                "Neutral",
-                new StandardCombatStats(initiativeBonus: initBonus)
-            );
+            var creature = Substitute.For<ICreature>();
+            creature.Id.Returns(Guid.NewGuid());
+            creature.Name.Returns(name);
+            creature.Team.Returns("Neutral");
+
+            var stats = Substitute.For<ICombatStats>();
+            stats.InitiativeBonus.Returns(initBonus);
+            creature.CombatStats.Returns(stats);
+
+            var abilities = Substitute.For<IAbilityScores>();
+            abilities.Dexterity.Returns(dex);
+            abilities.GetModifier(Ability.Dexterity).Returns((dex - 10) / 2);
+            creature.AbilityScores.Returns(abilities);
+
+            return creature;
         }
     }
 }

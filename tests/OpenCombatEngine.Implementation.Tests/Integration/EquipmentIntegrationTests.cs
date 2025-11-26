@@ -2,6 +2,7 @@ using FluentAssertions;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Items;
 using System;
 using Xunit;
@@ -16,7 +17,7 @@ namespace OpenCombatEngine.Implementation.Tests.Integration
             // Arrange
             var scores = new StandardAbilityScores(10, 14, 10, 10, 10, 10); // Dex +2
             var hp = new StandardHitPoints(10, 10, 0);
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp); // Default AC 10 + Dex? No, default AC 10.
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp, new StandardInventory(), new StandardTurnManager(new StandardDiceRoller())); // Default AC 10 + Dex? No, default AC 10.
             
             // Act - Default
             // StandardCombatStats default base is 10. With Dex +2, it should be 10 (if using base) or 12 (if using unarmored logic).
@@ -46,7 +47,7 @@ namespace OpenCombatEngine.Implementation.Tests.Integration
             // Arrange
             var scores = new StandardAbilityScores(10, 18, 10, 10, 10, 10); // Dex +4
             var hp = new StandardHitPoints(10, 10, 0);
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp);
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Test", scores, hp, new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
 
             // Act - Equip Medium Armor (14 + Dex max 2)
             var scaleMail = new Armor("Scale Mail", 14, ArmorCategory.Medium, dexterityCap: 2);

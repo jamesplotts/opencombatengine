@@ -85,6 +85,7 @@ public class CreatureInterfaceTests
         public int ProficiencyBonus { get; }
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
+        public EncumbranceLevel EncumbranceLevel => EncumbranceLevel.None;
         
         public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
         

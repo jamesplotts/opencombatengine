@@ -8,6 +8,8 @@ using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests
@@ -20,7 +22,7 @@ namespace OpenCombatEngine.Implementation.Tests
             // Arrange
             var diceRoller = Substitute.For<IDiceRoller>();
             var turnManager = new StandardTurnManager(diceRoller);
-            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10));
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Hero", new StandardAbilityScores(), new StandardHitPoints(10), new StandardInventory(), turnManager);
             
             diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Normal)));
             turnManager.StartCombat(new[] { creature });

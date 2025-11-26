@@ -7,6 +7,8 @@ using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 using System.Collections.Generic;
 using OpenCombatEngine.Core.Results;
@@ -26,12 +28,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             // Setup Attacker
             var attackerStats = Substitute.For<IAbilityScores>();
             attackerStats.GetModifier(Arg.Any<Ability>()).Returns(0);
-            _attacker = new StandardCreature("11111111-1111-1111-1111-111111111111", "Attacker", attackerStats, Substitute.For<IHitPoints>());
+            _attacker = new StandardCreature("11111111-1111-1111-1111-111111111111", "Attacker", attackerStats, Substitute.For<IHitPoints>(), new StandardInventory(), new StandardTurnManager(_diceRoller));
 
             // Setup Target
             var targetStats = Substitute.For<IAbilityScores>();
             targetStats.GetModifier(Arg.Any<Ability>()).Returns(0);
-            _target = new StandardCreature("22222222-2222-2222-2222-222222222222", "Target", targetStats, Substitute.For<IHitPoints>());
+            _target = new StandardCreature("22222222-2222-2222-2222-222222222222", "Target", targetStats, Substitute.For<IHitPoints>(), new StandardInventory(), new StandardTurnManager(_diceRoller));
         }
 
         [Fact]

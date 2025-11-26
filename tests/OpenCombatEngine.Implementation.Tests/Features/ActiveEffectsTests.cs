@@ -7,14 +7,16 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Effects;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests.Features
 {
     public class ActiveEffectsTests
     {
-        private readonly ICreature _creature;
+        private readonly StandardCreature _creature;
         private readonly IEffectManager _effectManager;
         private readonly ICombatStats _combatStats;
 
@@ -30,10 +32,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             equipment.Armor.Returns(armor);
 
             // Use named arguments for constructor
-            _combatStats = new StandardCombatStats(
-                abilities: abilityScores, 
-                equipment: equipment
-            );
+            // We can't inject CombatStats directly, but we can inject EquipmentManager which CombatStats uses.
             
             var hitPoints = Substitute.For<IHitPoints>();
             
@@ -42,12 +41,13 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 "Test Creature",
                 abilityScores,
                 hitPoints,
-                team: "Neutral",
-                combatStats: _combatStats,
-                checkManager: null,
-                spellCaster: null
+                new StandardInventory(),
+                new StandardTurnManager(new StandardDiceRoller()),
+                equipmentManager: equipment
             );
+            _creature.Team = "Neutral";
             
+            _combatStats = _creature.CombatStats;
             _effectManager = _creature.Effects;
         }
 
