@@ -409,6 +409,19 @@ namespace OpenCombatEngine.Implementation.Creatures
             {
                 yield return action;
             }
+
+            // Magic Item Actions
+            // Check Equipment
+            foreach (var item in Equipment.GetEquippedItems())
+            {
+                if (item is IMagicItem magicItem)
+                {
+                    foreach (var ability in magicItem.Abilities)
+                    {
+                        yield return new OpenCombatEngine.Implementation.Actions.UseMagicItemAction(magicItem, ability);
+                    }
+                }
+            }
         }
     }
 }

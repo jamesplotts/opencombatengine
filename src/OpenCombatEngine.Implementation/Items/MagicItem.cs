@@ -47,7 +47,8 @@ namespace OpenCombatEngine.Implementation.Items
             IWeapon? weaponProperties = null,
             IArmor? armorProperties = null,
             IContainer? containerProperties = null,
-            OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null)
+            OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null,
+            IEnumerable<IMagicItemAbility>? abilities = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             Name = name;
@@ -66,7 +67,11 @@ namespace OpenCombatEngine.Implementation.Items
             
             if (features != null) _features.AddRange(features);
             if (conditions != null) _conditions.AddRange(conditions);
+            if (abilities != null) _abilities.AddRange(abilities);
         }
+
+        private readonly List<IMagicItemAbility> _abilities = new();
+        public IEnumerable<IMagicItemAbility> Abilities => _abilities;
 
         public Result<bool> Attune(ICreature creature)
         {

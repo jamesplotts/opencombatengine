@@ -49,5 +49,10 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// <param name="item">The item to unattune from.</param>
         /// <returns>Result of the operation.</returns>
         Result<bool> UnattuneItem(IMagicItem item);
+
+        /// <summary>
+        /// Gets all equipped items.
+        /// </summary>
+        System.Collections.Generic.IEnumerable<IItem> GetEquippedItems();
     }
 }

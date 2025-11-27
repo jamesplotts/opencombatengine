@@ -25,6 +25,8 @@ namespace OpenCombatEngine.Implementation.Items
 
         private readonly ICreature _owner;
 
+        private readonly System.Collections.Generic.Dictionary<OpenCombatEngine.Core.Enums.EquipmentSlot, IItem> _equippedItems = new();
+
         public StandardEquipmentManager(ICreature owner)
         {
             _owner = owner ?? throw new System.ArgumentNullException(nameof(owner));
@@ -33,43 +35,50 @@ namespace OpenCombatEngine.Implementation.Items
         public Result<bool> EquipMainHand(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand);
         public Result<bool> EquipOffHand(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
         public Result<bool> EquipArmor(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.Armor);
-        public Result<bool> EquipShield(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand); // Shield goes to OffHand usually, but we track it separately? 
-        // Wait, EquipShield logic was specific. Let's keep specific methods but delegate or reimplement.
-        // Actually, EquipShield sets Shield property. EquipOffHand sets OffHand.
-        // If I equip a shield, it should probably occupy OffHand too?
-        // For now, let's keep them somewhat separate but consistent.
-        
+        public Result<bool> EquipShield(IItem item) => Equip(item, OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
+
         public Result<bool> Equip(IItem item, OpenCombatEngine.Core.Enums.EquipmentSlot slot)
         {
             if (item == null) return Result<bool>.Failure("Item cannot be null.");
             
+            Result<bool> result = Result<bool>.Failure("Unknown error");
+
             switch (slot)
             {
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand:
-                    return EquipMainHandInternal(item);
+                    result = EquipMainHandInternal(item);
+                    break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand:
-                    return EquipOffHandInternal(item);
+                    result = EquipOffHandInternal(item);
+                    break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Armor:
-                    return EquipArmorInternal(item);
+                    result = EquipArmorInternal(item);
+                    break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Head:
-                    Head = item; return Result<bool>.Success(true);
+                    Head = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Neck:
-                    Neck = item; return Result<bool>.Success(true);
+                    Neck = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders:
-                    Shoulders = item; return Result<bool>.Success(true);
+                    Shoulders = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Hands:
-                    Hands = item; return Result<bool>.Success(true);
+                    Hands = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Waist:
-                    Waist = item; return Result<bool>.Success(true);
+                    Waist = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Feet:
-                    Feet = item; return Result<bool>.Success(true);
+                    Feet = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1:
-                    Ring1 = item; return Result<bool>.Success(true);
+                    Ring1 = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2:
-                    Ring2 = item; return Result<bool>.Success(true);
+                    Ring2 = item; result = Result<bool>.Success(true); break;
                 default:
                     return Result<bool>.Failure("Invalid slot.");
             }
+
+            if (result.IsSuccess)
+            {
+                _equippedItems[slot] = item;
+            }
+            return result;
         }
         
         private Result<bool> EquipMainHandInternal(IItem item)
@@ -134,13 +143,14 @@ namespace OpenCombatEngine.Implementation.Items
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1: Ring1 = null; break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2: Ring2 = null; break;
             }
+            _equippedItems.Remove(slot);
             return Result<bool>.Success(true);
         }
 
-        public void UnequipMainHand() => MainHand = null;
-        public void UnequipOffHand() { OffHand = null; Shield = null; }
-        public void UnequipArmor() => Armor = null;
-        public void UnequipShield() => Shield = null;
+        public void UnequipMainHand() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand);
+        public void UnequipOffHand() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
+        public void UnequipArmor() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.Armor);
+        public void UnequipShield() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
 
         public Result<bool> AttuneItem(IMagicItem item)
         {
@@ -188,6 +198,11 @@ namespace OpenCombatEngine.Implementation.Items
             }
 
             return Result<bool>.Success(true);
+        }
+
+        public System.Collections.Generic.IEnumerable<IItem> GetEquippedItems()
+        {
+            return _equippedItems.Values;
         }
     }
 }

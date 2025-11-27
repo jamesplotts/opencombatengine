@@ -89,6 +89,11 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         IContainer? ContainerProperties { get; }
 
         /// <summary>
+        /// Gets the active abilities granted by this item.
+        /// </summary>
+        System.Collections.Generic.IEnumerable<IMagicItemAbility> Abilities { get; }
+
+        /// <summary>
         /// Gets the default equipment slot for this item, if any.
         /// </summary>
         OpenCombatEngine.Core.Enums.EquipmentSlot? DefaultSlot { get; }
