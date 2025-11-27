@@ -86,6 +86,7 @@ public class CreatureInterfaceTests
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
         public EncumbranceLevel EncumbranceLevel => EncumbranceLevel.None;
+        public ILevelManager LevelManager { get; set; }
         
         public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
         
@@ -128,6 +129,10 @@ public class CreatureInterfaceTests
     {
         public int Speed => 30;
         public int MovementRemaining => 30;
+        public ILevelManager LevelManager { get; set; }
+        
+        public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
+        public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
         public void Move(int distance) { }
         public void ResetTurn() { }
     }

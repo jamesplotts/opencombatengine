@@ -55,9 +55,11 @@ namespace OpenCombatEngine.Implementation.Creatures
         public ISpellCaster? Spellcasting { get; }
         public ITurnManager TurnManager { get; }
         
+        public ILevelManager LevelManager { get; }
+        
         // Grid is not in ICreature, removing it.
         
-        public int ProficiencyBonus => 2; // Placeholder
+        public int ProficiencyBonus => LevelManager.ProficiencyBonus;
 
         public StandardCreature(
             string id,
@@ -123,6 +125,8 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             Checks = checkManager ?? new StandardCheckManager(AbilityScores, new StandardDiceRoller(), this);
             
+            LevelManager = new StandardLevelManager(HitPoints, AbilityScores);
+
             // Default to Intelligence if creating new caster
             Spellcasting = spellcasting ?? new StandardSpellCaster(AbilityScores, ProficiencyBonus, Ability.Intelligence);
 
@@ -177,6 +181,10 @@ namespace OpenCombatEngine.Implementation.Creatures
             Checks = new StandardCheckManager(AbilityScores, new StandardDiceRoller(), this);
             // Equipment already created above
             Spellcasting = null; 
+
+            LevelManager = new StandardLevelManager(HitPoints, AbilityScores);
+            // TODO: Restore LevelManager state if we had it. For now, it starts fresh (Level 0/1?).
+            // We need to add LevelManager state to CreatureState later.
 
             HitPoints.Died += OnDied;
             HitPoints.DamageTaken += OnDamageTaken;

@@ -28,7 +28,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public int DeathSaveFailures { get; private set; }
 
         public string HitDice { get; }
-        public int HitDiceTotal { get; }
+        public int HitDiceTotal { get; private set; }
         public int HitDiceRemaining { get; private set; }
 
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
@@ -194,6 +194,20 @@ namespace OpenCombatEngine.Implementation.Creatures
         {
             ArgumentOutOfRangeException.ThrowIfNegative(amount);
             HitDiceRemaining = Math.Min(HitDiceTotal, HitDiceRemaining + amount);
+        }
+
+        public void IncreaseMax(int amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be positive.");
+            Max += amount;
+            Current += amount;
+        }
+
+        public void AddHitDie(int count)
+        {
+            if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive.");
+            HitDiceTotal += count;
+            HitDiceRemaining += count;
         }
 
         public HitPointsState GetState()

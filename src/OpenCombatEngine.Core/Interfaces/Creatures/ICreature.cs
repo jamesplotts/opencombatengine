@@ -123,6 +123,11 @@ public interface ICreature
     void Rest(RestType type, int hitDiceToSpend = 0);
 
     /// <summary>
+    /// Gets the level manager for the creature.
+    /// </summary>
+    ILevelManager LevelManager { get; }
+
+    /// <summary>
     /// Adds a feature to the creature.
     /// </summary>
     /// <param name="feature">The feature to add.</param>
