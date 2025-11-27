@@ -51,6 +51,8 @@ namespace OpenCombatEngine.Implementation.Creatures
             _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
         }
 
+        public bool IsInDifficultTerrain { get; set; }
+
         public void Move(int distance)
         {
             if (distance < 0) throw new ArgumentOutOfRangeException(nameof(distance), "Distance cannot be negative.");
@@ -60,12 +62,14 @@ namespace OpenCombatEngine.Implementation.Creatures
                 throw new InvalidOperationException("Cannot move while Grappled.");
             }
 
-            if (MovementRemaining < distance)
+            int cost = IsInDifficultTerrain ? distance * 2 : distance;
+
+            if (MovementRemaining < cost)
             {
-                throw new InvalidOperationException($"Not enough movement remaining. Current: {MovementRemaining}, Requested: {distance}");
+                throw new InvalidOperationException($"Not enough movement remaining. Current: {MovementRemaining}, Cost: {cost} (Distance: {distance}, Difficult Terrain: {IsInDifficultTerrain})");
             }
 
-            _movementUsed += distance;
+            _movementUsed += cost;
         }
 
         public void ResetTurn()

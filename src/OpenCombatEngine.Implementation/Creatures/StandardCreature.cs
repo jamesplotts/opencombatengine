@@ -329,6 +329,24 @@ namespace OpenCombatEngine.Implementation.Creatures
                 return new AttackOutcome(false, 0, "Target has Total Cover.");
             }
 
+            // Obscurement Logic:
+            // If target is Heavily Obscured, they are effectively invisible to the attacker (unless attacker has special senses).
+            // Attack rolls against an invisible target have Disadvantage.
+            // We don't have a direct "Disadvantage" flag on AttackResult yet, but we can simulate it or note it.
+            // For now, let's just log it or ensure the roll reflects it (caller responsibility to roll with disadvantage?).
+            // Ideally, the caller (CombatManager or Action) checks Obscurement before rolling.
+            // But if we are resolving here, the roll is already done.
+            // So we can't force a reroll here easily without changing the flow.
+            // We will assume the caller handled the Disadvantage on the roll itself if they knew about the obscurement.
+            // However, if the target is heavily obscured and the attacker blindly attacks, we might want to impose a flat miss chance or check.
+            // For this abstract cycle, we'll trust the input roll but maybe add a note to the outcome if obscured.
+            
+            if (attack.TargetObscurement == ObscurementType.Heavily)
+            {
+                // Optional: Fail automatically if attacker relies on sight? 
+                // For now, just proceed.
+            }
+
             bool isHit = attack.AttackRoll >= targetAC || attack.IsCritical;
             
             if (!isHit)

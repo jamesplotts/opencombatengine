@@ -130,6 +130,7 @@ public class CreatureInterfaceTests
         public int Speed => 30;
         public int MovementRemaining => 30;
         public ILevelManager LevelManager { get; set; }
+        public bool IsInDifficultTerrain { get; set; }
         
         public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
         public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }

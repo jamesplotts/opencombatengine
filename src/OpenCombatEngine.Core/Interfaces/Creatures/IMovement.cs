@@ -26,5 +26,10 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// Typically called at the start of the turn.
         /// </summary>
         void ResetTurn();
+
+        /// <summary>
+        /// Gets or sets whether the creature is currently in difficult terrain.
+        /// </summary>
+        bool IsInDifficultTerrain { get; set; }
     }
 }
