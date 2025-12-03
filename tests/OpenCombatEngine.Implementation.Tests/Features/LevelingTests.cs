@@ -2,6 +2,7 @@ using FluentAssertions;
 using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Implementation.Classes;
 using OpenCombatEngine.Implementation.Creatures;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Items;
@@ -12,6 +13,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
     public class LevelingTests
     {
         private readonly StandardCreature _creature;
+        private readonly ClassDefinition _fighter;
+        private readonly ClassDefinition _rogue;
 
         public LevelingTests()
         {
@@ -23,6 +26,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 new StandardInventory(),
                 new StandardTurnManager(new StandardDiceRoller())
             );
+            _fighter = new ClassDefinition("Fighter", 10);
+            _rogue = new ClassDefinition("Rogue", 8);
         }
 
         [Fact]
@@ -43,47 +48,47 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         [Fact]
         public void LevelUp_Should_Increase_Level_And_Add_Class()
         {
-            _creature.LevelManager.LevelUp("Fighter", 10);
+            _creature.LevelManager.LevelUp(_fighter);
 
             _creature.LevelManager.TotalLevel.Should().Be(1);
-            _creature.LevelManager.Classes.Should().ContainKey("Fighter").WhoseValue.Should().Be(1);
+            _creature.LevelManager.Classes.Should().ContainKey(_fighter).WhoseValue.Should().Be(1);
         }
 
         [Fact]
         public void LevelUp_Should_Increase_Existing_Class_Level()
         {
-            _creature.LevelManager.LevelUp("Fighter", 10);
-            _creature.LevelManager.LevelUp("Fighter", 10);
+            _creature.LevelManager.LevelUp(_fighter);
+            _creature.LevelManager.LevelUp(_fighter);
 
             _creature.LevelManager.TotalLevel.Should().Be(2);
-            _creature.LevelManager.Classes["Fighter"].Should().Be(2);
+            _creature.LevelManager.Classes[_fighter].Should().Be(2);
         }
 
         [Fact]
         public void LevelUp_Should_Support_Multiclassing()
         {
-            _creature.LevelManager.LevelUp("Fighter", 10);
-            _creature.LevelManager.LevelUp("Rogue", 8);
+            _creature.LevelManager.LevelUp(_fighter);
+            _creature.LevelManager.LevelUp(_rogue);
 
             _creature.LevelManager.TotalLevel.Should().Be(2);
-            _creature.LevelManager.Classes["Fighter"].Should().Be(1);
-            _creature.LevelManager.Classes["Rogue"].Should().Be(1);
+            _creature.LevelManager.Classes[_fighter].Should().Be(1);
+            _creature.LevelManager.Classes[_rogue].Should().Be(1);
         }
 
         [Fact]
         public void ProficiencyBonus_Should_Scale_With_Level()
         {
             // Level 1-4: +2
-            _creature.LevelManager.LevelUp("Fighter", 10); // Level 1
+            _creature.LevelManager.LevelUp(_fighter); // Level 1
             _creature.ProficiencyBonus.Should().Be(2);
 
-            _creature.LevelManager.LevelUp("Fighter", 10); // Level 2
-            _creature.LevelManager.LevelUp("Fighter", 10); // Level 3
-            _creature.LevelManager.LevelUp("Fighter", 10); // Level 4
+            _creature.LevelManager.LevelUp(_fighter); // Level 2
+            _creature.LevelManager.LevelUp(_fighter); // Level 3
+            _creature.LevelManager.LevelUp(_fighter); // Level 4
             _creature.ProficiencyBonus.Should().Be(2);
 
             // Level 5: +3
-            _creature.LevelManager.LevelUp("Fighter", 10); // Level 5
+            _creature.LevelManager.LevelUp(_fighter); // Level 5
             _creature.ProficiencyBonus.Should().Be(3);
         }
 
@@ -94,7 +99,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             // Con Mod is 0 (default 10)
             // Fighter d10 average is 6 (10/2 + 1)
             
-            _creature.LevelManager.LevelUp("Fighter", 10);
+            _creature.LevelManager.LevelUp(_fighter);
 
             _creature.HitPoints.Max.Should().Be(16); // 10 + 6
             _creature.HitPoints.Current.Should().Be(16); // Assuming current increases too
@@ -105,13 +110,9 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         {
             // Initial HitDiceTotal is 1 (from StandardHitPoints constructor default)
             
-            _creature.LevelManager.LevelUp("Fighter", 10);
+            _creature.LevelManager.LevelUp(_fighter);
 
             _creature.HitPoints.HitDiceTotal.Should().Be(2); // 1 (initial) + 1 (added)
-            // StandardLevelManager calls AddHitDie(hitDieSize).
-            // StandardHitPoints.AddHitDie(count) adds count to Total.
-            // Ah, StandardLevelManager passes hitDieSize (e.g. 10) to AddHitDie?
-            // Let's check StandardLevelManager implementation.
         }
     }
 }

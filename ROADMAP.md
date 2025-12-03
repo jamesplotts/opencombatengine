@@ -289,9 +289,23 @@ This document tracks the progress of the OpenCombatEngine development, including
 
 - [x] **Cycle 34: Condition Effects**
 - [x] **Cycle 35: Magic Item Passive Bonuses**
+- [x] **Cycle 37: Magic Item Active Abilities (Spells)**
+    - [x] Implement `ISpellRepository` and `InMemorySpellRepository`
+    - [x] Create `CastSpellFromItemAbility`
+    - [x] Update `JsonMagicItemImporter` to use repository
+    - [x] Verify with Tests
+- [x] [Save Magic Item Spells ADR](docs/adr/0044-magic-item-spells.md)
 - [x] **Cycle 36: Magic Item Charges & Active Abilities**
     - [x] Implement `RechargeFrequency` and `MagicItemRecharger`
     - [x] Update `IMagicItem` and `MagicItem`
     - [x] Update `JsonMagicItemImporter` for recharge parsing
     - [x] Verify with Tests
 - [x] [Save Magic Item Charges ADR](docs/adr/0043-magic-item-charges.md)
+
+- [ ] **Cycle 38: Character Classes & Races**
+    - [ ] Design Class and Race Interfaces
+    - [ ] Implement Standard Class and Race Models
+    - [ ] Update `ILevelManager` and `ICreature`
+    - [ ] Implement Feature Application Logic
+    - [ ] Verify with Tests
+- [ ] [Save Character Classes & Races ADR](docs/adr/0045-character-classes-and-races.md)

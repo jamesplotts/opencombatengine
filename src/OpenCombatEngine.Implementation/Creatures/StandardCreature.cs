@@ -26,6 +26,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public Guid Id { get; }
         public string Name { get; }
         public string Team { get; set; } = "Player";
+        public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         
         public IAbilityScores AbilityScores { get; }
         public IHitPoints HitPoints { get; }
@@ -74,7 +75,8 @@ namespace OpenCombatEngine.Implementation.Creatures
             ICheckManager? checkManager = null,
             IEquipmentManager? equipmentManager = null,
             ISpellCaster? spellcasting = null,
-            IEffectManager? effectManager = null)
+            IEffectManager? effectManager = null,
+            OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? race = null)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Id cannot be empty", nameof(id));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -125,7 +127,21 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             Checks = checkManager ?? new StandardCheckManager(AbilityScores, new StandardDiceRoller(), this);
             
-            LevelManager = new StandardLevelManager(HitPoints, AbilityScores);
+            LevelManager = new StandardLevelManager(this);
+
+            Race = race;
+            if (Race != null)
+            {
+                foreach (var feature in Race.RacialFeatures)
+                {
+                    AddFeature(feature);
+                }
+                // Apply Ability Score Increases
+                foreach (var kvp in Race.AbilityScoreIncreases)
+                {
+                    // TODO: Apply ASI. StandardAbilityScores needs to support modification.
+                }
+            }
 
             // Default to Intelligence if creating new caster
             Spellcasting = spellcasting ?? new StandardSpellCaster(AbilityScores, ProficiencyBonus, Ability.Intelligence);
@@ -182,7 +198,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             // Equipment already created above
             Spellcasting = null; 
 
-            LevelManager = new StandardLevelManager(HitPoints, AbilityScores);
+            LevelManager = new StandardLevelManager(this);
             // TODO: Restore LevelManager state if we had it. For now, it starts fresh (Level 0/1?).
             // We need to add LevelManager state to CreatureState later.
 

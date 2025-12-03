@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using OpenCombatEngine.Core.Interfaces.Classes;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures
 {
@@ -7,9 +8,9 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         int TotalLevel { get; }
         int ExperiencePoints { get; }
         int ProficiencyBonus { get; }
-        IReadOnlyDictionary<string, int> Classes { get; }
+        IReadOnlyDictionary<IClassDefinition, int> Classes { get; }
 
         void AddExperience(int amount);
-        void LevelUp(string className, int hitDieSize, bool takeAverageHp = true);
+        void LevelUp(IClassDefinition classDefinition, bool takeAverageHp = true);
     }
 }

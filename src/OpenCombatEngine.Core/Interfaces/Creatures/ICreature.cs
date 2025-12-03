@@ -138,4 +138,9 @@ public interface ICreature
     /// </summary>
     /// <param name="feature">The feature to remove.</param>
     void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature);
+
+    /// <summary>
+    /// Gets the race definition of the creature.
+    /// </summary>
+    OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
 }

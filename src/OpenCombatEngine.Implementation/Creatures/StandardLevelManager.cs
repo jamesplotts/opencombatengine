@@ -3,24 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Classes;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
     public class StandardLevelManager : ILevelManager
     {
-        private readonly Dictionary<string, int> _classes = new();
-        private readonly IHitPoints _hitPoints;
-        private readonly IAbilityScores _abilityScores;
+        private readonly Dictionary<IClassDefinition, int> _classes = new();
+        private readonly ICreature _creature;
 
         public int TotalLevel => _classes.Values.Sum();
         public int ExperiencePoints { get; private set; }
         public int ProficiencyBonus => (TotalLevel - 1) / 4 + 2;
-        public IReadOnlyDictionary<string, int> Classes => _classes;
+        public IReadOnlyDictionary<IClassDefinition, int> Classes => _classes;
 
-        public StandardLevelManager(IHitPoints hitPoints, IAbilityScores abilityScores)
+        public StandardLevelManager(ICreature creature)
         {
-            _hitPoints = hitPoints ?? throw new ArgumentNullException(nameof(hitPoints));
-            _abilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
+            _creature = creature ?? throw new ArgumentNullException(nameof(creature));
         }
 
         public void AddExperience(int amount)
@@ -29,51 +28,48 @@ namespace OpenCombatEngine.Implementation.Creatures
             ExperiencePoints += amount;
         }
 
-        public void LevelUp(string className, int hitDieSize, bool takeAverageHp = true)
+        public void LevelUp(IClassDefinition classDefinition, bool takeAverageHp = true)
         {
-            if (string.IsNullOrWhiteSpace(className)) throw new ArgumentException("Class name cannot be empty.", nameof(className));
-            if (hitDieSize <= 0) throw new ArgumentOutOfRangeException(nameof(hitDieSize), "Hit die size must be positive.");
+            ArgumentNullException.ThrowIfNull(classDefinition);
 
-            if (!_classes.TryGetValue(className, out int currentLevel))
+            if (!_classes.TryGetValue(classDefinition, out int currentLevel))
             {
                 currentLevel = 0;
             }
-            _classes[className] = currentLevel + 1;
+            int newLevel = currentLevel + 1;
+            _classes[classDefinition] = newLevel;
 
             // HP Increase
-            int conMod = _abilityScores.GetModifier(Ability.Constitution);
+            int conMod = _creature.AbilityScores.GetModifier(Ability.Constitution);
             int hpIncrease = 0;
 
             if (takeAverageHp)
             {
                 // Average is (Die / 2) + 1
-                hpIncrease = (hitDieSize / 2) + 1;
+                hpIncrease = (classDefinition.HitDie / 2) + 1;
             }
             else
             {
-                // For now, we don't have a dice roller here, so we default to average or throw?
-                // The interface implies we might want to roll. 
-                // Let's stick to average for this implementation or just use average logic if takeAverageHp is false for now to avoid dependency on DiceRoller if not strictly needed yet.
-                // Or better, assume max roll for level 1?
-                // The prompt didn't specify level 1 logic, but usually level 1 is max.
-                // For simplicity in this cycle, we'll use average.
-                hpIncrease = (hitDieSize / 2) + 1;
+                // Default to average if no roller
+                hpIncrease = (classDefinition.HitDie / 2) + 1;
             }
 
             hpIncrease += conMod;
             if (hpIncrease < 1) hpIncrease = 1; // Minimum 1 HP gain
 
-            // We need a way to increase Max HP on IHitPoints.
-            // IHitPoints usually has Max property. If it's settable, we set it.
-            // Let's check IHitPoints definition.
-            // Assuming we can't set it directly if it's just a getter, we might need to cast to StandardHitPoints or update interface.
-            // For now, let's assume we can cast or it has a method.
-            // I'll check IHitPoints in a moment. If I can't set it, I'll need to update IHitPoints.
-            
-            if (_hitPoints is StandardHitPoints stdHp)
+            if (_creature.HitPoints is StandardHitPoints stdHp)
             {
                 stdHp.IncreaseMax(hpIncrease);
                 stdHp.AddHitDie(1);
+            }
+
+            // Apply Features
+            if (classDefinition.FeaturesByLevel.TryGetValue(newLevel, out var features))
+            {
+                foreach (var feature in features)
+                {
+                    _creature.AddFeature(feature);
+                }
             }
         }
     }
