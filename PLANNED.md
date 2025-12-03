@@ -11,7 +11,7 @@ This document outlines the future direction of the OpenCombatEngine.
 ## Phase 4: Advanced Features
 - [x] **Class Features**: Rage, Sneak Attack, Wild Shape, etc.
 - [x] **Magic Items**: Attunement, charges, and passive bonuses.
-- [ ] **Environmental Effects**: Difficult terrain, cover, visibility/lighting.
+- [x] **Environmental Effects**: Difficult terrain, cover, visibility/lighting.
 
 ## Phase 5: Grid & Tactical
 - [ ] **Grid System**: 5ft square grid logic.

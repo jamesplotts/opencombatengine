@@ -27,6 +27,8 @@ namespace OpenCombatEngine.Implementation.Items
         public int Charges { get; private set; }
         public int MaxCharges { get; }
         public string RechargeRate { get; }
+        public RechargeFrequency RechargeFrequency { get; }
+        public string RechargeFormula { get; }
 
         public IWeapon? WeaponProperties { get; }
         public IArmor? ArmorProperties { get; }
@@ -44,6 +46,8 @@ namespace OpenCombatEngine.Implementation.Items
             IEnumerable<OpenCombatEngine.Core.Interfaces.Conditions.ICondition>? conditions = null,
             int maxCharges = 0,
             string rechargeRate = "",
+            RechargeFrequency rechargeFrequency = RechargeFrequency.Unspecified,
+            string rechargeFormula = "",
             IWeapon? weaponProperties = null,
             IArmor? armorProperties = null,
             IContainer? containerProperties = null,
@@ -60,6 +64,8 @@ namespace OpenCombatEngine.Implementation.Items
             MaxCharges = maxCharges;
             Charges = maxCharges; // Start full
             RechargeRate = rechargeRate;
+            RechargeFrequency = rechargeFrequency;
+            RechargeFormula = rechargeFormula;
             WeaponProperties = weaponProperties;
             ArmorProperties = armorProperties;
             ContainerProperties = containerProperties;

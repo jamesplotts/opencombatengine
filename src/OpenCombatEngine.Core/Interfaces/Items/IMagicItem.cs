@@ -55,6 +55,16 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         string RechargeRate { get; }
 
         /// <summary>
+        /// Gets the frequency at which the item recharges.
+        /// </summary>
+        RechargeFrequency RechargeFrequency { get; }
+
+        /// <summary>
+        /// Gets the dice formula for recharging (e.g. "1d6+1").
+        /// </summary>
+        string RechargeFormula { get; }
+
+        /// <summary>
         /// Consumes the specified number of charges.
         /// </summary>
         /// <param name="amount">Amount to consume.</param>

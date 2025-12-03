@@ -92,5 +92,27 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             result.Value.First().Name.Should().Be("Item 1");
             result.Value.Last().Name.Should().Be("Item 2");
         }
+        [Fact]
+        public void Import_Should_Parse_Recharge_Logic()
+        {
+            var json = @"
+            {
+                ""name"": ""Staff of Power"",
+                ""type"": ""ST"",
+                ""charges"": 20,
+                ""recharge"": ""2d8 + 4 at dawn"",
+                ""entries"": [""...""]
+            }";
+
+            var importer = new JsonMagicItemImporter();
+            var result = importer.Import(json);
+
+            result.IsSuccess.Should().BeTrue();
+            var item = result.Value.First();
+            item.Charges.Should().Be(20);
+            item.MaxCharges.Should().Be(20);
+            item.RechargeFrequency.Should().Be(RechargeFrequency.Dawn);
+            item.RechargeFormula.Should().Be("2D8+4");
+        }
     }
 }

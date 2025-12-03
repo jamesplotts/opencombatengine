@@ -290,3 +290,8 @@ This document tracks the progress of the OpenCombatEngine development, including
 - [x] **Cycle 34: Condition Effects**
 - [x] **Cycle 35: Magic Item Passive Bonuses**
 - [ ] **Cycle 36: Magic Item Charges & Active Abilities**
+    - [ ] Implement `RechargeFrequency` and `MagicItemRecharger`
+    - [ ] Update `IMagicItem` and `MagicItem`
+    - [ ] Update `JsonMagicItemImporter` for recharge parsing
+    - [ ] Verify with Tests
+- [ ] [Save Magic Item Charges ADR](docs/adr/0043-magic-item-charges.md)

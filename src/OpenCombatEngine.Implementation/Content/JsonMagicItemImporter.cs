@@ -229,6 +229,8 @@ namespace OpenCombatEngine.Implementation.Content
                 else if (dto.Name.Contains("belt", StringComparison.OrdinalIgnoreCase) || dto.Name.Contains("girdle", StringComparison.OrdinalIgnoreCase)) defaultSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Waist;
             }
 
+            var (rechargeFreq, rechargeFormula) = ParseRecharge(dto.Recharge);
+
             return new MagicItem(
                 dto.Name ?? "Unknown Item",
                 description,
@@ -240,6 +242,8 @@ namespace OpenCombatEngine.Implementation.Content
                 null, // conditions
                 dto.Charges ?? 0,
                 dto.Recharge ?? "",
+                rechargeFreq,
+                rechargeFormula,
                 weaponProps,
                 armorProps,
                 containerProps,
@@ -291,6 +295,34 @@ namespace OpenCombatEngine.Implementation.Content
         {
             if (entries == null) return string.Empty;
             return string.Join("\n", entries.Select(e => e.ToString()));
+        }
+        private static (RechargeFrequency, string) ParseRecharge(string? recharge)
+        {
+            if (string.IsNullOrWhiteSpace(recharge)) return (RechargeFrequency.Unspecified, "");
+
+            var upper = recharge.ToUpperInvariant();
+            var frequency = RechargeFrequency.Other;
+
+            if (upper.Contains("DAWN", StringComparison.Ordinal)) frequency = RechargeFrequency.Dawn;
+            else if (upper.Contains("DUSK", StringComparison.Ordinal)) frequency = RechargeFrequency.Dusk;
+            else if (upper.Contains("MIDNIGHT", StringComparison.Ordinal)) frequency = RechargeFrequency.Midnight;
+            else if (upper.Contains("SHORT REST", StringComparison.Ordinal)) frequency = RechargeFrequency.ShortRest;
+            else if (upper.Contains("LONG REST", StringComparison.Ordinal)) frequency = RechargeFrequency.LongRest;
+            else if (upper.Contains("NEVER", StringComparison.Ordinal)) frequency = RechargeFrequency.Never;
+
+            // Extract formula: "1d6+1" from "1d6+1 at dawn"
+            // Regex for dice formula: \d+d\d+(\s*[\+\-]\s*\d+)?
+            var match = System.Text.RegularExpressions.Regex.Match(upper, @"(\d+D\d+(\s*[\+\-]\s*\d+)?)");
+            string formula = match.Success ? match.Value.Replace(" ", "", StringComparison.Ordinal) : "";
+
+            // If no dice formula found, maybe it's a fixed number? "5 at dawn"
+            if (string.IsNullOrEmpty(formula))
+            {
+                var numberMatch = System.Text.RegularExpressions.Regex.Match(upper, @"^(\d+)\s+AT");
+                if (numberMatch.Success) formula = numberMatch.Groups[1].Value;
+            }
+
+            return (frequency, formula);
         }
     }
 }
