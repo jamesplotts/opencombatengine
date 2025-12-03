@@ -27,7 +27,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                     ""bonusSavingThrow"": ""+1""
                 }
             ]";
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(Substitute.For<OpenCombatEngine.Core.Interfaces.Spells.ISpellRepository>());
 
             // Act
             var result = importer.Import(json);

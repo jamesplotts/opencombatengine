@@ -14,6 +14,6 @@ This document outlines the future direction of the OpenCombatEngine.
 - [x] **Environmental Effects**: Difficult terrain, cover, visibility/lighting.
 
 ## Phase 5: Grid & Tactical
-- [ ] **Grid System**: 5ft square grid logic.
-- [ ] **Pathfinding**: A* or Dijkstra for movement validation.
-- [ ] **Line of Sight**: Raycasting for visibility checks.
+- [x] **Grid System**: 5ft square grid logic.
+- [x] **Pathfinding**: A* or Dijkstra for movement validation.
+- [x] **Line of Sight**: Raycasting for visibility checks.

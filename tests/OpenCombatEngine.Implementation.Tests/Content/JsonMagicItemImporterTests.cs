@@ -1,6 +1,9 @@
 using FluentAssertions;
+using NSubstitute;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Implementation.Content;
+using OpenCombatEngine.Implementation.Items;
 using Xunit;
 using System.Linq;
 
@@ -8,6 +11,13 @@ namespace OpenCombatEngine.Implementation.Tests.Content
 {
     public class JsonMagicItemImporterTests
     {
+        private readonly ISpellRepository _spellRepository;
+
+        public JsonMagicItemImporterTests()
+        {
+            _spellRepository = Substitute.For<ISpellRepository>();
+        }
+
         [Fact]
         public void Import_Should_Parse_Simple_Item()
         {
@@ -20,7 +30,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""entries"": [""You regain 2d4 + 2 hit points.""]
             }";
 
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(_spellRepository);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -43,7 +53,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""entries"": [""You gain a +1 bonus to AC and saving throws.""]
             }";
 
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(_spellRepository);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -64,7 +74,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""entries"": [""...""]
             }";
 
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(_spellRepository);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -84,7 +94,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ]
             }";
 
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(_spellRepository);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -92,6 +102,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             result.Value.First().Name.Should().Be("Item 1");
             result.Value.Last().Name.Should().Be("Item 2");
         }
+
         [Fact]
         public void Import_Should_Parse_Recharge_Logic()
         {
@@ -104,7 +115,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
                 ""entries"": [""...""]
             }";
 
-            var importer = new JsonMagicItemImporter();
+            var importer = new JsonMagicItemImporter(_spellRepository);
             var result = importer.Import(json);
 
             result.IsSuccess.Should().BeTrue();
@@ -113,6 +124,31 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             item.MaxCharges.Should().Be(20);
             item.RechargeFrequency.Should().Be(RechargeFrequency.Dawn);
             item.RechargeFormula.Should().Be("2D8+4");
+        }
+
+        [Fact]
+        public void Import_Should_Parse_Attached_Spells()
+        {
+            var json = @"
+            {
+                ""name"": ""Staff of Fire"",
+                ""type"": ""ST"",
+                ""charges"": 10,
+                ""recharge"": ""1d6 + 4 at dawn"",
+                ""attachedSpells"": [""Fireball"", ""Burning Hands""],
+                ""entries"": [""...""]
+            }";
+
+            var importer = new JsonMagicItemImporter(_spellRepository);
+            var result = importer.Import(json);
+
+            result.IsSuccess.Should().BeTrue();
+            var item = result.Value.First();
+            item.Abilities.Should().HaveCount(2);
+            
+            var fireball = item.Abilities.First();
+            fireball.Should().BeOfType<CastSpellFromItemAbility>();
+            fireball.Name.Should().Contain("Fireball");
         }
     }
 }

@@ -43,6 +43,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         [JsonPropertyName("recharge")]
         public string? Recharge { get; set; }
 
+        [JsonPropertyName("attachedSpells")]
+        public List<string>? AttachedSpells { get; set; }
+
         // Weapon properties
         [JsonPropertyName("dmg1")]
         public string? Dmg1 { get; set; } // Damage dice (e.g. "1d8")

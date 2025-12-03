@@ -6,6 +6,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Content;
 using OpenCombatEngine.Core.Interfaces.Features;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Content.Dtos;
 using OpenCombatEngine.Implementation.Items;
@@ -14,6 +15,15 @@ namespace OpenCombatEngine.Implementation.Content
 {
     public class JsonMagicItemImporter : IContentImporter<IMagicItem>
     {
+        private readonly ISpellRepository _spellRepository;
+        private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
+
+        public JsonMagicItemImporter(ISpellRepository spellRepository, OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller? diceRoller = null)
+        {
+            _spellRepository = spellRepository ?? throw new ArgumentNullException(nameof(spellRepository));
+            _diceRoller = diceRoller ?? new OpenCombatEngine.Implementation.Dice.StandardDiceRoller();
+        }
+
         public Result<IEnumerable<IMagicItem>> Import(string data)
         {
             if (string.IsNullOrWhiteSpace(data))
@@ -69,7 +79,7 @@ namespace OpenCombatEngine.Implementation.Content
             }
         }
 
-        private static MagicItem MapDtoToItem(MagicItemDto dto)
+        private MagicItem MapDtoToItem(MagicItemDto dto)
         {
             var type = ParseItemType(dto.Type);
             var reqAttunement = ParseAttunement(dto.ReqAttune);
@@ -231,6 +241,19 @@ namespace OpenCombatEngine.Implementation.Content
 
             var (rechargeFreq, rechargeFormula) = ParseRecharge(dto.Recharge);
 
+            var abilities = new List<IMagicItemAbility>();
+            if (dto.AttachedSpells != null)
+            {
+                foreach (var spellName in dto.AttachedSpells)
+                {
+                    // Heuristic: Cost is often 1 charge per spell level, or specified in text.
+                    // For now, we'll default to 1 charge if not specified.
+                    // Ideally, we'd parse "Fireball (3 charges)" from a list, but DTO just has names.
+                    // We'll assume 1 for now or 0.
+                    abilities.Add(new CastSpellFromItemAbility(_spellRepository, spellName, 1, _diceRoller));
+                }
+            }
+
             return new MagicItem(
                 dto.Name ?? "Unknown Item",
                 description,
@@ -247,7 +270,8 @@ namespace OpenCombatEngine.Implementation.Content
                 weaponProps,
                 armorProps,
                 containerProps,
-                defaultSlot
+                defaultSlot,
+                abilities
             );
         }
 
