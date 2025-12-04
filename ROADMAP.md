@@ -302,10 +302,17 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Verify with Tests
 - [x] [Save Magic Item Charges ADR](docs/adr/0043-magic-item-charges.md)
 
-- [ ] **Cycle 38: Character Classes & Races**
-    - [ ] Design Class and Race Interfaces
-    - [ ] Implement Standard Class and Race Models
-    - [ ] Update `ILevelManager` and `ICreature`
-    - [ ] Implement Feature Application Logic
-    - [ ] Verify with Tests
-- [ ] [Save Character Classes & Races ADR](docs/adr/0045-character-classes-and-races.md)
+- [x] **Cycle 38: Character Classes & Races**
+    - [x] Design Class and Race Interfaces
+    - [x] Implement Standard Class and Race Models
+    - [x] Update `ILevelManager` and `ICreature`
+    - [x] Implement Feature Application Logic
+    - [x] Verify with Tests
+- [x] [Save Character Classes & Races ADR](docs/adr/0045-character-classes-and-races.md)
+
+- [x] **Cycle 39: Class & Race Import**
+    - [x] Design Class and Race DTOs
+    - [x] Implement `JsonClassImporter`
+    - [x] Implement `JsonRaceImporter`
+    - [x] Verify with Tests
+- [x] [Save Class and Race Import ADR](docs/adr/0046-class-and-race-import.md)

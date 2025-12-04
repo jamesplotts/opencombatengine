@@ -1,0 +1,60 @@
+using System.Linq;
+using FluentAssertions;
+using OpenCombatEngine.Implementation.Content;
+using Xunit;
+
+namespace OpenCombatEngine.Implementation.Tests.Content
+{
+    public class JsonClassImporterTests
+    {
+        [Fact]
+        public void Import_Should_Parse_Valid_Class_Json()
+        {
+            var json = @"
+            {
+                ""class"": [
+                    {
+                        ""name"": ""Fighter"",
+                        ""source"": ""PHB"",
+                        ""hd"": {
+                            ""number"": 1,
+                            ""faces"": 10
+                        },
+                        ""proficiency"": [
+                            ""str"",
+                            ""con""
+                        ]
+                    }
+                ]
+            }";
+
+            var importer = new JsonClassImporter();
+            var result = importer.Import(json);
+
+            result.IsSuccess.Should().BeTrue();
+            var classes = result.Value.ToList();
+
+            classes.Should().HaveCount(1);
+            var fighter = classes.First();
+            fighter.Name.Should().Be("Fighter");
+            fighter.HitDie.Should().Be(10);
+        }
+
+        [Fact]
+        public void Import_Should_Handle_Empty_Json()
+        {
+            var importer = new JsonClassImporter();
+            var result = importer.Import("{}");
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Import_Should_Handle_Invalid_Json()
+        {
+            var importer = new JsonClassImporter();
+            var result = importer.Import("invalid json");
+            result.IsSuccess.Should().BeFalse();
+        }
+    }
+}
