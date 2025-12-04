@@ -316,3 +316,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement `JsonRaceImporter`
     - [x] Verify with Tests
 - [x] [Save Class and Race Import ADR](docs/adr/0046-class-and-race-import.md)
+
+- [x] **Cycle 40: Class & Race Feature Parsing**
+    - [x] Implement `FeatureParsingService`
+    - [x] Create `TextFeature`
+    - [x] Update Importers
+    - [x] Verify with Tests
+- [x] [Save Feature Parsing ADR](docs/adr/0047-feature-parsing.md)

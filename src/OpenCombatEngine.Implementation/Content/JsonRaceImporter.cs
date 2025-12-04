@@ -8,6 +8,8 @@ using OpenCombatEngine.Core.Interfaces.Races;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Content.Dtos;
 using OpenCombatEngine.Implementation.Races;
+using OpenCombatEngine.Implementation.Features;
+using OpenCombatEngine.Core.Interfaces.Features;
 
 namespace OpenCombatEngine.Implementation.Content
 {
@@ -37,6 +39,7 @@ namespace OpenCombatEngine.Implementation.Content
             }
         }
 
+
         private static IRaceDefinition? MapDtoToRace(RaceDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Name)) return null;
@@ -45,9 +48,9 @@ namespace OpenCombatEngine.Implementation.Content
             Size size = ParseSize(dto.Size);
             var asi = ParseAbilityScoreIncreases(dto.Ability);
 
-            // TODO: Parse racial features from Entries
+            var features = FeatureParsingService.ParseFeatures(dto.Entries);
             
-            return new RaceDefinition(dto.Name, speed, size, asi);
+            return new RaceDefinition(dto.Name, speed, size, asi, features);
         }
 
         private static int ParseSpeed(object? speedObj)

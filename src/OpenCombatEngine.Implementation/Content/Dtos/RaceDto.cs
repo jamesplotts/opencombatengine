@@ -30,7 +30,7 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         public List<System.Text.Json.JsonElement>? Ability { get; set; }
 
         [JsonPropertyName("entries")]
-        public List<object>? Entries { get; set; }
+        public System.Text.Json.JsonElement Entries { get; set; }
     }
 #pragma warning restore CA2227
 #pragma warning restore CA1002

@@ -46,6 +46,36 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             human.Speed.Should().Be(30);
             human.AbilityScoreIncreases.Should().Contain(Ability.Strength, 1);
             human.AbilityScoreIncreases.Should().Contain(Ability.Intelligence, 1);
+            
+            // Verify features (none in this JSON, but property should exist)
+            human.RacialFeatures.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Import_Should_Parse_Racial_Features()
+        {
+            var json = @"
+            {
+                ""race"": [
+                    {
+                        ""name"": ""Elf"",
+                        ""entries"": [
+                            {
+                                ""name"": ""Darkvision"",
+                                ""entries"": [""You can see in the dark.""]
+                            }
+                        ]
+                    }
+                ]
+            }";
+
+            var importer = new JsonRaceImporter();
+            var result = importer.Import(json);
+
+            result.IsSuccess.Should().BeTrue();
+            var elf = result.Value.First();
+            elf.RacialFeatures.Should().HaveCount(1);
+            elf.RacialFeatures.First().Name.Should().Be("Darkvision");
         }
 
         [Fact]

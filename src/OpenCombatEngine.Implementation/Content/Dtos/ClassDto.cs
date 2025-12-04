@@ -28,6 +28,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         // but the plan mentioned ClassTableGroups.
         [JsonPropertyName("classTableGroups")]
         public List<ClassTableGroupDto>? ClassTableGroups { get; set; }
+
+        [JsonPropertyName("classFeatures")]
+        public List<object>? ClassFeatures { get; set; } // Often a list of strings or objects referencing features
     }
 
     public class HdDto
