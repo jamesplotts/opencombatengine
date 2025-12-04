@@ -3,6 +3,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Races;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Models.States;
@@ -87,6 +88,8 @@ public class CreatureInterfaceTests
         public IEquipmentManager Equipment { get; }
         public EncumbranceLevel EncumbranceLevel => EncumbranceLevel.None;
         public ILevelManager LevelManager { get; set; }
+        public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
+        public IDictionary<string, int> Senses { get; } = new Dictionary<string, int>();
         
         public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
         
@@ -116,7 +119,8 @@ public class CreatureInterfaceTests
         public void ModifyOutgoingAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack) { }
         public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
         public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
-        public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race => null;
+        public void Move(int distance) { }
+        public void ResetTurn() { }
     }
 
     private class StubCheckManager : ICheckManager
@@ -130,12 +134,11 @@ public class CreatureInterfaceTests
     {
         public int Speed => 30;
         public int MovementRemaining => 30;
-        public ILevelManager LevelManager { get; set; }
         public bool IsInDifficultTerrain { get; set; }
         
-        public void AddFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
-        public void RemoveFeature(OpenCombatEngine.Core.Interfaces.Features.IFeature feature) { }
-        public void Move(int distance) { }
+        public bool CanMove(int feet) => true;
+        public void Move(int feet) { }
+        public void ResetMovement() { }
         public void ResetTurn() { }
     }
 

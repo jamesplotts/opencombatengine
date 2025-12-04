@@ -9,6 +9,7 @@ using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Core.Interfaces.Features;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Races;
 using OpenCombatEngine.Core.Interfaces.Spatial;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Combat;
@@ -57,8 +58,9 @@ namespace OpenCombatEngine.Implementation.Creatures
         public ITurnManager TurnManager { get; }
         
         public ILevelManager LevelManager { get; }
-        
-        // Grid is not in ICreature, removing it.
+        public IDictionary<string, int> Senses { get; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly List<IFeature> _features = new();
         
         public int ProficiencyBonus => LevelManager.ProficiencyBonus;
 
@@ -292,8 +294,6 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState);
         }
-
-        private readonly List<IFeature> _features = new();
 
         public void AddFeature(IFeature feature)
         {

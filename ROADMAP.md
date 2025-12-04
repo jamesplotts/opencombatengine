@@ -323,3 +323,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update Importers
     - [x] Verify with Tests
 - [x] [Save Feature Parsing ADR](docs/adr/0047-feature-parsing.md)
+
+- [x] **Cycle 41: Feature Factory & Concrete Features**
+    - [x] Implement `FeatureFactory`
+    - [x] Implement `SenseFeature` & `AttributeBonusFeature`
+    - [x] Update `ICreature` with Senses
+    - [x] Verify with Tests
+- [x] [Save Feature Factory ADR](docs/adr/0048-feature-factory.md)

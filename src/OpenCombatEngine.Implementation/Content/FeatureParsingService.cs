@@ -53,12 +53,8 @@ namespace OpenCombatEngine.Implementation.Content
                 description = ParseEntries(entriesProp);
             }
 
-            // TODO: Add logic to map specific names to concrete feature implementations
-            // e.g. if (name == "Sneak Attack") return new SneakAttackFeature(...);
-
-            if (string.IsNullOrWhiteSpace(description) && name == "Unknown Feature") return null;
-
-            return new TextFeature(name, description);
+            // Use factory to create specific feature or fallback to TextFeature
+            return FeatureFactory.CreateFeature(name, description);
         }
 
         private static string ParseEntries(JsonElement entries)

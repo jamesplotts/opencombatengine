@@ -22,9 +22,11 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             var features = FeatureParsingService.ParseFeatures(element).ToList();
 
             features.Should().HaveCount(1);
-            var feature = features.First().Should().BeOfType<TextFeature>().Subject;
+            features.Should().HaveCount(1);
+            var feature = features.First().Should().BeOfType<SenseFeature>().Subject;
             feature.Name.Should().Be("Darkvision");
-            feature.Description.Should().Contain("You can see in dim light");
+            feature.SenseType.Should().Be("Darkvision");
+            feature.Range.Should().Be(60); // Default range for "Darkvision" without specific text
         }
 
         [Fact]
