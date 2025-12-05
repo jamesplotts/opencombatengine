@@ -51,6 +51,22 @@ namespace OpenCombatEngine.Implementation.Content
             // We'll add a simple "Class Feature" placeholder if we find 'classFeatures' just to show we touched it.
             
             var featuresByLevel = new Dictionary<int, IEnumerable<IFeature>>();
+            var level1Features = new List<IFeature>();
+
+            if (dto.Proficiency != null)
+            {
+                foreach (var prof in dto.Proficiency)
+                {
+                    // Create a feature for each proficiency
+                    // We treat them as skill proficiencies for now, which covers armor/weapons as string checks too
+                    level1Features.Add(new ProficiencyFeature($"Proficiency: {prof}", prof));
+                }
+            }
+
+            if (level1Features.Count > 0)
+            {
+                featuresByLevel[1] = level1Features;
+            }
             
             return new ClassDefinition(dto.Name, hitDie, featuresByLevel);
         }

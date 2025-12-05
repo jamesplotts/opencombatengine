@@ -358,3 +358,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `FeatureFactory`
     - [x] Verify with Tests
 - [x] [Save Proficiency Features ADR](docs/adr/0052-proficiency-features.md)
+
+- [x] **Cycle 46: Class and Race Feature Integration**
+    - [x] Update `JsonClassImporter`
+    - [x] Verify `JsonRaceImporter`
+    - [x] Integration Tests
+- [x] [Save Content Import Feature Integration ADR](docs/adr/0053-content-import-feature-integration.md)
