@@ -128,9 +128,17 @@ public class CreatureInterfaceTests
 
     private class StubCheckManager : ICheckManager
     {
-        public Result<int> RollAbilityCheck(Ability ability) => Result<int>.Success(10);
+        public Result<int> RollAbilityCheck(Ability ability, string? skillName = null) => Result<int>.Success(10);
         public Result<int> RollSavingThrow(Ability ability) => Result<int>.Success(10);
         public Result<int> RollDeathSave() => Result<int>.Success(10);
+        
+        public void AddSkillProficiency(string skillName) { }
+        public void RemoveSkillProficiency(string skillName) { }
+        public bool HasSkillProficiency(string skillName) => false;
+        
+        public void AddSavingThrowProficiency(Ability ability) { }
+        public void RemoveSavingThrowProficiency(Ability ability) { }
+        public bool HasSavingThrowProficiency(Ability ability) => false;
     }
 
     private class StubMovement : IMovement

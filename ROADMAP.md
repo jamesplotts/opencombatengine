@@ -351,3 +351,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `FeatureFactory` with `ISpellRepository`
     - [x] Verify with Tests
 - [x] [Save Spellcasting Features ADR](docs/adr/0051-spellcasting-features.md)
+
+- [x] **Cycle 45: Proficiency Features**
+    - [x] Update `ICheckManager`
+    - [x] Implement `ProficiencyFeature`
+    - [x] Update `FeatureFactory`
+    - [x] Verify with Tests
+- [x] [Save Proficiency Features ADR](docs/adr/0052-proficiency-features.md)

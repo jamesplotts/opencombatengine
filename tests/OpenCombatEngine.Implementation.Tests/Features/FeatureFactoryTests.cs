@@ -126,5 +126,27 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var spellFeature = (SpellcastingFeature)feature!;
             spellFeature.Spells.Should().Contain(spell);
         }
+
+        [Fact]
+        public void CreateFeature_Should_Return_ProficiencyFeature_For_Skill()
+        {
+            var feature = FeatureFactory.CreateFeature("Sneaky", "Proficiency in Stealth");
+            
+            feature.Should().BeOfType<ProficiencyFeature>();
+            var profFeature = (ProficiencyFeature)feature!;
+            profFeature.SkillName.Should().Be("Stealth");
+            profFeature.SavingThrowAbility.Should().BeNull();
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_ProficiencyFeature_For_SavingThrow()
+        {
+            var feature = FeatureFactory.CreateFeature("Resilient", "Proficiency in Constitution saving throws");
+            
+            feature.Should().BeOfType<ProficiencyFeature>();
+            var profFeature = (ProficiencyFeature)feature!;
+            profFeature.SavingThrowAbility.Should().Be(Ability.Constitution);
+            profFeature.SkillName.Should().BeNull();
+        }
     }
 }

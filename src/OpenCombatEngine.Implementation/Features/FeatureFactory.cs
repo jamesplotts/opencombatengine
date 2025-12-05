@@ -149,6 +149,38 @@ namespace OpenCombatEngine.Implementation.Features
                 }
             }
 
+            // Check for Proficiencies
+            // "Proficiency in Stealth"
+            // "Proficiency in Dexterity saving throws"
+            if (description.Contains("Proficiency in", StringComparison.OrdinalIgnoreCase))
+            {
+                // Try to extract skill or save
+                // Regex: Proficiency in (.*?) (skill|saving throws)
+                // Or simpler: just check common skills/saves
+                
+                // Check for saving throws first
+                foreach (var ability in Enum.GetValues<Ability>())
+                {
+                    if (description.Contains($"{ability} saving throws", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new ProficiencyFeature(name, ability);
+                    }
+                }
+
+                // Check for skills (simplified list for now, or just extract word)
+                // Let's extract the word after "Proficiency in "
+                var match = Regex.Match(description, @"Proficiency in ([\w\s]+?)( skill|\.|$)");
+                if (match.Success)
+                {
+                    var skill = match.Groups[1].Value.Trim();
+                    // Basic validation to ensure it's not "saving throws" if regex matched weirdly
+                    if (!skill.Contains("saving throws", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new ProficiencyFeature(name, skill);
+                    }
+                }
+            }
+
             // Fallback to TextFeature
             return new TextFeature(name, description);
         }

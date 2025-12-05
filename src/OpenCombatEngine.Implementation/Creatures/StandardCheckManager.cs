@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
@@ -15,6 +16,9 @@ namespace OpenCombatEngine.Implementation.Creatures
         // Circular dependency risk if we pass ICreature into CheckManager and CheckManager is on ICreature.
         // But StandardCreature constructs it, so it can pass 'this'.
         
+        private readonly HashSet<string> _skillProficiencies = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<Ability> _savingThrowProficiencies = new();
+
         public StandardCheckManager(IAbilityScores abilityScores, IDiceRoller diceRoller, ICreature creature)
         {
             _abilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
@@ -22,10 +26,17 @@ namespace OpenCombatEngine.Implementation.Creatures
             _creature = creature ?? throw new ArgumentNullException(nameof(creature));
         }
 
-        public Result<int> RollAbilityCheck(Ability ability)
+        public Result<int> RollAbilityCheck(Ability ability, string? skillName = null)
         {
             int modifier = _abilityScores.GetModifier(ability);
-            var roll = _diceRoller.Roll($"1d20+{modifier}");
+            int proficiencyBonus = 0;
+
+            if (!string.IsNullOrWhiteSpace(skillName) && HasSkillProficiency(skillName))
+            {
+                proficiencyBonus = _creature.ProficiencyBonus;
+            }
+
+            var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
             
             if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
             
@@ -41,15 +52,12 @@ namespace OpenCombatEngine.Implementation.Creatures
         public Result<int> RollSavingThrow(Ability ability)
         {
             int modifier = _abilityScores.GetModifier(ability);
-            
-            // TODO: Check for proficiency. For now, we assume no proficiency or we need a way to check.
-            // The plan said: "RollSavingThrow just rolls d20 + Mod + (IsProficient ? PB : 0)."
-            // But we didn't add IsProficient to ICreature yet.
-            // Let's assume 0 proficiency for now to keep it simple as per plan "assume no proficiency by default".
-            // Or better, let's just use the modifier.
-            
-            int proficiencyBonus = 0; 
-            // Future: if (_creature.SavingThrowProficiencies.Contains(ability)) proficiencyBonus = _creature.ProficiencyBonus;
+            int proficiencyBonus = 0;
+
+            if (HasSavingThrowProficiency(ability))
+            {
+                proficiencyBonus = _creature.ProficiencyBonus;
+            }
 
             var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
 
@@ -69,6 +77,42 @@ namespace OpenCombatEngine.Implementation.Creatures
             var roll = _diceRoller.Roll("1d20");
             if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
             return Result<int>.Success(roll.Value.Total);
+        }
+
+        public void AddSkillProficiency(string skillName)
+        {
+            if (!string.IsNullOrWhiteSpace(skillName))
+            {
+                _skillProficiencies.Add(skillName);
+            }
+        }
+
+        public void RemoveSkillProficiency(string skillName)
+        {
+            if (!string.IsNullOrWhiteSpace(skillName))
+            {
+                _skillProficiencies.Remove(skillName);
+            }
+        }
+
+        public bool HasSkillProficiency(string skillName)
+        {
+            return !string.IsNullOrWhiteSpace(skillName) && _skillProficiencies.Contains(skillName);
+        }
+
+        public void AddSavingThrowProficiency(Ability ability)
+        {
+            _savingThrowProficiencies.Add(ability);
+        }
+
+        public void RemoveSavingThrowProficiency(Ability ability)
+        {
+            _savingThrowProficiencies.Remove(ability);
+        }
+
+        public bool HasSavingThrowProficiency(Ability ability)
+        {
+            return _savingThrowProficiencies.Contains(ability);
         }
     }
 }
