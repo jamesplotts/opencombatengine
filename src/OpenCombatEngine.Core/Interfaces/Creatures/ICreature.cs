@@ -148,4 +148,21 @@ public interface ICreature
     /// Gets the senses of the creature (e.g. Darkvision -> 60).
     /// </summary>
     System.Collections.Generic.IDictionary<string, int> Senses { get; }
+
+    /// <summary>
+    /// Gets the list of actions available to the creature.
+    /// </summary>
+    System.Collections.Generic.IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> Actions { get; }
+
+    /// <summary>
+    /// Adds an action to the creature.
+    /// </summary>
+    /// <param name="action">The action to add.</param>
+    void AddAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action);
+
+    /// <summary>
+    /// Removes an action from the creature.
+    /// </summary>
+    /// <param name="action">The action to remove.</param>
+    void RemoveAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action);
 }

@@ -405,19 +405,26 @@ namespace OpenCombatEngine.Implementation.Creatures
             _customActions.Add(action);
         }
 
-        public IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> GetActions()
+        public void RemoveAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action)
         {
-            // Move Action
-            int speed = Movement.Speed;
-            yield return new OpenCombatEngine.Implementation.Actions.MoveAction(speed);
+            _customActions.Remove(action);
+        }
 
-            // Unarmed Strike
-            var strMod = AbilityScores.GetModifier(Ability.Strength);
-            var proficiency = ProficiencyBonus;
-            var attackBonus = strMod + proficiency;
-            var damageBonus = strMod;
-            var damageDice = "1";
-            var diceRoller = new StandardDiceRoller();
+        public IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> Actions
+        {
+            get
+            {
+                // Move Action
+                int speed = Movement.Speed;
+                yield return new OpenCombatEngine.Implementation.Actions.MoveAction(speed);
+
+                // Unarmed Strike
+                var strMod = AbilityScores.GetModifier(Ability.Strength);
+                var proficiency = ProficiencyBonus;
+                var attackBonus = strMod + proficiency;
+                var damageBonus = strMod;
+                var damageDice = "1";
+                var diceRoller = new StandardDiceRoller();
 
             yield return new OpenCombatEngine.Implementation.Actions.AttackAction(
                 "Unarmed Strike",
@@ -455,6 +462,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                         yield return new OpenCombatEngine.Implementation.Actions.UseMagicItemAction(magicItem, ability);
                     }
                 }
+            }
             }
         }
     }

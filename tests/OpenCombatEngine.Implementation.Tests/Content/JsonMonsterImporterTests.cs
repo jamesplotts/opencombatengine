@@ -60,7 +60,7 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             goblin.HitPoints.Max.Should().Be(7);
 
             // Actions
-            var actions = goblin.GetActions().ToList();
+            var actions = goblin.Actions.ToList();
             var scimitar = actions.OfType<MonsterAttackAction>().FirstOrDefault();
             scimitar.Should().NotBeNull();
             scimitar!.Name.Should().Be("Scimitar");

@@ -337,3 +337,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `FeatureFactory`
     - [x] Verify with Tests
 - [x] [Save Damage Affinity ADR](docs/adr/0049-resistance-immunity-vulnerability.md)
+
+- [x] **Cycle 43: Action Features**
+    - [x] Update `ICreature` with `Actions`
+    - [x] Implement `ActionFeature` & `TextAction`
+    - [x] Update `FeatureFactory`
+    - [x] Verify with Tests
+- [x] [Save Action Features ADR](docs/adr/0050-action-features.md)

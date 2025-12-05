@@ -10,6 +10,7 @@ namespace OpenCombatEngine.Implementation.Features
         public static IFeature? CreateFeature(string name, string description)
         {
             if (string.IsNullOrWhiteSpace(name)) return null;
+            if (description == null) description = "";
 
             // Check for Darkvision
             if (name.Contains("Darkvision", StringComparison.OrdinalIgnoreCase))
@@ -90,6 +91,22 @@ namespace OpenCombatEngine.Implementation.Features
                 {
                     return new DamageAffinityFeature(name, type.Value, AffinityType.Vulnerability);
                 }
+            }
+
+            // Check for Actions
+            // "As an action", "As a bonus action"
+            if (description.Contains("As an action", StringComparison.OrdinalIgnoreCase) || 
+                description.Contains("use your action", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = new OpenCombatEngine.Implementation.Actions.TextAction(name, description, ActionType.Action);
+                return new ActionFeature(name, action);
+            }
+
+            if (description.Contains("As a bonus action", StringComparison.OrdinalIgnoreCase) || 
+                description.Contains("use a bonus action", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = new OpenCombatEngine.Implementation.Actions.TextAction(name, description, ActionType.BonusAction);
+                return new ActionFeature(name, action);
             }
 
             // Fallback to TextFeature

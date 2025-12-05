@@ -90,6 +90,9 @@ public class CreatureInterfaceTests
         public ILevelManager LevelManager { get; set; }
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         public IDictionary<string, int> Senses { get; } = new Dictionary<string, int>();
+        public IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> Actions => new List<OpenCombatEngine.Core.Interfaces.Actions.IAction>();
+        public void AddAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action) { }
+        public void RemoveAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action) { }
         
         public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
         

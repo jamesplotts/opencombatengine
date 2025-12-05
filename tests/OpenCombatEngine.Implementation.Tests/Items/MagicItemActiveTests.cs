@@ -134,7 +134,7 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             equipResult.IsSuccess.Should().BeTrue("Item should be equipped successfully");
 
             // Act
-            var actions = _creature.GetActions().ToList();
+            var actions = _creature.Actions.ToList();
 
             // Assert
             actions.Should().Contain(a => a is UseMagicItemAction && a.Name.Contains("Fireball"));

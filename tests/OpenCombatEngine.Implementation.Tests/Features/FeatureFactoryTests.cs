@@ -81,5 +81,27 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             affinity.DamageType.Should().Be(DamageType.Cold);
             affinity.AffinityType.Should().Be(AffinityType.Vulnerability);
         }
+
+        [Fact]
+        public void CreateFeature_Should_Return_ActionFeature_For_Action()
+        {
+            var feature = FeatureFactory.CreateFeature("Breath Weapon", "As an action, you exhale fire.");
+            
+            feature.Should().BeOfType<ActionFeature>();
+            var actionFeature = (ActionFeature)feature!;
+            actionFeature.Action.Should().BeOfType<OpenCombatEngine.Implementation.Actions.TextAction>();
+            actionFeature.Action.Type.Should().Be(ActionType.Action);
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_ActionFeature_For_BonusAction()
+        {
+            var feature = FeatureFactory.CreateFeature("Quick Step", "You can use a bonus action to move.");
+            
+            feature.Should().BeOfType<ActionFeature>();
+            var actionFeature = (ActionFeature)feature!;
+            actionFeature.Action.Should().BeOfType<OpenCombatEngine.Implementation.Actions.TextAction>();
+            actionFeature.Action.Type.Should().Be(ActionType.BonusAction);
+        }
     }
 }
