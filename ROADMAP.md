@@ -330,3 +330,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `ICreature` with Senses
     - [x] Verify with Tests
 - [x] [Save Feature Factory ADR](docs/adr/0048-feature-factory.md)
+
+- [x] **Cycle 42: Resistance, Immunity, & Vulnerability Features**
+    - [x] Update `ICombatStats`
+    - [x] Implement `DamageAffinityFeature`
+    - [x] Update `FeatureFactory`
+    - [x] Verify with Tests
+- [x] [Save Damage Affinity ADR](docs/adr/0049-resistance-immunity-vulnerability.md)

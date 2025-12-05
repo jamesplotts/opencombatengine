@@ -174,6 +174,10 @@ public class CreatureInterfaceTests
 
         public void AddResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
         public void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void AddVulnerability(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void RemoveVulnerability(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void AddImmunity(OpenCombatEngine.Core.Enums.DamageType type) { }
+        public void RemoveImmunity(OpenCombatEngine.Core.Enums.DamageType type) { }
         public void SetEffectManager(OpenCombatEngine.Core.Interfaces.Effects.IEffectManager effects) { }
     }
 

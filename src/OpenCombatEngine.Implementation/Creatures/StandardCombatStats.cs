@@ -151,6 +151,26 @@ namespace OpenCombatEngine.Implementation.Creatures
             _resistances.Remove(type);
         }
 
+        public void AddVulnerability(DamageType type)
+        {
+            _vulnerabilities.Add(type);
+        }
+
+        public void RemoveVulnerability(DamageType type)
+        {
+            _vulnerabilities.Remove(type);
+        }
+
+        public void AddImmunity(DamageType type)
+        {
+            _immunities.Add(type);
+        }
+
+        public void RemoveImmunity(DamageType type)
+        {
+            _immunities.Remove(type);
+        }
+
         public CombatStatsState GetState()
         {
             // Note: We serialize the CALCULATED AC/Speed or the BASE?

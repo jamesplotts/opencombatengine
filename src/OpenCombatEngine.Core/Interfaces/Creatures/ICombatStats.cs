@@ -53,5 +53,29 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// </summary>
         /// <param name="type">The damage type to remove resistance for.</param>
         void RemoveResistance(OpenCombatEngine.Core.Enums.DamageType type);
+
+        /// <summary>
+        /// Adds a vulnerability to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to add vulnerability for.</param>
+        void AddVulnerability(OpenCombatEngine.Core.Enums.DamageType type);
+
+        /// <summary>
+        /// Removes a vulnerability to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to remove vulnerability for.</param>
+        void RemoveVulnerability(OpenCombatEngine.Core.Enums.DamageType type);
+
+        /// <summary>
+        /// Adds an immunity to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to add immunity for.</param>
+        void AddImmunity(OpenCombatEngine.Core.Enums.DamageType type);
+
+        /// <summary>
+        /// Removes an immunity to the specified damage type.
+        /// </summary>
+        /// <param name="type">The damage type to remove immunity for.</param>
+        void RemoveImmunity(OpenCombatEngine.Core.Enums.DamageType type);
     }
 }

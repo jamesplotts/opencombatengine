@@ -1,4 +1,5 @@
 using FluentAssertions;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Implementation.Features;
 using Xunit;
 
@@ -46,6 +47,39 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var bonus = (AttributeBonusFeature)feature!;
             bonus.AttributeName.Should().Be("Speed");
             bonus.Bonus.Should().Be(10);
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_DamageAffinityFeature_For_Resistance()
+        {
+            var feature = FeatureFactory.CreateFeature("Fire Resistance", "You have resistance to fire damage.");
+            
+            feature.Should().BeOfType<DamageAffinityFeature>();
+            var affinity = (DamageAffinityFeature)feature!;
+            affinity.DamageType.Should().Be(DamageType.Fire);
+            affinity.AffinityType.Should().Be(AffinityType.Resistance);
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_DamageAffinityFeature_For_Immunity()
+        {
+            var feature = FeatureFactory.CreateFeature("Immunity to Poison", "You are immune to poison damage.");
+            
+            feature.Should().BeOfType<DamageAffinityFeature>();
+            var affinity = (DamageAffinityFeature)feature!;
+            affinity.DamageType.Should().Be(DamageType.Poison);
+            affinity.AffinityType.Should().Be(AffinityType.Immunity);
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_DamageAffinityFeature_For_Vulnerability()
+        {
+            var feature = FeatureFactory.CreateFeature("Vulnerability to Cold", "You are vulnerable to cold damage.");
+            
+            feature.Should().BeOfType<DamageAffinityFeature>();
+            var affinity = (DamageAffinityFeature)feature!;
+            affinity.DamageType.Should().Be(DamageType.Cold);
+            affinity.AffinityType.Should().Be(AffinityType.Vulnerability);
         }
     }
 }

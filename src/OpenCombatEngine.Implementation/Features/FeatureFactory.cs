@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Features;
 
 namespace OpenCombatEngine.Implementation.Features
@@ -43,6 +44,51 @@ namespace OpenCombatEngine.Implementation.Features
                 if (match.Success && int.TryParse(match.Groups[1].Value, out bonus))
                 {
                     return new AttributeBonusFeature(name, "Speed", bonus);
+                }
+            }
+
+            // Check for Damage Affinities
+            // "Resistance to Fire", "Fire Resistance"
+            // "Immunity to Poison", "Poison Immunity"
+            // "Vulnerability to Cold", "Cold Vulnerability"
+            
+            // Helper to parse damage type
+            DamageType? ParseDamageType(string text)
+            {
+                foreach (var type in Enum.GetValues<DamageType>())
+                {
+                    if (text.Contains(type.ToString(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return type;
+                    }
+                }
+                return null;
+            }
+
+            if (name.Contains("Resistance", StringComparison.OrdinalIgnoreCase))
+            {
+                var type = ParseDamageType(name);
+                if (type.HasValue)
+                {
+                    return new DamageAffinityFeature(name, type.Value, AffinityType.Resistance);
+                }
+            }
+
+            if (name.Contains("Immunity", StringComparison.OrdinalIgnoreCase) || name.Contains("Immune", StringComparison.OrdinalIgnoreCase))
+            {
+                var type = ParseDamageType(name);
+                if (type.HasValue)
+                {
+                    return new DamageAffinityFeature(name, type.Value, AffinityType.Immunity);
+                }
+            }
+
+            if (name.Contains("Vulnerability", StringComparison.OrdinalIgnoreCase) || name.Contains("Vulnerable", StringComparison.OrdinalIgnoreCase))
+            {
+                var type = ParseDamageType(name);
+                if (type.HasValue)
+                {
+                    return new DamageAffinityFeature(name, type.Value, AffinityType.Vulnerability);
                 }
             }
 
