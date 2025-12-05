@@ -65,6 +65,11 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         /// Unprepares a spell.
         /// </summary>
         void UnprepareSpell(ISpell spell);
+
+        /// <summary>
+        /// Removes a spell from the known spells list.
+        /// </summary>
+        void UnlearnSpell(ISpell spell);
         
         /// <summary>
         /// Sets the number of slots for a level (e.g. on level up).

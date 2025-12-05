@@ -1,4 +1,5 @@
 using FluentAssertions;
+using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Implementation.Features;
 using Xunit;
@@ -102,6 +103,28 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var actionFeature = (ActionFeature)feature!;
             actionFeature.Action.Should().BeOfType<OpenCombatEngine.Implementation.Actions.TextAction>();
             actionFeature.Action.Type.Should().Be(ActionType.BonusAction);
+        }
+
+        [Fact]
+        public void CreateFeature_Should_Return_SpellcastingFeature_For_Known_Cantrip()
+        {
+            // Arrange
+            var repo = NSubstitute.Substitute.For<OpenCombatEngine.Core.Interfaces.Spells.ISpellRepository>();
+            var spell = NSubstitute.Substitute.For<OpenCombatEngine.Core.Interfaces.Spells.ISpell>();
+            spell.Name.Returns("Dancing Lights");
+            
+            var successResult = OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Interfaces.Spells.ISpell>.Success(spell);
+            repo.GetSpell("Dancing Lights").Returns(successResult);
+            
+            FeatureFactory.SetSpellRepository(repo);
+
+            // Act
+            var feature = FeatureFactory.CreateFeature("Innate Magic", "You know the Dancing Lights cantrip.");
+
+            // Assert
+            feature.Should().BeOfType<SpellcastingFeature>();
+            var spellFeature = (SpellcastingFeature)feature!;
+            spellFeature.Spells.Should().Contain(spell);
         }
     }
 }

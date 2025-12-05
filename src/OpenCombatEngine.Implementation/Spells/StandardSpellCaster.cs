@@ -109,6 +109,16 @@ namespace OpenCombatEngine.Implementation.Spells
             }
         }
 
+        public void UnlearnSpell(ISpell spell)
+        {
+            ArgumentNullException.ThrowIfNull(spell);
+            var existing = _knownSpells.FirstOrDefault(s => s.Name == spell.Name);
+            if (existing != null)
+            {
+                _knownSpells.Remove(existing);
+            }
+        }
+
         public Result<bool> PrepareSpell(ISpell spell)
         {
             ArgumentNullException.ThrowIfNull(spell);

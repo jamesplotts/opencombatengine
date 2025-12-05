@@ -344,3 +344,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `FeatureFactory`
     - [x] Verify with Tests
 - [x] [Save Action Features ADR](docs/adr/0050-action-features.md)
+
+- [x] **Cycle 44: Spellcasting Features**
+    - [x] Update `ISpellCaster` with `UnlearnSpell`
+    - [x] Implement `SpellcastingFeature`
+    - [x] Update `FeatureFactory` with `ISpellRepository`
+    - [x] Verify with Tests
+- [x] [Save Spellcasting Features ADR](docs/adr/0051-spellcasting-features.md)

@@ -109,8 +109,55 @@ namespace OpenCombatEngine.Implementation.Features
                 return new ActionFeature(name, action);
             }
 
+            if (description.Contains("As a bonus action", StringComparison.OrdinalIgnoreCase) || 
+                description.Contains("use a bonus action", StringComparison.OrdinalIgnoreCase))
+            {
+                var action = new OpenCombatEngine.Implementation.Actions.TextAction(name, description, ActionType.BonusAction);
+                return new ActionFeature(name, action);
+            }
+
+            // Check for Spells
+            // "You know the [spell] cantrip"
+            // "You can cast [spell]"
+            if (_spellRepository != null)
+            {
+                var spells = new System.Collections.Generic.List<OpenCombatEngine.Core.Interfaces.Spells.ISpell>();
+                
+                // Simple regex to find spell names might be hard without a list of all spells.
+                // Instead, we can iterate known spells in repo and check if description contains them?
+                // Or rely on specific phrasing.
+                // Let's try iterating the repository if it's not too large, or just check for common patterns.
+                // For now, let's assume the repository has a GetAll method or similar, but ISpellRepository usually has GetSpell(name).
+                // Let's try to extract potential spell names from quotes or specific phrases.
+                
+                // Pattern: "You know the (.*?) cantrip"
+                var cantripMatch = Regex.Match(description, @"You know the (.*?) cantrip", RegexOptions.IgnoreCase);
+                if (cantripMatch.Success)
+                {
+                    var spellName = cantripMatch.Groups[1].Value;
+                    var spellResult = _spellRepository.GetSpell(spellName);
+                    if (spellResult.IsSuccess) spells.Add(spellResult.Value);
+                }
+
+                // Pattern: "You can cast (.*?)"
+                // This is risky as it might match too much.
+                // Let's stick to specific known patterns or exact matches if possible.
+                
+                if (spells.Count > 0)
+                {
+                    return new SpellcastingFeature(name, spells);
+                }
+            }
+
             // Fallback to TextFeature
             return new TextFeature(name, description);
+        }
+
+        private static OpenCombatEngine.Core.Interfaces.Spells.ISpellRepository? _spellRepository;
+
+        public static void SetSpellRepository(OpenCombatEngine.Core.Interfaces.Spells.ISpellRepository repository)
+        {
+            _spellRepository = repository;
         }
     }
 }
