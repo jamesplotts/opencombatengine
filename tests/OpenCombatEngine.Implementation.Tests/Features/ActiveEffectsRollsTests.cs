@@ -33,14 +33,6 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             armor.ArmorClass.Returns(10);
             equipment.Armor.Returns(armor);
 
-            var combatStats = new StandardCombatStats(
-                initiativeBonus: 0,
-                equipment: equipment,
-                abilities: _abilityScores
-            );
-
-            _spellCaster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence);
-
             _creature = new StandardCreature(
                 System.Guid.NewGuid().ToString(),
                 "Test Creature",
@@ -48,10 +40,18 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 Substitute.For<IHitPoints>(),
                 new StandardInventory(),
                 new StandardTurnManager(new StandardDiceRoller()),
-                spellcasting: _spellCaster,
                 equipmentManager: equipment
             );
             _creature.Team = "Neutral";
+            
+            // Ensure we have a spellcaster
+            if (_creature.Spellcasting == null)
+            {
+                // Should be created by default if we passed null? 
+                // Actually StandardCreature constructor: Spellcasting = spellcasting ?? new StandardSpellCaster(this, Ability.Intelligence);
+                // So it should be there.
+            }
+            _spellCaster = _creature.Spellcasting!;
 
             _effectManager = _creature.Effects;
         }

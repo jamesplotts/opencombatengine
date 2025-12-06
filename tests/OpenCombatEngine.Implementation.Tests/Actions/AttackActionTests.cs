@@ -155,7 +155,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             
             var source = Substitute.For<ICreature>();
             source.ActionEconomy.Returns(economy);
-            source.CombatStats.Returns(new StandardCombatStats()); // Needed for hit check? No, source stats not used for hit, only target AC.
+            source.CombatStats.Returns(new StandardCombatStats(creature: null!)); // Needed for hit check? No, source stats not used for hit, only target AC.
             // Wait, AttackAction uses _attackBonus from constructor, doesn't look at source stats for bonus yet.
 
             var action = new AttackAction("Sword", "Slash", 5, "1d8", DamageType.Slashing, 0, _diceRoller);

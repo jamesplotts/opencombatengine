@@ -24,7 +24,7 @@ namespace OpenCombatEngine.Implementation.Tests
             var turnManager = new StandardTurnManager(diceRoller);
             
             var creature = Substitute.For<ICreature>();
-            creature.CombatStats.Returns(new StandardCombatStats());
+            creature.CombatStats.Returns(new StandardCombatStats(creature: null!));
             creature.AbilityScores.Returns(new StandardAbilityScores());
 
             diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Normal)));

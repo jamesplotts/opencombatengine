@@ -17,8 +17,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
 
         public EnvironmentTests()
         {
-            _attacker = new StandardCreature("11111111-1111-1111-1111-111111111111", "Attacker", new StandardAbilityScores(), new StandardHitPoints(10, new StandardCombatStats()), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
-            _target = new StandardCreature("22222222-2222-2222-2222-222222222222", "Target", new StandardAbilityScores(), new StandardHitPoints(10, new StandardCombatStats()), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
+            _attacker = new StandardCreature("11111111-1111-1111-1111-111111111111", "Attacker", new StandardAbilityScores(), new StandardHitPoints(10, new StandardCombatStats(creature: null!)), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
+            _target = new StandardCreature("22222222-2222-2222-2222-222222222222", "Target", new StandardAbilityScores(), new StandardHitPoints(10, new StandardCombatStats(creature: null!)), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
         }
 
         [Theory]

@@ -24,7 +24,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public SpellEffectsTests()
         {
             var abilityScores = new StandardAbilityScores(intelligence: 18, constitution: 14); // Int +4, Con +2
-            _spellCaster = new StandardSpellCaster(abilityScores, 2, Ability.Intelligence);
+            
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            mockCreature.ProficiencyBonus.Returns(2);
+            
+            _spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
             _caster = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: _spellCaster);
             
             _target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));

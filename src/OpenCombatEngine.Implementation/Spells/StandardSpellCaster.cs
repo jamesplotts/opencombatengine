@@ -4,6 +4,7 @@ using System.Linq;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Creatures;
 
 namespace OpenCombatEngine.Implementation.Spells
 {
@@ -12,8 +13,7 @@ namespace OpenCombatEngine.Implementation.Spells
         private readonly List<ISpell> _knownSpells = new();
         private readonly List<ISpell> _preparedSpells = new();
         private readonly SpellSlotManager _slotManager = new();
-        private readonly OpenCombatEngine.Core.Interfaces.Creatures.IAbilityScores _abilityScores;
-        private readonly int _proficiencyBonus;
+        private readonly ICreature _creature;
         private readonly OpenCombatEngine.Core.Enums.Ability _spellcastingAbility;
 
         private readonly bool _isPreparedCaster;
@@ -25,7 +25,7 @@ namespace OpenCombatEngine.Implementation.Spells
         {
             get
             {
-                int dc = 8 + _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+                int dc = 8 + _creature.ProficiencyBonus + _creature.AbilityScores.GetModifier(_spellcastingAbility);
                 if (_effects != null)
                 {
                     dc = _effects.ApplyStatBonuses(OpenCombatEngine.Core.Enums.StatType.SpellSaveDC, dc);
@@ -38,7 +38,7 @@ namespace OpenCombatEngine.Implementation.Spells
         {
             get
             {
-                int bonus = _proficiencyBonus + _abilityScores.GetModifier(_spellcastingAbility);
+                int bonus = _creature.ProficiencyBonus + _creature.AbilityScores.GetModifier(_spellcastingAbility);
                 if (_effects != null)
                 {
                     bonus = _effects.ApplyStatBonuses(OpenCombatEngine.Core.Enums.StatType.AttackRoll, bonus);
@@ -80,14 +80,12 @@ namespace OpenCombatEngine.Implementation.Spells
         }
 
         public StandardSpellCaster(
-            OpenCombatEngine.Core.Interfaces.Creatures.IAbilityScores abilityScores,
-            int proficiencyBonus,
+            ICreature creature,
             OpenCombatEngine.Core.Enums.Ability spellcastingAbility,
             bool isPreparedCaster = false)
         {
-            ArgumentNullException.ThrowIfNull(abilityScores);
-            _abilityScores = abilityScores;
-            _proficiencyBonus = proficiencyBonus;
+            ArgumentNullException.ThrowIfNull(creature);
+            _creature = creature;
             _spellcastingAbility = spellcastingAbility;
             _isPreparedCaster = isPreparedCaster;
             CastingAbility = spellcastingAbility;

@@ -43,15 +43,23 @@ namespace OpenCombatEngine.Implementation.Creatures
             int conMod = _creature.AbilityScores.GetModifier(Ability.Constitution);
             int hpIncrease = 0;
 
-            if (takeAverageHp)
+            if (newLevel == 1)
             {
-                // Average is (Die / 2) + 1
-                hpIncrease = (classDefinition.HitDie / 2) + 1;
+                // Level 1: Max Die + Con Mod
+                hpIncrease = classDefinition.HitDie;
             }
             else
             {
-                // Default to average if no roller
-                hpIncrease = (classDefinition.HitDie / 2) + 1;
+                if (takeAverageHp)
+                {
+                    // Average is (Die / 2) + 1
+                    hpIncrease = (classDefinition.HitDie / 2) + 1;
+                }
+                else
+                {
+                    // Default to average if no roller
+                    hpIncrease = (classDefinition.HitDie / 2) + 1;
+                }
             }
 
             hpIncrease += conMod;

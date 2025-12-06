@@ -15,8 +15,7 @@ namespace OpenCombatEngine.Implementation.Creatures
     public record StandardCombatStats : ICombatStats, OpenCombatEngine.Core.Interfaces.IStateful<CombatStatsState>
     {
         private readonly int _baseArmorClass;
-        private readonly IEquipmentManager? _equipment;
-        private readonly IAbilityScores? _abilities;
+        private readonly ICreature? _creature;
         private IEffectManager? _effects;
 
         public int ArmorClass
@@ -24,34 +23,32 @@ namespace OpenCombatEngine.Implementation.Creatures
             get
             {
                 int ac = _baseArmorClass;
+                var abilities = _creature?.AbilityScores;
+                var equipment = _creature?.Equipment;
 
-                if (_equipment?.Armor != null && _abilities != null)
+                if (equipment?.Armor != null && abilities != null)
                 {
-                    int dexMod = _abilities.GetModifier(Ability.Dexterity);
-                    ac = _equipment.Armor.ArmorClass;
+                    int dexMod = abilities.GetModifier(Ability.Dexterity);
+                    ac = equipment.Armor.ArmorClass;
                     
-                    if (_equipment.Armor.DexterityCap.HasValue)
+                    if (equipment.Armor.DexterityCap.HasValue)
                     {
-                        dexMod = System.Math.Min(dexMod, _equipment.Armor.DexterityCap.Value);
+                        dexMod = System.Math.Min(dexMod, equipment.Armor.DexterityCap.Value);
                     }
                     
                     ac += dexMod;
                     
-                    if (_equipment.Shield != null)
+                    if (equipment.Shield != null)
                     {
-                        ac += _equipment.Shield.ArmorClass;
+                        ac += equipment.Shield.ArmorClass;
                     }
                 }
-                else if (_abilities != null)
+                else if (abilities != null)
                 {
                     // Unarmored: 10 + Dex (if base is 10)
-                    // If base is custom (e.g. natural armor), use that + Dex?
-                    // For simplicity, if no armor, use base + Dex if base is 10, else just base.
-                    // Actually, let's assume _baseArmorClass is the "natural" AC.
-                    // If it's 10 (default), add Dex.
                     if (_baseArmorClass == 10)
                     {
-                        ac += _abilities.GetModifier(Ability.Dexterity);
+                        ac += abilities.GetModifier(Ability.Dexterity);
                     }
                 }
 
@@ -102,38 +99,31 @@ namespace OpenCombatEngine.Implementation.Creatures
         public IReadOnlySet<DamageType> Immunities => _immunities;
 
         public StandardCombatStats(
+            ICreature creature,
             int armorClass = 10, 
             int initiativeBonus = 0, 
             int speed = 30,
             IEnumerable<DamageType>? resistances = null,
             IEnumerable<DamageType>? vulnerabilities = null,
-            IEnumerable<DamageType>? immunities = null,
-            IEquipmentManager? equipment = null,
-            IAbilityScores? abilities = null)
+            IEnumerable<DamageType>? immunities = null)
         {
+            _creature = creature;
             _baseArmorClass = armorClass;
             _baseInitiativeBonus = initiativeBonus;
             _baseSpeed = speed;
             _resistances = (resistances ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _vulnerabilities = (vulnerabilities ?? Enumerable.Empty<DamageType>()).ToHashSet();
             _immunities = (immunities ?? Enumerable.Empty<DamageType>()).ToHashSet();
-            _equipment = equipment;
-            _abilities = abilities;
         }
 
-        public StandardCombatStats(CombatStatsState state) : this(state, null, null) { }
+        public StandardCombatStats(CombatStatsState state) : this(null!, state?.ArmorClass ?? 10, state?.InitiativeBonus ?? 0, state?.Speed ?? 30, state?.Resistances, state?.Vulnerabilities, state?.Immunities) 
+        { 
+            System.ArgumentNullException.ThrowIfNull(state);
+        }
 
-        public StandardCombatStats(CombatStatsState state, IEquipmentManager? equipment, IAbilityScores? abilities)
+        public StandardCombatStats(CombatStatsState state, ICreature creature) : this(creature, state?.ArmorClass ?? 10, state?.InitiativeBonus ?? 0, state?.Speed ?? 30, state?.Resistances, state?.Vulnerabilities, state?.Immunities)
         {
             System.ArgumentNullException.ThrowIfNull(state);
-            _baseArmorClass = state.ArmorClass;
-            _baseInitiativeBonus = state.InitiativeBonus;
-            _baseSpeed = state.Speed;
-            _resistances = (state.Resistances ?? Enumerable.Empty<DamageType>()).ToHashSet();
-            _vulnerabilities = (state.Vulnerabilities ?? Enumerable.Empty<DamageType>()).ToHashSet();
-            _immunities = (state.Immunities ?? Enumerable.Empty<DamageType>()).ToHashSet();
-            _equipment = equipment;
-            _abilities = abilities;
         }
 
         public void SetEffectManager(IEffectManager effects)

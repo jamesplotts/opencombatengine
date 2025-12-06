@@ -17,7 +17,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void Constructor_Should_Set_Properties()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 40);
+            var stats = new StandardCombatStats(null!, speed: 40);
             var conditions = Substitute.For<IConditionManager>();
             var movement = new StandardMovement(stats, conditions);
 
@@ -30,7 +30,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void Move_Should_Throw_When_Grappled()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 30);
+            var stats = new StandardCombatStats(null!, speed: 30);
             var conditions = Substitute.For<IConditionManager>();
             conditions.HasCondition(ConditionType.Grappled).Returns(true);
             var movement = new StandardMovement(stats, conditions);
@@ -46,7 +46,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void ResetTurn_Should_Set_Movement_To_Zero_When_Grappled()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 30);
+            var stats = new StandardCombatStats(null!, speed: 30);
             var conditions = Substitute.For<IConditionManager>();
             conditions.HasCondition(ConditionType.Grappled).Returns(true);
             var movement = new StandardMovement(stats, conditions);
@@ -62,7 +62,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void ResetTurn_Should_Restore_Speed()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 30);
+            var stats = new StandardCombatStats(null!, speed: 30);
             var conditions = Substitute.For<IConditionManager>();
             var movement = new StandardMovement(stats, conditions);
             movement.Move(30);
@@ -78,7 +78,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void Move_Should_Decrease_Remaining_Movement()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 30);
+            var stats = new StandardCombatStats(null!, speed: 30);
             var conditions = Substitute.For<IConditionManager>();
             var movement = new StandardMovement(stats, conditions);
 
@@ -93,7 +93,7 @@ namespace OpenCombatEngine.Implementation.Tests
         public void Move_Should_Throw_If_Not_Enough_Movement()
         {
             // Arrange
-            var stats = new StandardCombatStats(speed: 30);
+            var stats = new StandardCombatStats(null!, speed: 30);
             var conditions = Substitute.For<IConditionManager>();
             var movement = new StandardMovement(stats, conditions);
 

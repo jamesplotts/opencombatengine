@@ -18,7 +18,7 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             // Arrange
             var scores = new StandardAbilityScores(18, 14, 12, 10, 8, 16);
             var hp = new StandardHitPoints(50, 45, 5);
-            var combatStats = new StandardCombatStats(armorClass: 18, initiativeBonus: 2, speed: 40);
+            var combatStats = new StandardCombatStats(null!, armorClass: 18, initiativeBonus: 2, speed: 40);
             var original = new StandardCreature(Guid.NewGuid().ToString(), "Test Hero", scores, hp, new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             original.Team = "Neutral";
             // Note: We are not passing combatStats to constructor because new signature doesn't support it directly?

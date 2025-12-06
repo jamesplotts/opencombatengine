@@ -29,7 +29,11 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             _diceRoller = Substitute.For<IDiceRoller>();
             var hp = new StandardHitPoints(20, combatStats: null, diceRoller: _diceRoller);
             
-            var spellCaster = new StandardSpellCaster(abilityScores, 2, Ability.Intelligence, isPreparedCaster: true);
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            mockCreature.ProficiencyBonus.Returns(2);
+            
+            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence, isPreparedCaster: true);
             
             _creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, hp, new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster);
 
@@ -105,7 +109,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             
             var mockCheckManager = Substitute.For<ICheckManager>();
             var abilityScores = new StandardAbilityScores();
-            var spellCaster = new StandardSpellCaster(abilityScores, 2, Ability.Intelligence);
+            
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            mockCreature.ProficiencyBonus.Returns(2);
+            
+            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
             var creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster2", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster, checkManager: mockCheckManager);
             
             creature.Spellcasting!.SetConcentration(_concentrationSpell);
@@ -125,7 +134,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         {
             var mockCheckManager = Substitute.For<ICheckManager>();
             var abilityScores = new StandardAbilityScores();
-            var spellCaster = new StandardSpellCaster(abilityScores, 2, Ability.Intelligence);
+            
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            mockCreature.ProficiencyBonus.Returns(2);
+            
+            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
             var creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster3", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster, checkManager: mockCheckManager);
             
             creature.Spellcasting!.SetConcentration(_concentrationSpell);

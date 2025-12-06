@@ -210,6 +210,13 @@ namespace OpenCombatEngine.Implementation.Creatures
             HitDiceRemaining += count;
         }
 
+        public void SetMax(int max)
+        {
+            if (max <= 0) throw new ArgumentOutOfRangeException(nameof(max), "Max HP must be positive.");
+            Max = max;
+            if (Current > Max) Current = Max;
+        }
+
         public HitPointsState GetState()
         {
             return new HitPointsState(Current, Max, Temporary);

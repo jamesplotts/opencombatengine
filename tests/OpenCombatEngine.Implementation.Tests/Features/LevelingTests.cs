@@ -101,8 +101,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             
             _creature.LevelManager.LevelUp(_fighter);
 
-            _creature.HitPoints.Max.Should().Be(16); // 10 + 6
-            _creature.HitPoints.Current.Should().Be(16); // Assuming current increases too
+            _creature.HitPoints.Max.Should().Be(20); // 10 + 10 (Max Die at Level 1)
+            _creature.HitPoints.Current.Should().Be(20); // Assuming current increases too
         }
 
         [Fact]

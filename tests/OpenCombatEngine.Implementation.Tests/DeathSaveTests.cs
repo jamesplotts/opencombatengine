@@ -23,10 +23,13 @@ namespace OpenCombatEngine.Implementation.Tests
             diceRoller.Roll("1d20").Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Normal)));
             
             var abilityScores = Substitute.For<IAbilityScores>();
-            var combatStats = new StandardCombatStats();
+            var combatStats = new StandardCombatStats(creature: null!);
             var hp = new StandardHitPoints(10, 0, 0);
             
-            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            
+            var checkManager = new StandardCheckManager(diceRoller, mockCreature);
             
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
             creature.Team = "Neutral";
@@ -100,7 +103,10 @@ namespace OpenCombatEngine.Implementation.Tests
             var hp = new StandardHitPoints(10, 0, 0);
             var combatStats = Substitute.For<ICombatStats>();
             
-            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            
+            var checkManager = new StandardCheckManager(diceRoller, mockCreature);
             
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
             creature.Team = "Neutral";
@@ -122,7 +128,10 @@ namespace OpenCombatEngine.Implementation.Tests
             var hp = new StandardHitPoints(10, 0, 0);
             hp.Stabilize();
             
-            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            
+            var checkManager = new StandardCheckManager(diceRoller, mockCreature);
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
             creature.Team = "Neutral";
             
@@ -143,7 +152,11 @@ namespace OpenCombatEngine.Implementation.Tests
             
             var abilityScores = Substitute.For<IAbilityScores>();
             var hp = new StandardHitPoints(10, 0, 0);
-            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            
+            var checkManager = new StandardCheckManager(diceRoller, mockCreature);
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
             creature.Team = "Neutral";
             
@@ -166,7 +179,11 @@ namespace OpenCombatEngine.Implementation.Tests
             
             var abilityScores = Substitute.For<IAbilityScores>();
             var hp = new StandardHitPoints(10, 0, 0);
-            var checkManager = new StandardCheckManager(abilityScores, diceRoller, Substitute.For<ICreature>());
+            
+            var mockCreature = Substitute.For<ICreature>();
+            mockCreature.AbilityScores.Returns(abilityScores);
+            
+            var checkManager = new StandardCheckManager(diceRoller, mockCreature);
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "name", abilityScores, hp, new StandardInventory(), new StandardTurnManager(diceRoller), checkManager: checkManager);
             creature.Team = "Neutral";
             

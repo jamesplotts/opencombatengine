@@ -11,6 +11,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
 {
     public class SpellCasterTests
     {
+        private readonly ICreature _creature;
         private readonly IAbilityScores _abilityScores;
         private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller = Substitute.For<OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller>();
 
@@ -18,11 +19,15 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         {
             _abilityScores = Substitute.For<IAbilityScores>();
             _abilityScores.GetModifier(Arg.Any<Ability>()).Returns(3); // +3 mod
+            
+            _creature = Substitute.For<ICreature>();
+            _creature.AbilityScores.Returns(_abilityScores);
+            _creature.ProficiencyBonus.Returns(2);
         }
 
         private StandardSpellCaster CreateCaster()
         {
-            return new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence);
+            return new StandardSpellCaster(_creature, Ability.Intelligence);
         }
 
         [Fact]
@@ -106,7 +111,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         [Fact]
         public void PrepareSpell_Should_Add_To_Prepared()
         {
-            var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: true);
+            var caster = new StandardSpellCaster(_creature, Ability.Intelligence, isPreparedCaster: true);
             var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
             caster.LearnSpell(spell);
 
@@ -119,7 +124,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         [Fact]
         public void PreparedSpells_Should_Return_Known_If_Not_PreparedCaster()
         {
-            var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: false);
+            var caster = new StandardSpellCaster(_creature, Ability.Intelligence, isPreparedCaster: false);
             var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
             caster.LearnSpell(spell);
 
@@ -133,7 +138,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
         [Fact]
         public void PreparedSpells_Should_Return_Only_Prepared_If_PreparedCaster()
         {
-            var caster = new StandardSpellCaster(_abilityScores, 2, Ability.Intelligence, isPreparedCaster: true);
+            var caster = new StandardSpellCaster(_creature, Ability.Intelligence, isPreparedCaster: true);
             var spell1 = new Spell("Test1", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
             var spell2 = new Spell("Test2", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
             caster.LearnSpell(spell1);

@@ -9,7 +9,6 @@ namespace OpenCombatEngine.Implementation.Creatures
 {
     public class StandardCheckManager : ICheckManager
     {
-        private readonly IAbilityScores _abilityScores;
         private readonly IDiceRoller _diceRoller;
         private readonly ICreature _creature; // To access ProficiencyBonus if needed, or we pass it in.
         // Actually, we need ProficiencyBonus for saves.
@@ -19,16 +18,15 @@ namespace OpenCombatEngine.Implementation.Creatures
         private readonly HashSet<string> _skillProficiencies = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<Ability> _savingThrowProficiencies = new();
 
-        public StandardCheckManager(IAbilityScores abilityScores, IDiceRoller diceRoller, ICreature creature)
+        public StandardCheckManager(IDiceRoller diceRoller, ICreature creature)
         {
-            _abilityScores = abilityScores ?? throw new ArgumentNullException(nameof(abilityScores));
             _diceRoller = diceRoller ?? throw new ArgumentNullException(nameof(diceRoller));
             _creature = creature ?? throw new ArgumentNullException(nameof(creature));
         }
 
         public Result<int> RollAbilityCheck(Ability ability, string? skillName = null)
         {
-            int modifier = _abilityScores.GetModifier(ability);
+            int modifier = _creature.AbilityScores.GetModifier(ability);
             int proficiencyBonus = 0;
 
             if (!string.IsNullOrWhiteSpace(skillName) && HasSkillProficiency(skillName))
@@ -51,7 +49,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public Result<int> RollSavingThrow(Ability ability)
         {
-            int modifier = _abilityScores.GetModifier(ability);
+            int modifier = _creature.AbilityScores.GetModifier(ability);
             int proficiencyBonus = 0;
 
             if (HasSavingThrowProficiency(ability))

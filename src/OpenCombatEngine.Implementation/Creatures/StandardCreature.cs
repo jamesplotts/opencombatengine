@@ -29,7 +29,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public string Team { get; set; } = "Player";
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         
-        public IAbilityScores AbilityScores { get; }
+        public IAbilityScores AbilityScores { get; private set; }
         public IHitPoints HitPoints { get; }
         public ICombatStats CombatStats { get; }
         public IConditionManager Conditions { get; }
@@ -92,13 +92,14 @@ namespace OpenCombatEngine.Implementation.Creatures
             TurnManager = turnManager ?? throw new ArgumentNullException(nameof(turnManager));
             
             // Initialize components
-            // Create Equipment first so CombatStats can use it
+            // Create Equipment first so CombatStats can use it via 'this'
             Equipment = equipmentManager ?? new StandardEquipmentManager(this);
             
             // Conditions needs 'this', so we create it here if null
             Conditions = conditions ?? new StandardConditionManager(this);
             
-            CombatStats = new StandardCombatStats(equipment: Equipment, abilities: AbilityScores);
+            // CombatStats now takes 'this'
+            CombatStats = new StandardCombatStats(creature: this);
 
             if (effectManager == null)
             {
@@ -127,7 +128,8 @@ namespace OpenCombatEngine.Implementation.Creatures
                 }
             }
 
-            Checks = checkManager ?? new StandardCheckManager(AbilityScores, new StandardDiceRoller(), this);
+            // CheckManager now takes 'this'
+            Checks = checkManager ?? new StandardCheckManager(new StandardDiceRoller(), this);
             
             LevelManager = new StandardLevelManager(this);
 
@@ -139,14 +141,11 @@ namespace OpenCombatEngine.Implementation.Creatures
                     AddFeature(feature);
                 }
                 // Apply Ability Score Increases
-                foreach (var kvp in Race.AbilityScoreIncreases)
-                {
-                    // TODO: Apply ASI. StandardAbilityScores needs to support modification.
-                }
+                ApplyAbilityScoreIncreases(Race.AbilityScoreIncreases.ToDictionary(k => k.Key, v => v.Value));
             }
 
-            // Default to Intelligence if creating new caster
-            Spellcasting = spellcasting ?? new StandardSpellCaster(AbilityScores, ProficiencyBonus, Ability.Intelligence);
+            // Default to Intelligence if creating new caster, now takes 'this'
+            Spellcasting = spellcasting ?? new StandardSpellCaster(this, Ability.Intelligence);
 
             // Subscribe to events
             HitPoints.Died += OnDied;
@@ -173,16 +172,12 @@ namespace OpenCombatEngine.Implementation.Creatures
                 ? new StandardConditionManager(this, state.Conditions) 
                 : new StandardConditionManager(this);
             
-            // For state restoration, we might not have equipment set up yet in the state object in a way that CombatStats can use directly?
-            // StandardCombatStats(state) uses values from state.
-            // We need to pass AbilityScores and Equipment (which we create later).
-            // But Equipment needs 'this'.
-            // So we create Equipment first.
             Equipment = new StandardEquipmentManager(this); // Pass 'this'
             
+            // CombatStats takes 'this' and state
             CombatStats = state.CombatStats != null 
-                ? new StandardCombatStats(state.CombatStats, Equipment, AbilityScores) 
-                : new StandardCombatStats(abilities: AbilityScores, equipment: Equipment); // Fallback
+                ? new StandardCombatStats(state.CombatStats, this) 
+                : new StandardCombatStats(creature: this); // Fallback
 
             HitPoints = new StandardHitPoints(state.HitPoints, CombatStats);
             
@@ -196,7 +191,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Effects = new StandardEffectManager(this);
             CombatStats.SetEffectManager(Effects);
             
-            Checks = new StandardCheckManager(AbilityScores, new StandardDiceRoller(), this);
+            Checks = new StandardCheckManager(new StandardDiceRoller(), this);
             // Equipment already created above
             Spellcasting = null; 
 
@@ -206,6 +201,27 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             HitPoints.Died += OnDied;
             HitPoints.DamageTaken += OnDamageTaken;
+        }
+
+        public void ApplyAbilityScoreIncreases(Dictionary<Ability, int> increases)
+        {
+            if (increases == null) return;
+
+            int str = AbilityScores.Strength;
+            int dex = AbilityScores.Dexterity;
+            int con = AbilityScores.Constitution;
+            int intel = AbilityScores.Intelligence;
+            int wis = AbilityScores.Wisdom;
+            int cha = AbilityScores.Charisma;
+
+            if (increases.TryGetValue(Ability.Strength, out int strInc)) str += strInc;
+            if (increases.TryGetValue(Ability.Dexterity, out int dexInc)) dex += dexInc;
+            if (increases.TryGetValue(Ability.Constitution, out int conInc)) con += conInc;
+            if (increases.TryGetValue(Ability.Intelligence, out int intInc)) intel += intInc;
+            if (increases.TryGetValue(Ability.Wisdom, out int wisInc)) wis += wisInc;
+            if (increases.TryGetValue(Ability.Charisma, out int chaInc)) cha += chaInc;
+
+            AbilityScores = new StandardAbilityScores(str, dex, con, intel, wis, cha);
         }
 
         private void OnDied(object? sender, EventArgs e)

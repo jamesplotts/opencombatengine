@@ -27,8 +27,9 @@ namespace OpenCombatEngine.Implementation.Tests
 
             var creature = Substitute.For<ICreature>();
             creature.Effects.Returns((IEffectManager)null);
+            creature.AbilityScores.Returns(abilityScores);
             
-            var manager = new StandardCheckManager(abilityScores, diceRoller, creature);
+            var manager = new StandardCheckManager(diceRoller, creature);
             
             var result = manager.RollAbilityCheck(Ability.Strength);
             
@@ -50,8 +51,9 @@ namespace OpenCombatEngine.Implementation.Tests
 
             var creature = Substitute.For<ICreature>();
             creature.Effects.Returns((IEffectManager)null);
+            creature.AbilityScores.Returns(abilityScores);
             
-            var manager = new StandardCheckManager(abilityScores, diceRoller, creature);
+            var manager = new StandardCheckManager(diceRoller, creature);
             
             var result = manager.RollSavingThrow(Ability.Dexterity);
             
