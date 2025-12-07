@@ -31,7 +31,10 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Define `IShape` and concrete shapes (Sphere, Cone, Cube, Line)
     - [x] Update `IGridManager` to support shape queries
     - [x] Implement shape logic in `StandardGridManager`
-    - [x] Verify with `AoETargetingTests` (JSON)
+- [x] **Cycle 54: AoE Actions & Saving Throws**
+    - [x] Add `SavingThrowRolled` event to `ICheckManager`
+    - [x] Implement `FireballAction` using `IShape`
+    - [x] Verify with `FireballTests` (JSON)
 
 - [x] **Design Creature Serialization**
     - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)

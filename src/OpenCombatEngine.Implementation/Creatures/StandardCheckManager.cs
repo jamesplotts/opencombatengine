@@ -67,8 +67,13 @@ namespace OpenCombatEngine.Implementation.Creatures
                 total = _creature.Effects.ApplyStatBonuses(StatType.SavingThrow, total);
             }
 
+            SavingThrowRolled?.Invoke(this, new OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs(ability, total, _creature));
+
             return Result<int>.Success(total);
         }
+
+        /// <inheritdoc />
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs>? SavingThrowRolled;
 
         public Result<int> RollDeathSave()
         {

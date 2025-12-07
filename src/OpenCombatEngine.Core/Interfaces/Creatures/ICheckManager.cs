@@ -1,3 +1,4 @@
+using System;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Results;
 
@@ -60,5 +61,10 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// Checks if the creature is proficient in a saving throw.
         /// </summary>
         bool HasSavingThrowProficiency(Ability ability);
+
+        /// <summary>
+        /// Fired when a saving throw is rolled.
+        /// </summary>
+        event EventHandler<OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs> SavingThrowRolled;
     }
 }
