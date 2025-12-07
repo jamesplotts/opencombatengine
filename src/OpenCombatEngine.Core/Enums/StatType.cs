@@ -13,6 +13,7 @@ namespace OpenCombatEngine.Core.Enums
         AbilityCheck,
         Initiative,
         SpellSaveDC,
+        SpellAttackBonus,
         AttackAdvantage,
         AttackDisadvantage,
         IncomingAttackAdvantage,

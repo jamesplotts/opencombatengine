@@ -5,6 +5,7 @@ using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests.Content
 {
+    [Collection("Integration")]
     public class JsonClassImporterTests
     {
         [Fact]

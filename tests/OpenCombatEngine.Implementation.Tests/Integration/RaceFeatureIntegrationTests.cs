@@ -10,6 +10,7 @@ using Xunit;
 
 namespace OpenCombatEngine.Implementation.Tests.Integration
 {
+    [Collection("Integration")]
     public class RaceFeatureIntegrationTests
     {
         [Fact]

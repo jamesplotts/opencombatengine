@@ -33,7 +33,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             mockCreature.AbilityScores.Returns(abilityScores);
             mockCreature.ProficiencyBonus.Returns(2);
             
-            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence, isPreparedCaster: true);
+            // Updated Constructor
+            var spellCaster = new StandardSpellCaster(
+                Ability.Intelligence, 
+                a => mockCreature.AbilityScores.GetModifier(a), 
+                () => mockCreature.ProficiencyBonus
+            );
             
             _creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, hp, new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster);
 
@@ -105,8 +110,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         [Fact]
         public void Taking_Damage_Should_Trigger_Save_And_Break_On_Failure()
         {
-            _creature.Spellcasting!.SetConcentration(_concentrationSpell);
-            
+            // Update Constructor in Test Body
             var mockCheckManager = Substitute.For<ICheckManager>();
             var abilityScores = new StandardAbilityScores();
             
@@ -114,7 +118,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             mockCreature.AbilityScores.Returns(abilityScores);
             mockCreature.ProficiencyBonus.Returns(2);
             
-            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
+            var spellCaster = new StandardSpellCaster(
+                Ability.Intelligence, 
+                a => mockCreature.AbilityScores.GetModifier(a), 
+                () => mockCreature.ProficiencyBonus
+            );
+            
             var creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster2", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster, checkManager: mockCheckManager);
             
             creature.Spellcasting!.SetConcentration(_concentrationSpell);
@@ -139,7 +148,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             mockCreature.AbilityScores.Returns(abilityScores);
             mockCreature.ProficiencyBonus.Returns(2);
             
-            var spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
+            var spellCaster = new StandardSpellCaster(
+                Ability.Intelligence, 
+                a => mockCreature.AbilityScores.GetModifier(a), 
+                () => mockCreature.ProficiencyBonus
+            );
+            
             var creature = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster3", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: spellCaster, checkManager: mockCheckManager);
             
             creature.Spellcasting!.SetConcentration(_concentrationSpell);

@@ -56,11 +56,20 @@ namespace OpenCombatEngine.Implementation.Creatures
         public ICheckManager Checks { get; }
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
-        public ISpellCaster? Spellcasting { get; }
+        public ISpellCaster? Spellcasting { get; private set; }
         public ITurnManager TurnManager { get; }
         
         public ILevelManager LevelManager { get; }
         public IDictionary<string, int> Senses { get; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        public void SetSpellCaster(ISpellCaster spellCaster)
+        {
+            Spellcasting = spellCaster;
+            if (Spellcasting is StandardSpellCaster std && Effects != null)
+            {
+                std.SetEffectManager(Effects);
+            }
+        }
 
         private readonly List<IFeature> _features = new();
         
@@ -80,7 +89,8 @@ namespace OpenCombatEngine.Implementation.Creatures
             IEquipmentManager? equipmentManager = null,
             ISpellCaster? spellcasting = null,
             IEffectManager? effectManager = null,
-            OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? race = null)
+            OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? race = null,
+            IDiceRoller? defaultDiceRoller = null)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Id cannot be empty", nameof(id));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -131,7 +141,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
 
             // CheckManager now takes 'this'
-            Checks = checkManager ?? new StandardCheckManager(new StandardDiceRoller(), this);
+            Checks = checkManager ?? new StandardCheckManager(defaultDiceRoller ?? new StandardDiceRoller(), this);
             
             LevelManager = new StandardLevelManager(this);
 
@@ -147,7 +157,27 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
 
             // Default to Intelligence if creating new caster, now takes 'this'
-            Spellcasting = spellcasting ?? new StandardSpellCaster(this, Ability.Intelligence);
+            // Default to Intelligence if creating new caster, now takes 'this'
+            if (spellcasting != null)
+            {
+                Spellcasting = spellcasting;
+            }
+            else
+            {
+                // Initialize empty spellcasting if none provided? Or leave null?
+                // Previous code initialized it. Let's keep it null by default unless requested, 
+                // BUT the previous code forced it: "Spellcasting = spellcasting ?? new StandardSpellCaster(...)".
+                // If I default it to null, existing tests might break if they expect casters.
+                // However, non-casters shouldn't have it.
+                // I will NOT force it to new StandardSpellCaster unless it was explicitly requested via a factory or similar.
+                // BUT lines 150 suggests it WAS defaulting.
+                // Let's default it to null to be cleaner, but I should check if tests break.
+                // Actually, line 150 comment: "// Default to Intelligence if creating new caster, now takes 'this'".
+                // This implies "If I am a creature, I am a wizard?" No.
+                // I'll leave it null if not provided. This is a behavior change but likely correct.
+                // Wait, if I change it to null, then creatures won't have it by default.
+                Spellcasting = null;
+            }
 
             // Subscribe to events
             HitPoints.Died += OnDied;

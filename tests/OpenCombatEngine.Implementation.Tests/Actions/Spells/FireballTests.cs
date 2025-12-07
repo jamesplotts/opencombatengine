@@ -77,8 +77,11 @@ namespace OpenCombatEngine.Implementation.Tests.Actions.Spells
                 new StandardAbilityScores(10, dexScore, 10, 10, 10, 10),
                 new StandardHitPoints(100), // High HP to survive
                 new StandardInventory(),
-                new StandardTurnManager(_dice) // Uses fake dice for check manager
+                new StandardTurnManager(_dice), // Uses fake dice for check manager
+                defaultDiceRoller: _dice
             );
+
+            return creature;
         }
 
         [Fact]

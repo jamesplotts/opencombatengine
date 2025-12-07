@@ -29,7 +29,11 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             mockCreature.AbilityScores.Returns(abilityScores);
             mockCreature.ProficiencyBonus.Returns(2);
             
-            _spellCaster = new StandardSpellCaster(mockCreature, Ability.Intelligence);
+            _spellCaster = new StandardSpellCaster(
+                Ability.Intelligence, 
+                a => mockCreature.AbilityScores.GetModifier(a), 
+                () => mockCreature.ProficiencyBonus
+            );
             _caster = new StandardCreature(System.Guid.NewGuid().ToString(), "Caster", abilityScores, new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), spellcasting: _spellCaster);
             
             _target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
@@ -50,6 +54,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 saveEffect: SaveEffect.HalfDamage);
             
             _spellCaster.LearnSpell(spell);
+            _spellCaster.PrepareSpell(spell);
             _spellCaster.SetSlots(3, 1);
             _spellCaster.RestoreAllSlots();
 
@@ -70,6 +75,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 healingDice: "1d4");
 
             _spellCaster.LearnSpell(spell);
+            _spellCaster.PrepareSpell(spell);
             
             // Damage target first
             _target.HitPoints.TakeDamage(10);
@@ -101,6 +107,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 saveEffect: SaveEffect.HalfDamage);
 
             _spellCaster.LearnSpell(spell);
+            _spellCaster.PrepareSpell(spell);
             
             var action = new CastSpellAction(spell, 1);
             var context = new StandardActionContext(_caster, new OpenCombatEngine.Core.Models.Actions.CreatureTarget(target));

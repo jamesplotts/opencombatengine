@@ -45,12 +45,12 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             _creature.Team = "Neutral";
             
             // Ensure we have a spellcaster
-            if (_creature.Spellcasting == null)
-            {
-                // Should be created by default if we passed null? 
-                // Actually StandardCreature constructor: Spellcasting = spellcasting ?? new StandardSpellCaster(this, Ability.Intelligence);
-                // So it should be there.
-            }
+            var caster = new StandardSpellCaster(
+                Ability.Intelligence,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus
+            );
+            _creature.SetSpellCaster(caster);
             _spellCaster = _creature.Spellcasting!;
 
             _effectManager = _creature.Effects;
