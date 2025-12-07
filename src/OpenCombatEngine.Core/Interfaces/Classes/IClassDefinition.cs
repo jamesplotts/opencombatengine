@@ -22,7 +22,10 @@ namespace OpenCombatEngine.Core.Interfaces.Classes
         /// Gets the features granted by this class at each level.
         /// </summary>
         IReadOnlyDictionary<int, IEnumerable<IFeature>> FeaturesByLevel { get; }
-        
-        // Future: Proficiencies, Starting Equipment, etc.
+
+        /// <summary>
+        /// Gets the spell list for this class, if any.
+        /// </summary>
+        OpenCombatEngine.Core.Models.Spells.SpellList? SpellList { get; }
     }
 }

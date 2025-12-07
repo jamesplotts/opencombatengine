@@ -113,8 +113,14 @@ namespace OpenCombatEngine.Implementation.Content
             {
                 featuresByLevel[1] = level1Features;
             }
+
+            OpenCombatEngine.Core.Models.Spells.SpellList? spellList = null;
+            if (dto.Spells != null && dto.Spells.Count > 0)
+            {
+                spellList = new OpenCombatEngine.Core.Models.Spells.SpellList(dto.Name, dto.Spells);
+            }
             
-            return new ClassDefinition(dto.Name, hitDie, featuresByLevel);
+            return new ClassDefinition(dto.Name, hitDie, featuresByLevel, spellList);
         }
     }
 }

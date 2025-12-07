@@ -11,7 +11,7 @@ namespace OpenCombatEngine.Implementation.Classes
         public int HitDie { get; }
         public IReadOnlyDictionary<int, IEnumerable<IFeature>> FeaturesByLevel { get; }
 
-        public ClassDefinition(string name, int hitDie, Dictionary<int, IEnumerable<IFeature>>? featuresByLevel = null)
+        public ClassDefinition(string name, int hitDie, Dictionary<int, IEnumerable<IFeature>>? featuresByLevel = null, OpenCombatEngine.Core.Models.Spells.SpellList? spellList = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             if (hitDie <= 0) throw new ArgumentException("Hit die must be positive", nameof(hitDie));
@@ -19,6 +19,9 @@ namespace OpenCombatEngine.Implementation.Classes
             Name = name;
             HitDie = hitDie;
             FeaturesByLevel = featuresByLevel ?? new Dictionary<int, IEnumerable<IFeature>>();
+            SpellList = spellList;
         }
+
+        public OpenCombatEngine.Core.Models.Spells.SpellList? SpellList { get; }
     }
 }

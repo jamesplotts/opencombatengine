@@ -80,8 +80,6 @@ namespace OpenCombatEngine.Implementation.Tests.Actions.Spells
                 new StandardTurnManager(_dice), // Uses fake dice for check manager
                 defaultDiceRoller: _dice
             );
-
-            return creature;
         }
 
         [Fact]

@@ -31,6 +31,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("classFeatures")]
         public List<object>? ClassFeatures { get; set; } // Often a list of strings or objects referencing features
+        
+        [JsonPropertyName("spells")]
+        public List<string>? Spells { get; set; }
     }
 
     public class HdDto
