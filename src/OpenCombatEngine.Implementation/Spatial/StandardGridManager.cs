@@ -264,7 +264,7 @@ namespace OpenCombatEngine.Implementation.Spatial
             foreach (var kvp in _creaturePositions)
             {
                 var pos = kvp.Value;
-                if (shape.Contains(origin, pos, direction))
+                if (shape.Contains(pos, origin, direction ?? origin))
                 {
                     if (_creatures.TryGetValue(kvp.Key, out var creature))
                     {

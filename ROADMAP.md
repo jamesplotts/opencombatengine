@@ -27,6 +27,12 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Add unit tests for implementations
 - [x] [Save Architecture Decision Record (Creature Interfaces)](docs/architecture/001-creature-interfaces.md)
 
+- [x] **Cycle 53: Area of Effect Targeting**
+    - [x] Define `IShape` and concrete shapes (Sphere, Cone, Cube, Line)
+    - [x] Update `IGridManager` to support shape queries
+    - [x] Implement shape logic in `StandardGridManager`
+    - [x] Verify with `AoETargetingTests` (JSON)
+
 - [x] **Design Creature Serialization**
     - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)
     - [x] Add `ToState()`/`FromState()` to component interfaces
