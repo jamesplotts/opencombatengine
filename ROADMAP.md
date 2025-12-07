@@ -390,3 +390,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Integrate into `StandardCreature`
     - [x] Verify with Tests
 - [x] [Save Reaction System ADR](docs/adr/0055-reaction-system.md)
+
+- [x] **Cycle 50: Event-Driven UI (CLI Demo)**
+    - [x] Create `OpenCombatEngine.Demo` project
+    - [x] Implement `CombatLogger`
+    - [x] Verify full event pipeline (Movement -> Reaction -> Action)
+    - [x] Document in README.md
