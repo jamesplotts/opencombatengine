@@ -63,6 +63,52 @@ namespace OpenCombatEngine.Implementation.Content
                 }
             }
 
+            // Parse Class Features
+            if (dto.ClassFeatures != null)
+            {
+                foreach (var featureObj in dto.ClassFeatures)
+                {
+                    string? featureName = null;
+                    string featureDesc = "";
+
+                    if (featureObj is JsonElement element)
+                    {
+                        if (element.ValueKind == JsonValueKind.String)
+                        {
+                            featureName = element.GetString();
+                        }
+                        else if (element.ValueKind == JsonValueKind.Object)
+                        {
+                            // Try to get "name" or "classFeature"
+                            if (element.TryGetProperty("name", out var nameProp))
+                            {
+                                featureName = nameProp.GetString();
+                            }
+                            else if (element.TryGetProperty("classFeature", out var cfProp))
+                            {
+                                // Format: Name|Class|Source|Level
+                                var raw = cfProp.GetString();
+                                if (!string.IsNullOrEmpty(raw))
+                                {
+                                    featureName = raw.Split('|')[0];
+                                }
+                            }
+                        }
+                    }
+                    else if (featureObj is string str)
+                    {
+                        featureName = str;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(featureName))
+                    {
+                        var feature = FeatureFactory.CreateFeature(featureName, featureDesc) 
+                                      ?? new TextFeature(featureName, featureDesc);
+                        level1Features.Add(feature);
+                    }
+                }
+            }
+
             if (level1Features.Count > 0)
             {
                 featuresByLevel[1] = level1Features;

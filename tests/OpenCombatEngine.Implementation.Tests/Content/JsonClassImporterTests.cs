@@ -56,5 +56,32 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             var result = importer.Import("invalid json");
             result.IsSuccess.Should().BeFalse();
         }
+        [Fact]
+        public void Import_Should_Parse_Class_Features()
+        {
+            var json = @"
+            {
+                ""class"": [
+                    {
+                        ""name"": ""Barbarian"",
+                        ""hd"": { ""faces"": 12 },
+                        ""classFeatures"": [
+                            ""Rage"",
+                            { ""classFeature"": ""Unarmored Defense|Barbarian||1"" }
+                        ]
+                    }
+                ]
+            }";
+
+            var importer = new JsonClassImporter();
+            var result = importer.Import(json);
+
+            result.IsSuccess.Should().BeTrue();
+            var barbarian = result.Value.First();
+            barbarian.FeaturesByLevel.Should().ContainKey(1);
+            var features = barbarian.FeaturesByLevel[1];
+            features.Should().Contain(f => f.Name == "Rage");
+            features.Should().Contain(f => f.Name == "Unarmored Defense");
+        }
     }
 }
