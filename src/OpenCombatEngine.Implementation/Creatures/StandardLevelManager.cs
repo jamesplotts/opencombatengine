@@ -105,6 +105,45 @@ namespace OpenCombatEngine.Implementation.Creatures
                     _creature.AddFeature(feature);
                 }
             }
+
+            // Update Spell Slots
+            UpdateSpellSlots();
+        }
+
+        private void UpdateSpellSlots()
+        {
+            if (_creature.Spellcasting == null) return;
+
+            var castingClasses = new List<(OpenCombatEngine.Core.Enums.SpellcastingType Type, int Level)>();
+            foreach (var kvp in _classes)
+            {
+                if (kvp.Key.SpellcastingType != OpenCombatEngine.Core.Enums.SpellcastingType.None)
+                {
+                    castingClasses.Add((kvp.Key.SpellcastingType, kvp.Value));
+                }
+            }
+
+            if (castingClasses.Count == 0) return;
+
+            var slots = OpenCombatEngine.Implementation.Spells.SpellSlotCalculator.CalculateSlots(castingClasses);
+            
+            // Set slots on caster
+            // We need to iterate 1-9
+            for (int i = 1; i <= 9; i++)
+            {
+                if (slots.TryGetValue(i, out int count))
+                {
+                    _creature.Spellcasting.SetSlots(i, count);
+                }
+                else
+                {
+                    // If no slots for this level, set to 0? Or leave it?
+                    // Safe to set to 0 if we assume recalculation is absolute.
+                    // But if it had manual slots that we don't track, we overwrite.
+                    // For automated system, we overwrite.
+                    _creature.Spellcasting.SetSlots(i, 0);
+                }
+            }
         }
     }
 }

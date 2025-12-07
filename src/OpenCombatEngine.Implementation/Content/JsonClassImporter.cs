@@ -119,8 +119,18 @@ namespace OpenCombatEngine.Implementation.Content
             {
                 spellList = new OpenCombatEngine.Core.Models.Spells.SpellList(dto.Name, dto.Spells);
             }
+
+            var spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.None;
+            if (!string.IsNullOrWhiteSpace(dto.SpellcastingProgression))
+            {
+                if (dto.SpellcastingProgression.Equals("full", StringComparison.OrdinalIgnoreCase)) spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.Full;
+                else if (dto.SpellcastingProgression.Equals("half", StringComparison.OrdinalIgnoreCase)) spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.Half;
+                else if (dto.SpellcastingProgression.Equals("1/3", StringComparison.OrdinalIgnoreCase)) spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.Third;
+                else if (dto.SpellcastingProgression.Equals("third", StringComparison.OrdinalIgnoreCase)) spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.Third;
+                else if (dto.SpellcastingProgression.Equals("pact", StringComparison.OrdinalIgnoreCase)) spellcastingType = OpenCombatEngine.Core.Enums.SpellcastingType.Pact;
+            }
             
-            return new ClassDefinition(dto.Name, hitDie, featuresByLevel, spellList);
+            return new ClassDefinition(dto.Name, hitDie, featuresByLevel, spellList, spellcastingType);
         }
     }
 }

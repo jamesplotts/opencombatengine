@@ -34,6 +34,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         
         [JsonPropertyName("spells")]
         public List<string>? Spells { get; set; }
+
+        [JsonPropertyName("spellcastingProgression")]
+        public string? SpellcastingProgression { get; set; } // "full", "half", "pact", etc.
     }
 
     public class HdDto

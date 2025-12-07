@@ -27,5 +27,10 @@ namespace OpenCombatEngine.Core.Interfaces.Classes
         /// Gets the spell list for this class, if any.
         /// </summary>
         OpenCombatEngine.Core.Models.Spells.SpellList? SpellList { get; }
+
+        /// <summary>
+        /// Gets the type of spellcasting progression (Full, Half, etc.).
+        /// </summary>
+        OpenCombatEngine.Core.Enums.SpellcastingType SpellcastingType { get; }
     }
 }
