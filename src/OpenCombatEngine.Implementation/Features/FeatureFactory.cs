@@ -66,27 +66,34 @@ namespace OpenCombatEngine.Implementation.Features
                 return null;
             }
 
-            if (name.Contains("Resistance", StringComparison.OrdinalIgnoreCase))
+            if (name.Contains("Resistance", StringComparison.OrdinalIgnoreCase) || 
+                description.Contains("Resistance to", StringComparison.OrdinalIgnoreCase))
             {
-                var type = ParseDamageType(name);
+                var type = ParseDamageType(name) ?? ParseDamageType(description);
                 if (type.HasValue)
                 {
                     return new DamageAffinityFeature(name, type.Value, AffinityType.Resistance);
                 }
             }
 
-            if (name.Contains("Immunity", StringComparison.OrdinalIgnoreCase) || name.Contains("Immune", StringComparison.OrdinalIgnoreCase))
+            if (name.Contains("Immunity", StringComparison.OrdinalIgnoreCase) || 
+                name.Contains("Immune", StringComparison.OrdinalIgnoreCase) ||
+                description.Contains("Immunity to", StringComparison.OrdinalIgnoreCase) ||
+                description.Contains("Immune to", StringComparison.OrdinalIgnoreCase))
             {
-                var type = ParseDamageType(name);
+                var type = ParseDamageType(name) ?? ParseDamageType(description);
                 if (type.HasValue)
                 {
                     return new DamageAffinityFeature(name, type.Value, AffinityType.Immunity);
                 }
             }
 
-            if (name.Contains("Vulnerability", StringComparison.OrdinalIgnoreCase) || name.Contains("Vulnerable", StringComparison.OrdinalIgnoreCase))
+            if (name.Contains("Vulnerability", StringComparison.OrdinalIgnoreCase) || 
+                name.Contains("Vulnerable", StringComparison.OrdinalIgnoreCase) ||
+                description.Contains("Vulnerability to", StringComparison.OrdinalIgnoreCase) ||
+                description.Contains("Vulnerable to", StringComparison.OrdinalIgnoreCase))
             {
-                var type = ParseDamageType(name);
+                var type = ParseDamageType(name) ?? ParseDamageType(description);
                 if (type.HasValue)
                 {
                     return new DamageAffinityFeature(name, type.Value, AffinityType.Vulnerability);
