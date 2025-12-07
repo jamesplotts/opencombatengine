@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Models.Events;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Core.Models.Actions;
+using System.Linq;
 using OpenCombatEngine.Implementation.Actions;
 
 namespace OpenCombatEngine.Implementation.Reactions
@@ -58,49 +59,37 @@ namespace OpenCombatEngine.Implementation.Reactions
 
         public Result<ActionResult> React(object eventArgs, IReactionContext context)
         {
+             ArgumentNullException.ThrowIfNull(context);
              if (eventArgs is not MovedEventArgs movedArgs) return Result<ActionResult>.Failure("Invalid event args.");
              var target = movedArgs.Creature;
              if (target == null) return Result<ActionResult>.Failure("No target.");
 
-             // Execute Attack
-             // We reuse the logic from OpportunityAttack.cs helper, or implement it here.
-             // Since OpportunityAttack.cs was static and incomplete, let's implement the logic here cleanly.
-             
              // 1. Consume Reaction
             _attacker.ActionEconomy.UseReaction();
 
             // 2. Perform Attack
-            // We need an AttackAction.
-            // Does the creature have one?
-            // Or do we construct a basic one?
-            // "Melee Basic Attack"
+            // Find a melee attack (Unarmed Strike or Main Hand)
+            // We look for "Unarmed Strike" explicitly for now, or the first 'AttackAction'.
             
-            // Ideally, we find a melee weapon/attack in the creature's action list.
-            // For now, let's simulate it or use a default if available.
-            // StandardCreature doesn't have a "Basic Attack" method.
-            // But if they have a MonsterAttackAction or Equipped Weapon, we can use that.
+            var attackAction = _attacker.Actions.FirstOrDefault(a => a.Name == "Unarmed Strike" || a.GetType().Name.Contains("Attack", StringComparison.OrdinalIgnoreCase));
             
-            // Let's assume we can construct a simple AttackAction if we had a DiceRoller.
-            // But we don't.
+            if (attackAction != null)
+            {
+                var actionContext = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                    _attacker,
+                    new CreatureTarget(target),
+                    context.Grid
+                );
+
+                // Note: We ignore ActionEconomy check for the action itself (Standard Action), 
+                // because the Reaction allows us to use it.
+                // Assuming PerformAction doesn't enforce economy validation (it typically doesn't, it just runs it).
+                
+                var result = _attacker.PerformAction(attackAction, actionContext);
+                return result;
+            }
             
-            // However, implementing 'OpportunityAttack.Execute' correctly in the static helper is useful.
-            // Let's defer to that helper if we fix it, OR inline the logic.
-            // Inline logic:
-            
-            // We need to roll to hit.
-            // We can resolve the attack if we don't need a specific 'Action' object instance for events,
-            // OR we wrap it in a custom IAction.
-            
-            // For this implementation, let's return a "Success" result that *describes* the attack happened, 
-            // but without full dice rolling if we lack dependencies. 
-            // WAIT - StandardReactionManager is instantiated with just dependencies.
-            // We can pass an AttackFactory or similar?
-            // Or just: _attacker.PerformAction(new AttackAction(...))?
-            // But AttackAction implies using an Action resource (Standard/Bonus) unless we override type.
-            
-            // Let's assume we implement a "ReactionAttackAction".
-            
-            return Result<ActionResult>.Success(new ActionResult(true, $"{_attacker.Name} made an opportunity attack against {target.Name}!"));
+            return Result<ActionResult>.Success(new ActionResult(true, $"{_attacker.Name} used reaction but had no attack!"));
         }
     }
 }

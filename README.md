@@ -103,6 +103,14 @@ var advantage = roller.RollWithAdvantage("1d20+5");
 Console.WriteLine($"Advantage result: {advantage.Value}");
 ```
 
+### 🎮 Runs the Demo
+
+We include a CLI demo project that showcases the Event System and Reaction System in action.
+
+```bash
+dotnet run --project src/OpenCombatEngine.Demo/OpenCombatEngine.Demo.csproj
+```
+
 ## 📁 Project Structure
 
 ```

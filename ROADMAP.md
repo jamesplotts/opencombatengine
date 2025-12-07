@@ -382,3 +382,11 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardGridManager` to trigger movement events
     - [x] Verify with Tests
 - [x] [Save Core Event System ADR](docs/adr/0054-core-event-system.md)
+
+- [x] **Cycle 49: Reaction System Refactor**
+    - [x] Add `CreatureMoved` event to `IGridManager`
+    - [x] Define `IReaction` and `IReactionManager`
+    - [x] Implement `StandardReactionManager` and `OpportunityAttackReaction`
+    - [x] Integrate into `StandardCreature`
+    - [x] Verify with Tests
+- [x] [Save Reaction System ADR](docs/adr/0055-reaction-system.md)
