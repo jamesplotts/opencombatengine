@@ -73,31 +73,66 @@ namespace OpenCombatEngine.Implementation.Spells
 
         public ISpell? ConcentratingOn { get; private set; }
 
+        // Pact Magic Tracking
+        public int PactSlotsMax { get; private set; }
+        public int PactSlotsCurrent { get; private set; }
+        public int PactSlotLevel { get; private set; }
+
         public bool HasSlot(int level)
         {
             if (level == 0) return true; // Cantrips
-            return _currentSlots.TryGetValue(level, out int count) && count > 0;
+            if (_currentSlots.TryGetValue(level, out int count) && count > 0) return true;
+            
+            // Check Pact Slots
+            // Pact Slots are of a specific level. You can use them for that level.
+            // You can also use them for LOWER level spells (upcast).
+            // But HasSlot(level) usually asks "Do I have a slot OF this level?"
+            // DND rules: "You can use a spell slot of a higher level..."
+            // But this method checks direct availability usually?
+            // Let's say yes, if PactSlotLevel >= level and PactSlotsCurrent > 0.
+            if (PactSlotsCurrent > 0 && PactSlotLevel >= level) return true;
+            
+            return false;
         }
 
         public int GetSlots(int level)
         {
-            return _currentSlots.TryGetValue(level, out int count) ? count : 0;
+            int count = _currentSlots.TryGetValue(level, out int c) ? c : 0;
+            // Should we add pact slots here? 
+            // If PactSlotLevel == level, add them?
+            if (PactSlotLevel == level) count += PactSlotsCurrent;
+            return count;
         }
 
         public int GetMaxSlots(int level)
         {
-            return _maxSlots.TryGetValue(level, out int count) ? count : 0;
+            int count = _maxSlots.TryGetValue(level, out int c) ? c : 0;
+            if (PactSlotLevel == level) count += PactSlotsMax;
+            return count;
         }
 
         public Result<bool> ConsumeSlot(int level)
         {
-            if (level == 0) return Result<bool>.Success(true); // Cantrips don't consume slots
+            if (level == 0) return Result<bool>.Success(true); 
+            
+            // Priority: Use standard slot if available at exact level?
+            // Or use Pact Slot if equal level?
+            // Let's prioritize Standard Slots unless they are empty.
             
             if (_currentSlots.TryGetValue(level, out int count) && count > 0)
             {
                 _currentSlots[level] = count - 1;
                 return Result<bool>.Success(true);
             }
+            
+            // If no standard slots, try Pact Slots
+            // Valid if PactSlotLevel >= level
+            if (PactSlotsCurrent > 0 && PactSlotLevel >= level)
+            {
+                PactSlotsCurrent--;
+                return Result<bool>.Success(true);
+            }
+
             return Result<bool>.Failure($"No level {level} slots available.");
         }
 
@@ -107,6 +142,25 @@ namespace OpenCombatEngine.Implementation.Spells
             {
                 _currentSlots[kvp.Key] = kvp.Value;
             }
+            // Restore Pact Slots too (Long Rest restores all)
+            PactSlotsCurrent = PactSlotsMax;
+        }
+
+        public void RestoreShortRestSlots()
+        {
+            PactSlotsCurrent = PactSlotsMax;
+            // Standard slots not restored (unless Wizard Arcane Recovery etc, but that's a feature, not default)
+        }
+
+        public void SetPactSlots(int quantity, int level)
+        {
+            PactSlotsMax = quantity;
+            PactSlotLevel = level;
+            // Cap current
+            if (PactSlotsCurrent > PactSlotsMax) PactSlotsCurrent = PactSlotsMax;
+            // Or should we refill on set? Usually set happens on level up.
+            // Let's implicitly fill if it was 0? No.
+            // Let's just cap.
         }
 
         public void LearnSpell(ISpell spell)

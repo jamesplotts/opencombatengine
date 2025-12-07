@@ -123,26 +123,64 @@ namespace OpenCombatEngine.Implementation.Creatures
                 }
             }
 
-            if (castingClasses.Count == 0) return;
-
-            var slots = OpenCombatEngine.Implementation.Spells.SpellSlotCalculator.CalculateSlots(castingClasses);
-            
-            // Set slots on caster
-            // We need to iterate 1-9
-            for (int i = 1; i <= 9; i++)
+            if (castingClasses.Count > 0)
             {
-                if (slots.TryGetValue(i, out int count))
+                var slots = OpenCombatEngine.Implementation.Spells.SpellSlotCalculator.CalculateSlots(castingClasses);
+                
+                // Set slots on caster
+                for (int i = 1; i <= 9; i++)
                 {
-                    _creature.Spellcasting.SetSlots(i, count);
+                    if (slots.TryGetValue(i, out int count))
+                    {
+                        _creature.Spellcasting.SetSlots(i, count);
+                    }
+                    else
+                    {
+                        _creature.Spellcasting.SetSlots(i, 0);
+                    }
                 }
-                else
+            }
+
+            // Pact Slots (Warlock)
+            // Separate logic. Find total Pact Level.
+            // Assuming Warlock is the only class with Pact Magic for now.
+            // If multiple Pact classes exist, levels stack.
+            int pactLevel = 0;
+            foreach (var kvp in _classes)
+            {
+                if (kvp.Key.SpellcastingType == OpenCombatEngine.Core.Enums.SpellcastingType.Pact)
                 {
-                    // If no slots for this level, set to 0? Or leave it?
-                    // Safe to set to 0 if we assume recalculation is absolute.
-                    // But if it had manual slots that we don't track, we overwrite.
-                    // For automated system, we overwrite.
-                    _creature.Spellcasting.SetSlots(i, 0);
+                    pactLevel += kvp.Value;
                 }
+            }
+
+            if (pactLevel > 0 && _creature.Spellcasting is OpenCombatEngine.Implementation.Spells.StandardSpellCaster ssc)
+            {
+                // Calculate Pact Slots
+                // 1-10: 2 slots? Wait.
+                // 1: 1
+                // 2-10: 2
+                // 11-16: 3
+                // 17+: 4
+                int quantity = 0;
+                if (pactLevel >= 17) quantity = 4;
+                else if (pactLevel >= 11) quantity = 3;
+                else if (pactLevel >= 2) quantity = 2;
+                else quantity = 1;
+
+                // Calculate Pact Slot Level
+                // 1-2: 1st
+                // 3-4: 2nd
+                // 5-6: 3rd
+                // 7-8: 4th
+                // 9+: 5th
+                int level = 1;
+                if (pactLevel >= 9) level = 5;
+                else if (pactLevel >= 7) level = 4;
+                else if (pactLevel >= 5) level = 3;
+                else if (pactLevel >= 3) level = 2;
+
+                ssc.SetPactSlots(quantity, level);
             }
         }
     }

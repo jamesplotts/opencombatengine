@@ -241,19 +241,33 @@ namespace OpenCombatEngine.Implementation.Actions
                 {
                     int totalDamage = 0;
                     
+                    // Cantrip Scaling
+                    int multiplier = 1;
+                    if (_spell.Level == 0 && source.LevelManager != null)
+                    {
+                        int level = source.LevelManager.TotalLevel;
+                        if (level >= 17) multiplier = 4;
+                        else if (level >= 11) multiplier = 3;
+                        else if (level >= 5) multiplier = 2;
+                    }
+
                     foreach (var rollDef in _spell.DamageRolls)
                     {
-                        var roll = _diceRoller.Roll(rollDef.Dice);
-                        if (roll.IsSuccess)
+                        // Roll 'multiplier' times
+                        for (int i = 0; i < multiplier; i++)
                         {
-                            int amount = roll.Value.Total;
-                            if (saveSuccess && _spell.SaveEffect == SaveEffect.HalfDamage)
+                            var roll = _diceRoller.Roll(rollDef.Dice);
+                            if (roll.IsSuccess)
                             {
-                                amount /= 2;
+                                int amount = roll.Value.Total;
+                                if (saveSuccess && _spell.SaveEffect == SaveEffect.HalfDamage)
+                                {
+                                    amount /= 2;
+                                }
+                                
+                                target.HitPoints.TakeDamage(amount, rollDef.Type);
+                                totalDamage += amount;
                             }
-                            
-                            target.HitPoints.TakeDamage(amount, rollDef.Type);
-                            totalDamage += amount;
                         }
                     }
                     messages.Add($"Dealt {totalDamage} damage.");

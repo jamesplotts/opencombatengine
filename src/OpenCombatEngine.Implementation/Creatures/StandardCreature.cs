@@ -325,6 +325,12 @@ namespace OpenCombatEngine.Implementation.Creatures
                         HitPoints.Heal(totalHealing);
                     }
                 }
+                
+                // Warlock Pact Magic Short Rest Recovery
+                if (Spellcasting is OpenCombatEngine.Implementation.Spells.StandardSpellCaster ssc)
+                {
+                    ssc.RestoreShortRestSlots();
+                }
             }
             else if (type == RestType.LongRest)
             {
