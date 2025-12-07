@@ -19,6 +19,11 @@ namespace OpenCombatEngine.Core.Interfaces.Effects
         string Description { get; }
 
         /// <summary>
+        /// Gets the type of duration logic this effect uses.
+        /// </summary>
+        DurationType DurationType { get; }
+
+        /// <summary>
         /// Gets the remaining duration in rounds.
         /// -1 indicates a permanent effect.
         /// </summary>
@@ -39,6 +44,12 @@ namespace OpenCombatEngine.Core.Interfaces.Effects
         /// Used to decrement duration.
         /// </summary>
         void OnTurnStart(ICreature target);
+
+        /// <summary>
+        /// Called at the end of the creature's turn.
+        /// Used to expire effects that end at turn end.
+        /// </summary>
+        void OnTurnEnd(ICreature target);
 
         /// <summary>
         /// Modifies a specific statistic.

@@ -278,6 +278,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public void EndTurn()
         {
+            Effects.OnTurnEnd();
         }
 
         public void Rest(RestType type, int hitDiceToSpend = 0)

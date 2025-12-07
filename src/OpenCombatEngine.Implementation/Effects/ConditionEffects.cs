@@ -11,6 +11,7 @@ namespace OpenCombatEngine.Implementation.Effects
         public string Name { get; }
         public string Description { get; }
         public int DurationRounds => -1; // Managed by Condition
+        public DurationType DurationType => DurationType.Permanent;
 
         protected ConditionEffectBase(string name, string description)
         {
@@ -21,6 +22,7 @@ namespace OpenCombatEngine.Implementation.Effects
         public virtual void OnApplied(ICreature target) { }
         public virtual void OnRemoved(ICreature target) { }
         public virtual void OnTurnStart(ICreature target) { }
+        public virtual void OnTurnEnd(ICreature target) { }
         public virtual int ModifyStat(StatType stat, int currentValue) => currentValue;
     }
 

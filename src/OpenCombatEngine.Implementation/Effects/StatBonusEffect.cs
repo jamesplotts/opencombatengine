@@ -9,18 +9,20 @@ namespace OpenCombatEngine.Implementation.Effects
     {
         public string Name { get; }
         public string Description { get; }
+        public DurationType DurationType { get; }
         public int DurationRounds { get; private set; }
         
         private readonly StatType _targetStat;
         private readonly int _bonus;
 
-        public StatBonusEffect(string name, string description, int durationRounds, StatType targetStat, int bonus)
+        public StatBonusEffect(string name, string description, int durationRounds, StatType targetStat, int bonus, DurationType durationType = DurationType.Round)
         {
             Name = name;
             Description = description;
             DurationRounds = durationRounds;
             _targetStat = targetStat;
             _bonus = bonus;
+            DurationType = durationType;
         }
 
         public void OnApplied(ICreature target)
@@ -35,10 +37,17 @@ namespace OpenCombatEngine.Implementation.Effects
 
         public void OnTurnStart(ICreature target)
         {
+            if (DurationType == DurationType.Permanent || DurationType == DurationType.UntilEndOfTurn) return;
+
             if (DurationRounds > 0)
             {
                 DurationRounds--;
             }
+        }
+
+        public void OnTurnEnd(ICreature target)
+        {
+            // Logic handled by Manager for UntilEndOfTurn
         }
 
         public int ModifyStat(StatType stat, int currentValue)

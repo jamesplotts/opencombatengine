@@ -25,9 +25,14 @@ namespace OpenCombatEngine.Core.Interfaces.Effects
         void RemoveEffect(string effectName);
 
         /// <summary>
-        /// Processes turn-start logic for all effects.
+        /// Processes effects that trigger or expire at the start of a turn.
         /// </summary>
         void Tick();
+
+        /// <summary>
+        /// Processes effects that trigger or expire at the end of a turn.
+        /// </summary>
+        void OnTurnEnd();
 
         /// <summary>
         /// Applies all active effects to a base stat value.

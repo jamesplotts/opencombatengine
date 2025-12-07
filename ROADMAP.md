@@ -402,3 +402,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Update `StandardCreature` to publish result
     - [x] Implement `LifeStealingFeature` (Event-Driven)
     - [x] Verify with Tests
+
+- [x] **Cycle 52: Duration-Based Effects**
+    - [x] Define `DurationType` Enum (Rounds, Minutes, UntilEndOfTurn)
+    - [x] Update `StandardCreature` to call `EndTurn` logic
+    - [x] Update `IEffectManager` to handle Turn End expiration
+    - [x] Verify with Duration Tests

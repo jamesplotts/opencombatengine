@@ -56,7 +56,25 @@ namespace OpenCombatEngine.Implementation.Effects
                 var effect = _effects[i];
                 effect.OnTurnStart(_owner);
 
-                if (effect.DurationRounds == 0)
+                // If duration is managed by rounds (Round, Minute, Hour, etc.) and reaches 0, remove.
+                // UntilStartOfNextTurn implies 1 round duration, so decrementing to 0 here works.
+                // Permanent (-1) is ignored.
+                if (effect.DurationRounds == 0 && effect.DurationType != DurationType.Permanent)
+                {
+                    RemoveEffect(effect.Name);
+                }
+            }
+        }
+
+        public void OnTurnEnd()
+        {
+            // Iterate backwards to allow removal
+            for (int i = _effects.Count - 1; i >= 0; i--)
+            {
+                var effect = _effects[i];
+                effect.OnTurnEnd(_owner);
+
+                if (effect.DurationType == DurationType.UntilEndOfTurn)
                 {
                     RemoveEffect(effect.Name);
                 }
