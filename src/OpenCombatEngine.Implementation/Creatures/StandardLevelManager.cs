@@ -4,10 +4,12 @@ using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Classes;
+using OpenCombatEngine.Core.Models.States;
+using OpenCombatEngine.Core.Interfaces;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
-    public class StandardLevelManager : ILevelManager
+    public class StandardLevelManager : ILevelManager, IStateful<LevelManagerState>
     {
         private readonly Dictionary<IClassDefinition, int> _classes = new();
         private readonly ICreature _creature;
@@ -20,6 +22,30 @@ namespace OpenCombatEngine.Implementation.Creatures
         public StandardLevelManager(ICreature creature)
         {
             _creature = creature ?? throw new ArgumentNullException(nameof(creature));
+        }
+
+        public StandardLevelManager(ICreature creature, LevelManagerState state) : this(creature)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            ExperiencePoints = state.ExperiencePoints;
+            foreach (var classState in state.Classes)
+            {
+                // Reconstruct basic class definition. 
+                // Features are lost in basic restoration unless we look them up or have a registry.
+                // For now, we restore the definition so levels are correct.
+                var def = new OpenCombatEngine.Implementation.Classes.ClassDefinition(classState.ClassName, classState.HitDie);
+                _classes[def] = classState.Level;
+            }
+        }
+
+        public LevelManagerState GetState()
+        {
+            var classStates = new System.Collections.ObjectModel.Collection<ClassLevelState>();
+            foreach (var kvp in _classes)
+            {
+                classStates.Add(new ClassLevelState(kvp.Key.Name, kvp.Value, kvp.Key.HitDie));
+            }
+            return new LevelManagerState(ExperiencePoints, classStates);
         }
 
         public void AddExperience(int amount)

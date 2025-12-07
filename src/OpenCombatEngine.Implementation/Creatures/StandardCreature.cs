@@ -195,9 +195,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             // Equipment already created above
             Spellcasting = null; 
 
-            LevelManager = new StandardLevelManager(this);
-            // TODO: Restore LevelManager state if we had it. For now, it starts fresh (Level 0/1?).
-            // We need to add LevelManager state to CreatureState later.
+            LevelManager = state.LevelManager != null 
+                ? new StandardLevelManager(this, state.LevelManager) 
+                : new StandardLevelManager(this);
 
             HitPoints.Died += OnDied;
             HitPoints.DamageTaken += OnDamageTaken;
@@ -308,7 +308,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             var conditionState = (Conditions as IStateful<ConditionManagerState>)?.GetState()
                 ?? throw new InvalidOperationException("Conditions component does not support state export");
 
-            return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState);
+            var levelState = (LevelManager as IStateful<LevelManagerState>)?.GetState();
+
+            return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState, levelState);
         }
 
         public void AddFeature(IFeature feature)

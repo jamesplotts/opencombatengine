@@ -39,11 +39,13 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="HitPoints">State of hit points.</param>
     /// <param name="CombatStats">State of combat stats.</param>
     /// <param name="Conditions">State of conditions.</param>
+    /// <param name="LevelManager">State of level manager.</param>
     public record CreatureState(
         Guid Id,
         string Name,
         AbilityScoresState AbilityScores,
         HitPointsState HitPoints,
         CombatStatsState? CombatStats = null,
-        ConditionManagerState? Conditions = null);
+        ConditionManagerState? Conditions = null,
+        LevelManagerState? LevelManager = null);
 }
