@@ -2,6 +2,9 @@
 
 This document tracks the progress of the OpenCombatEngine development, including completed tasks and architectural decisions.
 
+## Strategic Plans
+- **[Strategy to Functional Completeness](docs/STRATEGY.md)**: A 7-phase roadmap to transform the core engine into a full game framework.
+
 ## Completed Tasks
 
 - [x] **Explore Project Structure**
