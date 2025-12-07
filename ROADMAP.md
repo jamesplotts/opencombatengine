@@ -396,3 +396,9 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Implement `CombatLogger`
     - [x] Verify full event pipeline (Movement -> Reaction -> Action)
     - [x] Document in README.md
+
+- [ ] **Cycle 51: Dynamic Item Events**
+    - [ ] Update `ActionEventArgs` to include `ActionResult`
+    - [ ] Update `StandardCreature` to publish result
+    - [ ] Implement `LifeStealingFeature` (Event-Driven)
+    - [ ] Verify with Tests

@@ -33,11 +33,13 @@ namespace OpenCombatEngine.Core.Models.Events
     {
         public string ActionName { get; }
         public object? Target { get; }
+        public OpenCombatEngine.Core.Models.Actions.ActionResult? Result { get; }
 
-        public ActionEventArgs(string actionName, object? target)
+        public ActionEventArgs(string actionName, object? target, OpenCombatEngine.Core.Models.Actions.ActionResult? result = null)
         {
             ActionName = actionName;
             Target = target;
+            Result = result;
         }
     }
 }

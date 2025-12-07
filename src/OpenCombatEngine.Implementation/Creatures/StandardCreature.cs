@@ -450,7 +450,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             var result = action.Execute(context);
 
-            ActionEnded?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ActionEventArgs(action.Name, context.Target));
+            ActionEnded?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ActionEventArgs(action.Name, context.Target, result.Value));
 
             return result;
         }
