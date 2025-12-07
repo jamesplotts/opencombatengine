@@ -367,3 +367,18 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Verify `JsonRaceImporter`
     - [x] Integration Tests
 - [x] [Save Content Import Feature Integration ADR](docs/adr/0053-content-import-feature-integration.md)
+
+- [x] **Cycle 47: Leveling Persistence**
+    - [x] Implement `ClassLevelState` and `LevelManagerState`
+    - [x] Update `StandardLevelManager` to be `IStateful`
+    - [x] Update `StandardCreature` to save/load leveling state
+    - [x] Verify with Tests
+- [x] [Save Leveling Persistence ADR](docs/adr/0050-leveling-and-experience.md)
+
+- [x] **Cycle 48: Core Event System**
+    - [x] Define `MovedEventArgs`, `ConditionEventArgs`, `ActionEventArgs`
+    - [x] Add Events to `IMovement`, `IConditionManager`, `ICreature`
+    - [x] Implement `StandardMovement`, `StandardConditionManager`, `StandardCreature` events
+    - [x] Update `StandardGridManager` to trigger movement events
+    - [x] Verify with Tests
+- [x] [Save Core Event System ADR](docs/adr/0054-core-event-system.md)

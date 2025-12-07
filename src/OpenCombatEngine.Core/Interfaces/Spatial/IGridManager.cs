@@ -37,5 +37,10 @@ namespace OpenCombatEngine.Core.Interfaces.Spatial
         /// Gets the path of positions from start to destination.
         /// </summary>
         IEnumerable<Position> GetPath(Position start, Position destination);
+
+        /// <summary>
+        /// Fired when a creature moves on the grid.
+        /// </summary>
+        event System.EventHandler<OpenCombatEngine.Core.Models.Events.MovedEventArgs> CreatureMoved;
     }
 }

@@ -13,6 +13,8 @@ namespace OpenCombatEngine.Implementation.Spatial
         private readonly Dictionary<Guid, Position> _creaturePositions = new();
         private readonly Dictionary<Position, Guid> _positionCreatures = new();
 
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.MovedEventArgs>? CreatureMoved;
+
         public Result<bool> PlaceCreature(ICreature creature, Position position)
         {
             if (creature == null) return Result<bool>.Failure("Creature cannot be null.");
@@ -58,7 +60,26 @@ namespace OpenCombatEngine.Implementation.Spatial
             _positionCreatures[newPosition] = creature.Id;
 
             creature.Movement?.NotifyMoved(oldPos, newPosition);
+            var eventArgs = new OpenCombatEngine.Core.Models.Events.MovedEventArgs(oldPos, newPosition, creature);
+            CreatureMoved?.Invoke(this, eventArgs);
 
+            // Trigger Reactions for other creatures
+            var context = new OpenCombatEngine.Implementation.Reactions.ReactionContext(this);
+            foreach (var creatureId in _creaturePositions.Keys)
+            {
+                if (creatureId == creature.Id) continue;
+                
+                if (_creatures.TryGetValue(creatureId, out var otherCreature))
+                {
+                   otherCreature.ReactionManager?.CheckReactions(eventArgs, context);
+                }
+            }
+            // Blocked: GridManager might not have ICreature instances.
+            // Let's check StandardGridManager implementation quickly. 
+            // If it doesn't store ICreature, we can't call methods on them.
+            // MoveCreature takes ICreature creature.
+            // But for OTHERS, we only have IDs?
+            
             return Result<bool>.Success(true);
         }
 

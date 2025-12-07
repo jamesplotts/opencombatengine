@@ -9,11 +9,13 @@ namespace OpenCombatEngine.Core.Models.Events
     {
         public Position From { get; }
         public Position To { get; }
+        public ICreature? Creature { get; }
 
-        public MovedEventArgs(Position from, Position to)
+        public MovedEventArgs(Position from, Position to, ICreature? creature = null)
         {
             From = from;
             To = to;
+            Creature = creature;
         }
     }
 

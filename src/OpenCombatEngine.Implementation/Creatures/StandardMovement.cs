@@ -57,7 +57,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public void NotifyMoved(OpenCombatEngine.Core.Models.Spatial.Position from, OpenCombatEngine.Core.Models.Spatial.Position destination)
         {
-            Moved?.Invoke(this, new OpenCombatEngine.Core.Models.Events.MovedEventArgs(from, destination));
+            Moved?.Invoke(this, new OpenCombatEngine.Core.Models.Events.MovedEventArgs(from, destination, Creature));
         }
 
         public void Move(int distance)

@@ -145,6 +145,11 @@ public interface ICreature
     OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
 
     /// <summary>
+    /// Gets the reaction manager for the creature.
+    /// </summary>
+    OpenCombatEngine.Core.Interfaces.Reactions.IReactionManager ReactionManager { get; }
+
+    /// <summary>
     /// Gets the senses of the creature (e.g. Darkvision -> 60).
     /// </summary>
     System.Collections.Generic.IDictionary<string, int> Senses { get; }

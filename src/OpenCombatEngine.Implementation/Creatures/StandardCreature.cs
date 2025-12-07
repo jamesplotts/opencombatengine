@@ -19,6 +19,7 @@ using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Effects;
 using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Spells;
+using OpenCombatEngine.Core.Interfaces.Reactions;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
@@ -35,6 +36,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public IConditionManager Conditions { get; }
         public IActionEconomy ActionEconomy { get; }
         public IEffectManager Effects { get; }
+        public IReactionManager ReactionManager { get; } // Added
         public IMovement Movement { get; }
 
         public EncumbranceLevel EncumbranceLevel
@@ -156,6 +158,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
             
             HitPoints.DamageTaken += OnDamageTaken;
+            
+            ReactionManager = new OpenCombatEngine.Implementation.Reactions.StandardReactionManager(this);
+            ReactionManager.AddReaction(new OpenCombatEngine.Implementation.Reactions.OpportunityAttackReaction(this));
         }
 
         public StandardCreature(CreatureState state)
@@ -201,6 +206,9 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             HitPoints.Died += OnDied;
             HitPoints.DamageTaken += OnDamageTaken;
+            
+            ReactionManager = new OpenCombatEngine.Implementation.Reactions.StandardReactionManager(this);
+            ReactionManager.AddReaction(new OpenCombatEngine.Implementation.Reactions.OpportunityAttackReaction(this));
         }
 
         public void ApplyAbilityScoreIncreases(Dictionary<Ability, int> increases)
