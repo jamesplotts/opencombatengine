@@ -18,6 +18,9 @@ namespace OpenCombatEngine.Implementation.Conditions
 
         public IEnumerable<ICondition> ActiveConditions => _conditions.AsReadOnly();
 
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs>? ConditionAdded;
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs>? ConditionRemoved;
+
         public StandardConditionManager(ICreature owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -28,10 +31,23 @@ namespace OpenCombatEngine.Implementation.Conditions
             return _conditions.Any(c => c.Type == type);
         }
 
+        public void Clear()
+        {
+            var all = _conditions.ToList();
+            _conditions.Clear();
+            foreach (var c in all)
+            {
+                c.OnRemoved(_owner);
+                ConditionRemoved?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ConditionEventArgs(c));
+            }
+        }
+
         public Result<bool> AddCondition(ICondition condition)
         {
-            ArgumentNullException.ThrowIfNull(condition);
+            if (condition == null) return Result<bool>.Failure("Condition cannot be null.");
 
+            // Check immunities, etc.
+            // Simplified for now.
             if (_conditions.Any(c => c.Name == condition.Name))
             {
                 return Result<bool>.Failure($"Condition '{condition.Name}' already active.");
@@ -48,6 +64,7 @@ namespace OpenCombatEngine.Implementation.Conditions
                     _owner.Effects.AddEffect(effect);
                 }
             }
+            ConditionAdded?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ConditionEventArgs(condition));
 
             return Result<bool>.Success(true);
         }
@@ -56,28 +73,22 @@ namespace OpenCombatEngine.Implementation.Conditions
         {
             if (string.IsNullOrWhiteSpace(conditionName)) return;
 
-            var condition = _conditions.FirstOrDefault(c => c.Name == conditionName);
-            if (condition != null)
-            {
-                condition.OnRemoved(_owner);
-                
-                // Remove Active Effects
-                if (condition.Effects != null)
-                {
-                    foreach (var effect in condition.Effects)
-                    {
-                        _owner.Effects.RemoveEffect(effect.Name); // Assuming unique names or ID? 
-                        // Wait, RemoveEffect takes ID usually. Or Name?
-                        // IEffectManager.RemoveEffect(string effectId).
-                        // IActiveEffect has Id property? Let's check.
-                        // If not, we might need to track IDs.
-                        // For now, let's assume RemoveEffect takes Name or ID and effect.Name is unique enough or we use ID.
-                        // Let's check IActiveEffect interface.
-                    }
-                }
+            var condition = _conditions.FirstOrDefault(c => c.Name.Equals(conditionName, StringComparison.OrdinalIgnoreCase));
+            if (condition == null) return;
 
-                _conditions.Remove(condition);
+            condition.OnRemoved(_owner);
+            
+            // Remove Active Effects
+            if (condition.Effects != null)
+            {
+                foreach (var effect in condition.Effects)
+                {
+                    _owner.Effects.RemoveEffect(effect.Name); 
+                }
             }
+
+            _conditions.Remove(condition);
+            ConditionRemoved?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ConditionEventArgs(condition));
         }
 
         public void Tick()

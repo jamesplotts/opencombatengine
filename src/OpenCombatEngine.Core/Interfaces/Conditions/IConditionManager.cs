@@ -29,6 +29,21 @@ namespace OpenCombatEngine.Core.Interfaces.Conditions
         Result<bool> AddCondition(ICondition condition);
 
         /// <summary>
+        /// Removes all conditions from the creature.
+        /// </summary>
+        void Clear();
+
+        /// <summary>
+        /// Fired when a condition is added.
+        /// </summary>
+        event System.EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs> ConditionAdded;
+
+        /// <summary>
+        /// Fired when a condition is removed.
+        /// </summary>
+        event System.EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs> ConditionRemoved;
+
+        /// <summary>
         /// Removes a condition by name.
         /// </summary>
         /// <param name="conditionName">The name of the condition to remove.</param>

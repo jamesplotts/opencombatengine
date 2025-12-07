@@ -57,6 +57,8 @@ namespace OpenCombatEngine.Implementation.Spatial
             _creaturePositions[creature.Id] = newPosition;
             _positionCreatures[newPosition] = creature.Id;
 
+            creature.Movement?.NotifyMoved(oldPos, newPosition);
+
             return Result<bool>.Success(true);
         }
 

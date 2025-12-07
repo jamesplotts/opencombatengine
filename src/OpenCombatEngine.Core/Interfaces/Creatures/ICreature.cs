@@ -165,4 +165,22 @@ public interface ICreature
     /// </summary>
     /// <param name="action">The action to remove.</param>
     void RemoveAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action);
+
+    /// <summary>
+    /// Fired when the creature starts an action.
+    /// </summary>
+    event System.EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs> ActionStarted;
+
+    /// <summary>
+    /// Fired when the creature ends an action.
+    /// </summary>
+    event System.EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs> ActionEnded;
+
+    /// <summary>
+    /// Performs the specified action, firing events.
+    /// </summary>
+    /// <param name="action">The action to perform.</param>
+    /// <param name="context">The context for the action.</param>
+    /// <returns>The result of the action.</returns>
+    OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Models.Actions.ActionResult> PerformAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action, OpenCombatEngine.Core.Interfaces.Actions.IActionContext context);
 }

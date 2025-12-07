@@ -53,6 +53,13 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public bool IsInDifficultTerrain { get; set; }
 
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.MovedEventArgs>? Moved;
+
+        public void NotifyMoved(OpenCombatEngine.Core.Models.Spatial.Position from, OpenCombatEngine.Core.Models.Spatial.Position destination)
+        {
+            Moved?.Invoke(this, new OpenCombatEngine.Core.Models.Events.MovedEventArgs(from, destination));
+        }
+
         public void Move(int distance)
         {
             if (distance < 0) throw new ArgumentOutOfRangeException(nameof(distance), "Distance cannot be negative.");

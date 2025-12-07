@@ -428,6 +428,25 @@ namespace OpenCombatEngine.Implementation.Creatures
             _customActions.Remove(action);
         }
 
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs>? ActionStarted;
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs>? ActionEnded;
+
+        public OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Models.Actions.ActionResult> PerformAction(
+            OpenCombatEngine.Core.Interfaces.Actions.IAction action, 
+            OpenCombatEngine.Core.Interfaces.Actions.IActionContext context)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+            ArgumentNullException.ThrowIfNull(context);
+
+            ActionStarted?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ActionEventArgs(action.Name, context.Target));
+
+            var result = action.Execute(context);
+
+            ActionEnded?.Invoke(this, new OpenCombatEngine.Core.Models.Events.ActionEventArgs(action.Name, context.Target));
+
+            return result;
+        }
+
         public IEnumerable<OpenCombatEngine.Core.Interfaces.Actions.IAction> Actions
         {
             get

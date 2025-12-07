@@ -31,5 +31,18 @@ namespace OpenCombatEngine.Core.Interfaces.Creatures
         /// Gets or sets whether the creature is currently in difficult terrain.
         /// </summary>
         bool IsInDifficultTerrain { get; set; }
+
+        /// <summary>
+        /// Fired when the creature moves.
+        /// </summary>
+        event System.EventHandler<OpenCombatEngine.Core.Models.Events.MovedEventArgs> Moved;
+
+        /// <summary>
+        /// Notifies the movement component that a move has occurred (physically).
+        /// Used by GridManager to trigger the Moved event.
+        /// </summary>
+        /// <param name="from">Starting position.</param>
+        /// <param name="destination">Ending position.</param>
+        void NotifyMoved(OpenCombatEngine.Core.Models.Spatial.Position from, OpenCombatEngine.Core.Models.Spatial.Position destination);
     }
 }
