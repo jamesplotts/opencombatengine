@@ -43,7 +43,9 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 - **Spellcasting System**:
   - Spell Slots & Preparation (Wizard/Sorcerer style support)
   - Spell Resolution (Attack Rolls, Saving Throws, Damage)
+  - Spell Resolution (Attack Rolls, Saving Throws, Damage)
   - Content Import (JSON support for Spells)
+  - **Open5e Integration**: Direct API access to SRD Spells and Monsters
 - **Magic Items**:
   - Attunement System (Max 3 items)
   - Passive Bonuses (Features/Conditions applied automatically)

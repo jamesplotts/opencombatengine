@@ -41,6 +41,12 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] **Refinement**: Implemented `ConditionFactory` for parsing conditions/durations.
 - [x] [Save Spellcasting System Refinements ADR](docs/adr/0056-spellcasting-refinements.md)
 
+- [x] **Cycle 56: Open5e Integration**
+    - [x] Implement `Open5eClient` and `Open5eAdapter`
+    - [x] Create `Open5eContentSource` for Spells/Monsters
+    - [x] Verify with Integration Tests
+- [x] [Save Open5e Integration ADR](docs/adr/0057-open5e-integration.md)
+
 - [x] **Design Creature Serialization**
     - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)
     - [x] Add `ToState()`/`FromState()` to component interfaces
