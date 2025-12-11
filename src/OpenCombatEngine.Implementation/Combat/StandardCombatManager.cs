@@ -15,12 +15,19 @@ namespace OpenCombatEngine.Implementation.Combat
 
         private readonly ITurnManager _turnManager;
         private readonly IGridManager? _gridManager;
+        private readonly IWinCondition _winCondition;
         private readonly List<ICreature> _participants = new();
 
-        public StandardCombatManager(ITurnManager turnManager, IGridManager? gridManager = null)
+        public IReadOnlyList<ICreature> Participants => _participants.AsReadOnly();
+
+        public StandardCombatManager(
+            ITurnManager turnManager, 
+            IGridManager? gridManager = null,
+            IWinCondition? winCondition = null)
         {
             _turnManager = turnManager ?? throw new ArgumentNullException(nameof(turnManager));
             _gridManager = gridManager;
+            _winCondition = winCondition ?? new OpenCombatEngine.Implementation.Combat.WinConditions.LastTeamStandingWinCondition();
         }
 
         public void StartEncounter(IEnumerable<ICreature> participants)
@@ -51,20 +58,9 @@ namespace OpenCombatEngine.Implementation.Combat
 
         public void CheckWinCondition()
         {
-            // Group active creatures (HP > 0 or not dead state) by Team
-            // StandardCreature defines "IsDead".
-            
-            var activeTeams = _participants
-                .Where(p => p.HitPoints.Current > 0 && !p.HitPoints.IsDead)
-                .Select(p => p.Team)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (activeTeams.Count <= 1)
+            if (_winCondition.Check(this))
             {
-                // Win Condition Met
-                string winner = activeTeams.FirstOrDefault() ?? "Draw";
-                EndEncounter(winner);
+                EndEncounter(_winCondition.GetWinner(this));
             }
         }
 

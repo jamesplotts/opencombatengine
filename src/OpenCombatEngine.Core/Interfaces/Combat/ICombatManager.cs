@@ -10,6 +10,8 @@ namespace OpenCombatEngine.Core.Interfaces.Combat
         event EventHandler<EventArgs> EncounterStarted;
         event EventHandler<EncounterEndedEventArgs> EncounterEnded;
 
+        IReadOnlyList<ICreature> Participants { get; }
+
         void StartEncounter(IEnumerable<ICreature> participants);
         void EndEncounter();
         void CheckWinCondition();

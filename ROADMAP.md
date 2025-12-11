@@ -47,6 +47,12 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Verify with Integration Tests
 - [x] [Save Open5e Integration ADR](docs/adr/0057-open5e-integration.md)
 
+- [x] **Cycle 57: Combat Loop Refinement**
+    - [x] Implement `IWinCondition` Strategy
+    - [x] Refactor Turn Loop to skip dead creatures
+    - [x] Verify with Combat Loop Tests
+- [x] [Save Combat Loop Refinement ADR](docs/adr/0058-combat-loop-refinement.md)
+
 - [x] **Design Creature Serialization**
     - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)
     - [x] Add `ToState()`/`FromState()` to component interfaces

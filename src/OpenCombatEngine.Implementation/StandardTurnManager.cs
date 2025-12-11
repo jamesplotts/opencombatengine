@@ -82,14 +82,26 @@ namespace OpenCombatEngine.Implementation
         {
             if (_turnOrder.Count == 0) return;
 
-            _currentTurnIndex++;
+            // Maximum loops to prevent infinite loop if everyone is dead
+            int checks = 0;
+            int maxChecks = _turnOrder.Count * 2; // Allow for a couple of rounds of checks just in case
 
-            if (_currentTurnIndex >= _turnOrder.Count)
+            do
             {
-                _currentTurnIndex = 0;
-                CurrentRound++;
-                RoundChanged?.Invoke(this, new RoundChangedEventArgs(CurrentRound));
-            }
+                checks++;
+                _currentTurnIndex++;
+
+                if (_currentTurnIndex >= _turnOrder.Count)
+                {
+                    _currentTurnIndex = 0;
+                    CurrentRound++;
+                    RoundChanged?.Invoke(this, new RoundChangedEventArgs(CurrentRound));
+                }
+
+                // If check count exceeds limit, stop. Maybe everyone is dead.
+                if (checks > maxChecks) return;
+
+            } while (_turnOrder[_currentTurnIndex].HitPoints.IsDead);
 
             var currentCreature = CurrentCreature;
             if (currentCreature != null)
