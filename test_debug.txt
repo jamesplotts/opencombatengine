@@ -1,4 +1,0 @@
-  Determining projects to restore...
-  All projects are up-to-date for restore.
-  OpenCombatEngine.Core -> /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Core/bin/Debug/net8.0/OpenCombatEngine.Core.dll
-/home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Combat/StandardCombatManager.cs(54,31): error CA1303: Method 'void StandardCombatManager.CheckWinCondition()' passes a literal string as parameter 'value' of a call to 'void Console.WriteLine(string? value)'. Retrieve the following string(s) from a resource table instead: "CheckWinCondition called.". (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1303) [/home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/OpenCombatEngine.Implementation.csproj]

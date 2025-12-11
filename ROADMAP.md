@@ -53,9 +53,23 @@ This document tracks the progress of the OpenCombatEngine development, including
     - [x] Verify with Combat Loop Tests
 - [x] [Save Combat Loop Refinement ADR](docs/adr/0058-combat-loop-refinement.md)
 
-- [x] **Design Creature Serialization**
-    - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)
-    - [x] Add `ToState()`/`FromState()` to component interfaces
+- [x] [Save Combat Loop Refinement ADR](docs/adr/0058-combat-loop-refinement.md)
+
+- [x] **Cycle 58: Combat Serialization**
+    - [x] Design State DTOs
+    - [x] Implement `IStateful` on Managers
+    - [x] Create `CombatSerializer`
+    - [x] Verify with Save/Load Tests
+- [x] [Save Serialization ADR](docs/adr/0059-combat-serialization.md)
+
+- [x] **Cycle 59: Completeness Verification**
+    - [x] Implement End-to-End "Mock Battle" Test
+    - [x] Verify Full System Integration
+
+## Future Work
+- [ ] Advanced AI Behaviors
+- [ ] Networking / Multiplayer Support
+- [ ] UI Integration
     - [x] Implement state logic in Standard components
     - [x] Verify with serialization tests (JSON)
 - [x] [Save Serialization Architecture Record](docs/architecture/002-creature-serialization.md)

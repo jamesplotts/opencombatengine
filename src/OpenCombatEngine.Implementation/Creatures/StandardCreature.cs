@@ -199,7 +199,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             Id = state.Id;
             Name = state.Name;
-            Team = "Neutral";
+            Team = state.Team;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
             
             Inventory = new StandardInventory();
@@ -355,7 +355,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             var levelState = (LevelManager as IStateful<LevelManagerState>)?.GetState();
 
-            return new CreatureState(Id, Name, abilityState, hpState, combatState, conditionState, levelState);
+            return new CreatureState(Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState);
         }
 
         public void AddFeature(IFeature feature)

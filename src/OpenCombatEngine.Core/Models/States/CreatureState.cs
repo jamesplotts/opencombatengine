@@ -35,6 +35,7 @@ namespace OpenCombatEngine.Core.Models.States
     /// </summary>
     /// <param name="Id">Unique identifier.</param>
     /// <param name="Name">Creature name.</param>
+    /// <param name="Team">Team assignment.</param>
     /// <param name="AbilityScores">State of ability scores.</param>
     /// <param name="HitPoints">State of hit points.</param>
     /// <param name="CombatStats">State of combat stats.</param>
@@ -43,6 +44,7 @@ namespace OpenCombatEngine.Core.Models.States
     public record CreatureState(
         Guid Id,
         string Name,
+        string Team,
         AbilityScoresState AbilityScores,
         HitPointsState HitPoints,
         CombatStatsState? CombatStats = null,

@@ -7,9 +7,11 @@ using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models;
 using OpenCombatEngine.Core.Models.Events;
 
+using OpenCombatEngine.Core.Models.States;
+
 namespace OpenCombatEngine.Implementation
 {
-    public class StandardTurnManager : ITurnManager
+    public class StandardTurnManager : ITurnManager, IStateful<TurnManagerState>
     {
         public event EventHandler<TurnChangedEventArgs>? TurnChanged;
         public event EventHandler<RoundChangedEventArgs>? RoundChanged;
@@ -117,6 +119,32 @@ namespace OpenCombatEngine.Implementation
             CurrentRound = 0;
             _currentTurnIndex = -1;
             CombatEnded?.Invoke(this, new CombatEndedEventArgs());
+        }
+        public TurnManagerState GetState()
+        {
+            var orderIds = _turnOrder.Select(c => c.Id).ToList();
+            return new TurnManagerState(CurrentRound, _currentTurnIndex, orderIds);
+        }
+
+        public void RestoreState(TurnManagerState state, IEnumerable<ICreature> availableCreatures)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            ArgumentNullException.ThrowIfNull(availableCreatures);
+
+            CurrentRound = state.CurrentRound;
+            _currentTurnIndex = state.CurrentTurnIndex;
+            
+            _turnOrder.Clear();
+            var creatureMap = availableCreatures.ToDictionary(c => c.Id);
+
+            foreach (var id in state.TurnOrderIds)
+            {
+                if (creatureMap.TryGetValue(id, out var creature))
+                {
+                    _turnOrder.Add(creature);
+                }
+                // If creature not found, skip? Or fail? Skipping is safer for partial loads.
+            }
         }
     }
 }
