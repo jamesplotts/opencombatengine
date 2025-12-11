@@ -125,7 +125,8 @@ namespace OpenCombatEngine.Implementation.Conditions
                     // Use Factory to restore standard conditions with effects
                     if (cState.Type != ConditionType.None && cState.Type != ConditionType.Custom)
                     {
-                        _conditions.Add(ConditionFactory.Create(cState.Type, cState.DurationRounds));
+                        var c = ConditionFactory.Create(cState.Type, cState.DurationRounds);
+                        if (c != null) _conditions.Add(c);
                     }
                     else
                     {

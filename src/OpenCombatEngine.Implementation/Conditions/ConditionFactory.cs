@@ -1,60 +1,73 @@
-using System.Collections.Generic;
+using System;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
-using OpenCombatEngine.Core.Interfaces.Effects;
-using OpenCombatEngine.Implementation.Effects;
+using OpenCombatEngine.Core.Interfaces.Creatures;
 
 namespace OpenCombatEngine.Implementation.Conditions
 {
     public static class ConditionFactory
     {
-        public static ICondition Create(ConditionType type, int durationRounds = -1)
+        public static OpenCombatEngine.Implementation.Conditions.Condition? Create(string name, string duration, ICreature? target = null)
         {
-            var effects = new List<IActiveEffect>();
+            if (string.IsNullOrWhiteSpace(name)) return null;
 
-            switch (type)
+            int durationRounds = ParseDuration(duration);
+            ConditionType type = ParseConditionType(name);
+            string description = $"Condition {name} applied via spell/effect.";
+
+            // In the future, we can switch on Name/Type to return specific subclasses 
+            // if we implement complex logic for specific conditions (e.g. Grappled might need a grappler source).
+            // For now, generic Condition class is sufficient as it holds the Type enum which the engine checks.
+            
+            return new OpenCombatEngine.Implementation.Conditions.Condition(name, description, durationRounds, type);
+        }
+
+        public static OpenCombatEngine.Implementation.Conditions.Condition? Create(ConditionType type, int durationRounds, ICreature? target = null)
+        {
+            if (type == ConditionType.None || type == ConditionType.Unspecified) return null;
+            
+            string name = type.ToString();
+            string description = $"Condition {name} restored/applied.";
+            
+            return new OpenCombatEngine.Implementation.Conditions.Condition(name, description, durationRounds, type);
+        }
+
+        public static OpenCombatEngine.Implementation.Conditions.Condition? Create(ConditionType type, ICreature? target = null)
+        {
+            return Create(type, 10, target);
+        }
+
+        private static int ParseDuration(string duration)
+        {
+            if (string.IsNullOrWhiteSpace(duration)) return 0; // Instantaneous or unknown
+
+            // Simple heuristics for 5e durations
+            if (duration.Contains("instant", StringComparison.OrdinalIgnoreCase)) return 0;
+            
+            int multiplier = 1;
+            // Parse number if present at start "1 minute", "10 minutes"
+            var parts = duration.Split(' ');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int val))
             {
-                case ConditionType.Blinded:
-                    effects.Add(new DisadvantageOnOutgoingAttacksEffect("Blinded"));
-                    effects.Add(new AdvantageOnIncomingAttacksEffect("Blinded"));
-                    return new Condition("Blinded", "Can't see. Disadvantage on attacks. Enemy has Advantage.", durationRounds, type, effects);
-
-                case ConditionType.Prone:
-                    // Prone is tricky: Disadvantage on attacks.
-                    // Incoming attacks: Advantage if within 5ft, Disadvantage if > 5ft.
-                    // Current Effect system is simple (Advantage/Disadvantage).
-                    // We might need a specific ProneEffect that checks distance in ModifyStat?
-                    // But ModifyStat takes StatType and int value. It doesn't know about source/target distance.
-                    // AttackAction checks distance.
-                    // AttackAction could check "IncomingAttackAdvantage" stat.
-                    // If we want distance logic, the Effect needs context.
-                    // But ModifyStat doesn't provide context (ActionContext).
-                    // This is a limitation.
-                    // For now, let's implement the simpler parts: Disadvantage on outgoing.
-                    // And maybe "IncomingAttackAdvantage" generally, noting the limitation?
-                    // Or we skip the distance check for now and just say "Advantage on incoming melee"?
-                    // 5e: "An attack roll against the creature has advantage if the attacker is within 5 feet of the creature. Otherwise, the attack roll has disadvantage."
-                    // This is complex for a simple stat modifier.
-                    // We'll implement Disadvantage on Outgoing.
-                    // For incoming, we might need a custom effect that we handle specially in AttackAction?
-                    // Or we just leave it for now.
-                    effects.Add(new DisadvantageOnOutgoingAttacksEffect("Prone"));
-                    return new Condition("Prone", "Disadvantage on attacks.", durationRounds, type, effects);
-
-                case ConditionType.Restrained:
-                    effects.Add(new DisadvantageOnOutgoingAttacksEffect("Restrained"));
-                    effects.Add(new AdvantageOnIncomingAttacksEffect("Restrained"));
-                    effects.Add(new StatBonusEffect("Restrained_DexSave", "Disadvantage on Dex saves", -1, StatType.SaveDisadvantage, 1)); // 1 = Disadvantage flag
-                    return new Condition("Restrained", "Speed 0. Disadvantage on attacks. Enemy has Advantage. Disadv on Dex saves.", durationRounds, type, effects);
-
-                case ConditionType.Poisoned:
-                    effects.Add(new DisadvantageOnOutgoingAttacksEffect("Poisoned"));
-                    effects.Add(new StatBonusEffect("Poisoned_Checks", "Disadvantage on Ability Checks", -1, StatType.CheckDisadvantage, 1));
-                    return new Condition("Poisoned", "Disadvantage on attacks and checks.", durationRounds, type, effects);
-
-                default:
-                    return new Condition(type.ToString(), "Standard condition.", durationRounds, type);
+                multiplier = val;
             }
+
+            if (duration.Contains("minute", StringComparison.OrdinalIgnoreCase)) return 10 * multiplier;
+            if (duration.Contains("hour", StringComparison.OrdinalIgnoreCase)) return 600 * multiplier;
+            if (duration.Contains("day", StringComparison.OrdinalIgnoreCase)) return 14400 * multiplier; // 24 * 600
+            if (duration.Contains("round", StringComparison.OrdinalIgnoreCase)) return 1 * multiplier;
+            if (duration.Contains("turn", StringComparison.OrdinalIgnoreCase)) return 1; // Until end of next turn?
+
+            return 0; // Default
+        }
+
+        private static ConditionType ParseConditionType(string name)
+        {
+            if (Enum.TryParse<ConditionType>(name, true, out var type))
+            {
+                return type;
+            }
+            return ConditionType.Custom;
         }
     }
 }

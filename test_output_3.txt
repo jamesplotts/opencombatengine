@@ -1,0 +1,56 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OpenCombatEngine.Core -> /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Core/bin/Debug/net8.0/OpenCombatEngine.Core.dll
+  OpenCombatEngine.Implementation -> /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/bin/Debug/net8.0/OpenCombatEngine.Implementation.dll
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/LifeStealingTests.cs(12,7): warning CS0105: The using directive for 'OpenCombatEngine.Implementation.Creatures' appeared previously in this namespace [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(29,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(53,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Content/FeatureParsingTests.cs(66,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ActiveEffectsRollsTests.cs(102,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/OpportunityAttackTests.cs(45,40): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(67,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ContainerTests.cs(75,26): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(102,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+  OpenCombatEngine.Implementation.Tests -> /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll
+Test run for /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll (.NETCoreApp,Version=v8.0)
+Microsoft (R) Test Execution Command Line Tool Version 17.8.0 (x64)
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+     Warning:
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.
+
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.
+
+     A paid commercial license supports the development and continued increasing support of
+     Fluent Assertions users under both commercial and community licenses. Help us
+     keep Fluent Assertions at the forefront of unit testing.
+
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/
+[xUnit.net 00:00:01.07]     OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Not_Apply_Condition_On_Success_Save [FAIL]
+[xUnit.net 00:00:01.13]     OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save [FAIL]
+  Failed OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Not_Apply_Condition_On_Success_Save [478 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at OpenCombatEngine.Implementation.Creatures.StandardCheckManager.RollSavingThrow(Ability ability) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Creatures/StandardCheckManager.cs:line 62
+   at OpenCombatEngine.Implementation.Actions.CastSpellAction.ApplySpellEffects(ICreature source, ICreature target, List`1 messages) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Actions/CastSpellAction.cs:line 208
+   at OpenCombatEngine.Implementation.Actions.CastSpellAction.Execute(IActionContext context) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Actions/CastSpellAction.cs:line 194
+   at OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Not_Apply_Condition_On_Success_Save() in /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Spells/SpellConditionTests.cs:line 124
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save [18 ms]
+  Error Message:
+   System.NullReferenceException : Object reference not set to an instance of an object.
+  Stack Trace:
+     at OpenCombatEngine.Implementation.Creatures.StandardCheckManager.RollSavingThrow(Ability ability) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Creatures/StandardCheckManager.cs:line 62
+   at OpenCombatEngine.Implementation.Actions.CastSpellAction.ApplySpellEffects(ICreature source, ICreature target, List`1 messages) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Actions/CastSpellAction.cs:line 208
+   at OpenCombatEngine.Implementation.Actions.CastSpellAction.Execute(IActionContext context) in /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/Actions/CastSpellAction.cs:line 194
+   at OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save() in /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Spells/SpellConditionTests.cs:line 67
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     2, Passed:     3, Skipped:     0, Total:     5, Duration: 37 ms - OpenCombatEngine.Implementation.Tests.dll (net8.0)

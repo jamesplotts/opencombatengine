@@ -25,6 +25,8 @@ namespace OpenCombatEngine.Implementation.Spells
         public System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula> DamageRolls { get; }
         public string? HealingDice { get; }
         
+        public System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition> AppliedConditions { get; }
+        
         public OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
         private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
@@ -46,6 +48,7 @@ namespace OpenCombatEngine.Implementation.Spells
             OpenCombatEngine.Core.Enums.SaveEffect saveEffect = OpenCombatEngine.Core.Enums.SaveEffect.None,
             System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula>? damageRolls = null,
             string? healingDice = null,
+            System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition>? appliedConditions = null,
             OpenCombatEngine.Core.Interfaces.Spatial.IShape? areaOfEffect = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -67,6 +70,7 @@ namespace OpenCombatEngine.Implementation.Spells
             SaveEffect = saveEffect;
             DamageRolls = damageRolls ?? new System.Collections.Generic.List<OpenCombatEngine.Core.Models.Spells.DamageFormula>();
             HealingDice = healingDice;
+            AppliedConditions = appliedConditions ?? new System.Collections.Generic.List<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition>();
             AreaOfEffect = areaOfEffect;
         }
 

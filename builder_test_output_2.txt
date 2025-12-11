@@ -6,9 +6,29 @@
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(29,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(53,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Content/FeatureParsingTests.cs(66,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
-/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Spells/SpellConditionTests.cs(74,26): error CS1061: 'ActionResult' does not contain a definition for 'Messages' and no accessible extension method 'Messages' accepting a first argument of type 'ActionResult' could be found (are you missing a using directive or an assembly reference?) [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
-/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ContainerTests.cs(75,26): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ActiveEffectsRollsTests.cs(102,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ContainerTests.cs(75,26): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/OpportunityAttackTests.cs(45,40): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(67,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
 /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(102,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+  OpenCombatEngine.Implementation.Tests -> /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll
+Test run for /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll (.NETCoreApp,Version=v8.0)
+Microsoft (R) Test Execution Command Line Tool Version 17.8.0 (x64)
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+     Warning:
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.
+
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.
+
+     A paid commercial license supports the development and continued increasing support of
+     Fluent Assertions users under both commercial and community licenses. Help us
+     keep Fluent Assertions at the forefront of unit testing.
+
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/
+
+Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 202 ms - OpenCombatEngine.Implementation.Tests.dll (net8.0)

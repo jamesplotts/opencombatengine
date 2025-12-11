@@ -5,6 +5,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Conditions;
 
 namespace OpenCombatEngine.Implementation.Actions
 {
@@ -282,6 +283,77 @@ namespace OpenCombatEngine.Implementation.Actions
                 {
                     target.HitPoints.Heal(roll.Value.Total);
                     messages.Add($"Healed {roll.Value.Total} HP.");
+                }
+            }
+
+            // 4. Conditions
+            if (_spell.AppliedConditions.Count > 0)
+            {
+                foreach (var conditionDef in _spell.AppliedConditions)
+                {
+                    bool apply = false;
+                    
+                    if (_spell.SaveAbility.HasValue)
+                    {
+                        // Save exists. Processing logic based on SaveEffectType/SaveSuccess.
+                        // Standard behavior: 
+                        // If SaveEffect is Negate -> Apply ONLY on Failure.
+                        // If SaveEffect is HalfDamage (rare for conditions) -> Usually implied Condition is Negated or Reduced? 
+                        // DND: "Half damage on save" usually implies purely damage spell.
+                        // If Condition is attached, usually "On a successful save, the creature takes half damage and isn't poisoned."
+                        // So generally, success = NO condition.
+                        
+                        if (!saveSuccess) apply = true; // Failed save = apply
+                        else
+                        {
+                            // Saved
+                            if (conditionDef.SaveEffectType == OpenCombatEngine.Core.Enums.SaveEffect.None) 
+                            { 
+                                // "None" implies save doesn't affect this? Or Always apply?
+                                // If SaveEffect is "None", maybe it means "Always Applied"?
+                                // But _spell.SaveAbility has a value.
+                                // Let's follow standard D&D: Specific conditions might apply regardless? Rare.
+                                // Usually if you save, you avoid condition.
+                                // Let's assume apply = false if saveSuccess.
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // No save required = auto apply
+                        apply = true;
+                    }
+
+                    if (apply)
+                    {
+                        // Add condition
+                        // We need a way to construct/add the condition by name.
+                        // IConditionManager usually takes an ICondition instance.
+                        // Does StandardConditionManager have a factory or Add(name)?
+                        // Searching usage... StandardConditionManager constructed with Creature.
+                        // It likely just holds a list.
+                        // We need to instantiate the specific condition class.
+                        // Do we have a factory? No.
+                        // We might need a `ConditionFactory` service.
+                        // Or simple switch for now given our small set of conditions.
+                        // We have implemented: Blinded, Charmed, Grapeled, Paralyzed, Poisoned, Prone, Restrained, Stunned, Unconscious...
+                        // We have `StandardCondition` classes for some? Or `ActiveCondition`?
+                        // Checking file structure... we have `OpenCombatEngine.Implementation.Conditions` namespace.
+                        
+                        // For this iteration, I'll assume we can use a helper or factory.
+                        // Since I can't browse all condition files right now efficiently, I'll use a local helper method `CreateCondition`.
+                        
+                        var condition = ConditionFactory.Create(conditionDef.ConditionName, conditionDef.Duration, target);
+                        if (condition != null)
+                        {
+                            target.Conditions.AddCondition(condition);
+                            messages.Add($"Applied {conditionDef.ConditionName}.");
+                        }
+                        else
+                        {
+                            messages.Add($"Warning: Unknown condition '{conditionDef.ConditionName}'.");
+                        }
+                    }
                 }
             }
         }

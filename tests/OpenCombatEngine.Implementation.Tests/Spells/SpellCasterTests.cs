@@ -41,6 +41,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
             public SaveEffect SaveEffect { get; } = SaveEffect.None;
             public IReadOnlyList<DamageFormula> DamageRolls { get; } = new List<DamageFormula>();
             public string? HealingDice { get; } = null;
+            public IReadOnlyList<SpellConditionDefinition> AppliedConditions { get; } = new List<SpellConditionDefinition>();
 
             public FakeSpell(string name, int level)
             {

@@ -48,6 +48,22 @@ namespace OpenCombatEngine.Implementation.Builders
             return this;
         }
 
+        private readonly List<OpenCombatEngine.Core.Interfaces.Items.IItem> _startingEquipment = new();
+
+        public CharacterBuilder WithEquipment(IEnumerable<OpenCombatEngine.Core.Interfaces.Items.IItem> items)
+        {
+            if (items != null)
+            {
+                _startingEquipment.AddRange(items);
+            }
+            return this;
+        }
+
+        public CharacterBuilder WithEquipment(params OpenCombatEngine.Core.Interfaces.Items.IItem[] items)
+        {
+            return WithEquipment((IEnumerable<OpenCombatEngine.Core.Interfaces.Items.IItem>)items);
+        }
+
         public ICreature Build()
         {
             var id = Guid.NewGuid().ToString();
@@ -103,6 +119,28 @@ namespace OpenCombatEngine.Implementation.Builders
                     
                     stdHp.SetMax(correctMax);
                     stdHp.Heal(correctMax); // Ensure current is full
+                }
+            }
+
+            // Add and Equip Starting Gear
+            foreach (var item in _startingEquipment)
+            {
+                creature.Inventory.AddItem(item);
+                
+                if (item is OpenCombatEngine.Core.Interfaces.Items.IWeapon weapon)
+                {
+                    creature.Equipment.EquipMainHand(weapon);
+                }
+                else if (item is OpenCombatEngine.Core.Interfaces.Items.IArmor armor)
+                {
+                    if (armor.Category == OpenCombatEngine.Core.Interfaces.Items.ArmorCategory.Shield)
+                    {
+                        creature.Equipment.EquipShield(armor);
+                    }
+                    else
+                    {
+                        creature.Equipment.EquipArmor(armor);
+                    }
                 }
             }
             

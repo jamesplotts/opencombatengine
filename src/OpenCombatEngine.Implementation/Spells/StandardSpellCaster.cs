@@ -154,13 +154,18 @@ namespace OpenCombatEngine.Implementation.Spells
 
         public void SetPactSlots(int quantity, int level)
         {
+            int oldMax = PactSlotsMax;
             PactSlotsMax = quantity;
             PactSlotLevel = level;
+            
+            // If gaining slots, add the difference to current.
+            if (PactSlotsMax > oldMax)
+            {
+                PactSlotsCurrent += (PactSlotsMax - oldMax);
+            }
+            
             // Cap current
             if (PactSlotsCurrent > PactSlotsMax) PactSlotsCurrent = PactSlotsMax;
-            // Or should we refill on set? Usually set happens on level up.
-            // Let's implicitly fill if it was 0? No.
-            // Let's just cap.
         }
 
         public void LearnSpell(ISpell spell)

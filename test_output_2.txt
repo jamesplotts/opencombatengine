@@ -1,0 +1,70 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OpenCombatEngine.Core -> /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Core/bin/Debug/net8.0/OpenCombatEngine.Core.dll
+  OpenCombatEngine.Implementation -> /home/jamesp/Projects/OpenCombatEngine/src/OpenCombatEngine.Implementation/bin/Debug/net8.0/OpenCombatEngine.Implementation.dll
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/LifeStealingTests.cs(12,7): warning CS0105: The using directive for 'OpenCombatEngine.Implementation.Creatures' appeared previously in this namespace [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(29,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/CheckManagerTests.cs(53,38): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ActiveEffectsRollsTests.cs(102,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/ContainerTests.cs(75,26): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Content/FeatureParsingTests.cs(66,13): warning CS8602: Dereference of a possibly null reference. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(67,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/OpportunityAttackTests.cs(45,40): warning CS8600: Converting null literal or possible null value to non-nullable type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Features/RageTests.cs(102,17): warning CS8625: Cannot convert null literal to non-nullable reference type. [/home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/OpenCombatEngine.Implementation.Tests.csproj]
+  OpenCombatEngine.Implementation.Tests -> /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll
+Test run for /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/bin/Debug/net8.0/OpenCombatEngine.Implementation.Tests.dll (.NETCoreApp,Version=v8.0)
+Microsoft (R) Test Execution Command Line Tool Version 17.8.0 (x64)
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+     Warning:
+     The component "Fluent Assertions" is governed by the rules defined in the Xceed License Agreement and
+     the Xceed Fluent Assertions Community License. You may use Fluent Assertions free of charge for
+     non-commercial use only. An active subscription is required to use Fluent Assertions for commercial use.
+
+     Please contact Xceed Sales mailto:sales@xceed.com to acquire a subscription at a very low cost.
+
+     A paid commercial license supports the development and continued increasing support of
+     Fluent Assertions users under both commercial and community licenses. Help us
+     keep Fluent Assertions at the forefront of unit testing.
+
+     For more information, visit https://xceed.com/products/unit-testing/fluent-assertions/
+[xUnit.net 00:00:00.81]     OpenCombatEngine.Implementation.Tests.Spells.AdvancedSpellTests.CastSpellAction_Should_Scale_Cantrip_Damage [FAIL]
+[xUnit.net 00:00:00.86]     OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save [FAIL]
+  Failed OpenCombatEngine.Implementation.Tests.Spells.AdvancedSpellTests.CastSpellAction_Should_Scale_Cantrip_Damage [316 ms]
+  Error Message:
+   NSubstitute.Exceptions.ReceivedCallsException : Expected to receive exactly 2 calls matching:
+	Roll("1d10")
+Actually received 1 matching call:
+	Roll("1d10")
+
+  Stack Trace:
+     at NSubstitute.Core.ReceivedCallsExceptionThrower.Throw(ICallSpecification callSpecification, IEnumerable`1 matchingCalls, IEnumerable`1 nonMatchingCalls, Quantity requiredQuantity)
+   at NSubstitute.Routing.Handlers.CheckReceivedCallsHandler.Handle(ICall call)
+   at NSubstitute.Routing.Route.Handle(ICall call)
+   at NSubstitute.Core.CallRouter.Route(ICall call)
+   at NSubstitute.Proxies.CastleDynamicProxy.CastleForwardingInterceptor.Intercept(IInvocation invocation)
+   at Castle.DynamicProxy.AbstractInvocation.Proceed()
+   at NSubstitute.Proxies.CastleDynamicProxy.ProxyIdInterceptor.Intercept(IInvocation invocation)
+   at Castle.DynamicProxy.AbstractInvocation.Proceed()
+   at Castle.Proxies.ObjectProxy.Roll(String notation)
+   at OpenCombatEngine.Implementation.Tests.Spells.AdvancedSpellTests.CastSpellAction_Should_Scale_Cantrip_Damage() in /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Spells/AdvancedSpellTests.cs:line 71
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save [72 ms]
+  Error Message:
+   Expected result.Value.Message "Cast successfully. Saved!" to contain "Applied Paralyzed".
+  Stack Trace:
+     at FluentAssertions.Execution.LateBoundTestFramework.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.AddPreFormattedFailure(String formattedFailureMessage)
+   at FluentAssertions.Execution.AssertionChain.FailWith(Func`1 getFailureReason)
+   at FluentAssertions.Execution.AssertionChain.FailWith(Func`1 getFailureReason)
+   at FluentAssertions.Execution.AssertionChain.FailWith(String message, Object[] args)
+   at FluentAssertions.Primitives.StringAssertions`1.Contain(String expected, String because, Object[] becauseArgs)
+   at OpenCombatEngine.Implementation.Tests.Spells.SpellConditionTests.CastSpell_Should_Apply_Condition_On_Failed_Save() in /home/jamesp/Projects/OpenCombatEngine/tests/OpenCombatEngine.Implementation.Tests/Spells/SpellConditionTests.cs:line 74
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     2, Passed:     3, Skipped:     0, Total:     5, Duration: 68 ms - OpenCombatEngine.Implementation.Tests.dll (net8.0)

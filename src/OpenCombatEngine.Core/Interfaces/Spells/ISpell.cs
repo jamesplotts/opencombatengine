@@ -26,6 +26,7 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         
         System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula> DamageRolls { get; }
         string? HealingDice { get; }
+        System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition> AppliedConditions { get; }
         
         OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 

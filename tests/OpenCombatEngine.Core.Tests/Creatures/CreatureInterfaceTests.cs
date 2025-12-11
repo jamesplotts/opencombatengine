@@ -11,7 +11,10 @@ using OpenCombatEngine.Core.Results;
 using Xunit;
 using System;
 using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
+using OpenCombatEngine.Core.Interfaces.Reactions;
+using OpenCombatEngine.Core.Models.Spatial;
 
 namespace OpenCombatEngine.Core.Tests.Creatures;
 
@@ -95,6 +98,15 @@ public class CreatureInterfaceTests
         public void RemoveAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action) { }
         
         public OpenCombatEngine.Core.Interfaces.Effects.IEffectManager Effects { get; } = null!; // Stub
+        public IReactionManager ReactionManager { get; } = null!;
+        
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs>? ActionStarted;
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ActionEventArgs>? ActionEnded;
+
+        public Result<OpenCombatEngine.Core.Models.Actions.ActionResult> PerformAction(OpenCombatEngine.Core.Interfaces.Actions.IAction action, OpenCombatEngine.Core.Interfaces.Actions.IActionContext context)
+        {
+            return Result<OpenCombatEngine.Core.Models.Actions.ActionResult>.Success(new OpenCombatEngine.Core.Models.Actions.ActionResult(true, "Stub Action Performed"));
+        }
         
         public StubCreature()
         {
@@ -139,6 +151,8 @@ public class CreatureInterfaceTests
         public void AddSavingThrowProficiency(Ability ability) { }
         public void RemoveSavingThrowProficiency(Ability ability) { }
         public bool HasSavingThrowProficiency(Ability ability) => false;
+
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs>? SavingThrowRolled;
     }
 
     private class StubMovement : IMovement
@@ -150,7 +164,11 @@ public class CreatureInterfaceTests
         public bool CanMove(int feet) => true;
         public void Move(int feet) { }
         public void ResetMovement() { }
+
         public void ResetTurn() { }
+
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.MovedEventArgs>? Moved;
+        public void NotifyMoved(Position from, Position destination) { }
     }
 
     private class StubActionEconomy : IActionEconomy
@@ -170,7 +188,12 @@ public class CreatureInterfaceTests
         public IEnumerable<ICondition> ActiveConditions => Enumerable.Empty<ICondition>();
         public bool HasCondition(ConditionType type) => false;
         public Result<bool> AddCondition(ICondition condition) => Result<bool>.Success(true);
+
         public void RemoveCondition(string conditionName) { }
+        public void Clear() { }
+        
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs>? ConditionAdded;
+        public event EventHandler<OpenCombatEngine.Core.Models.Events.ConditionEventArgs>? ConditionRemoved;
         public void Tick() { }
     }
 

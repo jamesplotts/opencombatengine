@@ -34,10 +34,12 @@ This document tracks the progress of the OpenCombatEngine development, including
 - [x] **Cycle 54: AoE Actions & Saving Throws**
     - [x] Add `SavingThrowRolled` event to `ICheckManager`
     - [x] Implement `FireballAction` using `IShape`
-- [ ] **Cycle 55: Spellcasting System**
-    - [ ] Implement `StandardSpellCaster`
-    - [ ] Update `CastSpellAction` to consume slots
-    - [ ] Create `SpellCastingTests` (JSON)
+- [x] **Cycle 55: Spellcasting System**
+    - [x] Implement `StandardSpellCaster`
+    - [x] Update `CastSpellAction` to consume slots
+    - [x] Create `SpellCastingTests` (JSON)
+    - [x] **Refinement**: Implemented `ConditionFactory` for parsing conditions/durations.
+- [x] [Save Spellcasting System Refinements ADR](docs/adr/0056-spellcasting-refinements.md)
 
 - [x] **Design Creature Serialization**
     - [x] Create State DTOs (`CreatureState`, `AbilityScoreState`, etc.)

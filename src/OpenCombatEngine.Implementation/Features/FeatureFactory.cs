@@ -103,9 +103,21 @@ namespace OpenCombatEngine.Implementation.Features
             // Check for Actions
             // "As an action", "As a bonus action"
             if (description.Contains("As an action", StringComparison.OrdinalIgnoreCase) || 
-                description.Contains("use your action", StringComparison.OrdinalIgnoreCase))
+                description.Contains("use your action", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("Breath Weapon", StringComparison.OrdinalIgnoreCase)) // Breath weapons usually actions
             {
                 var action = new OpenCombatEngine.Implementation.Actions.TextAction(name, description, ActionType.Action);
+                
+                // Check for Recharge
+                // "Recharge 5-6", "Recharge 6"
+                var rechargeMatch = Regex.Match(name + " " + description, @"Recharge (\d)(?:-(\d))?");
+                if (rechargeMatch.Success)
+                {
+                    int min = int.Parse(rechargeMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    var rechargeable = new OpenCombatEngine.Implementation.Actions.RechargeableAction(action, min);
+                    return new RechargeableFeature(name, rechargeable);
+                }
+
                 return new ActionFeature(name, action);
             }
 
