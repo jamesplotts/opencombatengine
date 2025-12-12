@@ -17,19 +17,19 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         [Fact]
         public void ConditionFactory_Should_Parse_Duration_Correctly()
         {
-            ConditionFactory.Create("Test", "1 minute").DurationRounds.Should().Be(10);
-            ConditionFactory.Create("Test", "1 round").DurationRounds.Should().Be(1);
-            ConditionFactory.Create("Test", "1 hour").DurationRounds.Should().Be(600);
-            ConditionFactory.Create("Test", "Instantaneous").DurationRounds.Should().Be(0);
-            ConditionFactory.Create("Test", "10 minutes").DurationRounds.Should().Be(100);
+            ConditionFactory.Create("Test", "1 minute")!.DurationRounds.Should().Be(10);
+            ConditionFactory.Create("Test", "1 round")!.DurationRounds.Should().Be(1);
+            ConditionFactory.Create("Test", "1 hour")!.DurationRounds.Should().Be(600);
+            ConditionFactory.Create("Test", "Instantaneous")!.DurationRounds.Should().Be(0);
+            ConditionFactory.Create("Test", "10 minutes")!.DurationRounds.Should().Be(100);
         }
 
         [Fact]
         public void ConditionFactory_Should_Parse_Type_Correctly()
         {
-            ConditionFactory.Create("Blinded", "1 round").Type.Should().Be(ConditionType.Blinded);
-            ConditionFactory.Create("Charmed", "1 round").Type.Should().Be(ConditionType.Charmed);
-            ConditionFactory.Create("UnknownCondition", "1 round").Type.Should().Be(ConditionType.Custom);
+            ConditionFactory.Create("Blinded", "1 round")!.Type.Should().Be(ConditionType.Blinded);
+            ConditionFactory.Create("Charmed", "1 round")!.Type.Should().Be(ConditionType.Charmed);
+            ConditionFactory.Create("UnknownCondition", "1 round")!.Type.Should().Be(ConditionType.Custom);
         }
 
         [Fact]

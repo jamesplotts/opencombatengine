@@ -40,7 +40,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Blinded_Should_Impose_Disadvantage_On_Attacker()
         {
             // Arrange
-            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Blinded));
+            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Blinded)!);
             
             var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
@@ -60,7 +60,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Blinded_Target_Should_Grant_Advantage_To_Attacker()
         {
             // Arrange
-            _target.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Blinded));
+            _target.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Blinded)!);
             
             var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
@@ -80,7 +80,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Poisoned_Should_Impose_Disadvantage_On_Attacker()
         {
             // Arrange
-            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Poisoned));
+            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Poisoned)!);
             
             var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
@@ -99,7 +99,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         [Fact]
         public void Restrained_Should_Impose_Disadvantage_On_Attacker()
         {
-            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Restrained));
+            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Restrained)!);
             
             var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
@@ -114,7 +114,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         [Fact]
         public void Restrained_Target_Should_Grant_Advantage_To_Attacker()
         {
-            _target.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Restrained));
+            _target.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Restrained)!);
             
             var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
