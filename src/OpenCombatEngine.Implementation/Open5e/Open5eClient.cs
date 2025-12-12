@@ -16,7 +16,7 @@ namespace OpenCombatEngine.Implementation.Open5e
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
 
-        public async Task<Open5eSpell?> GetSpellAsync(string slug)
+        public virtual async Task<Open5eSpell?> GetSpellAsync(string slug)
         {
             if (string.IsNullOrWhiteSpace(slug)) return null;
             
@@ -39,7 +39,7 @@ namespace OpenCombatEngine.Implementation.Open5e
             }
         }
 
-        public async Task<Open5eMonster?> GetMonsterAsync(string slug)
+        public virtual async Task<Open5eMonster?> GetMonsterAsync(string slug)
         {
             if (string.IsNullOrWhiteSpace(slug)) return null;
 
