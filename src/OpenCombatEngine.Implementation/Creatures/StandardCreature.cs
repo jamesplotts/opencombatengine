@@ -29,6 +29,7 @@ namespace OpenCombatEngine.Implementation.Creatures
         public string Name { get; }
         public string Team { get; set; } = "Player";
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
+        public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
         
         public IAbilityScores AbilityScores { get; private set; }
         public IHitPoints HitPoints { get; }

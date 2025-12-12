@@ -105,6 +105,41 @@ namespace OpenCombatEngine.Implementation.Open5e
                 }
             }
 
+            dto.Tags = new List<string>();
+            if (!string.IsNullOrWhiteSpace(source.Type)) dto.Tags.Add(source.Type);
+            if (!string.IsNullOrWhiteSpace(source.Alignment)) dto.Tags.Add(source.Alignment); // Alignment is string in Open5eMonster
+            
+            // Infer Roles
+            bool isArtillery = false;
+            if (dto.Action != null)
+            {
+                foreach (var act in dto.Action)
+                {
+                    // Check entries for range
+                    // Format often: "Melee or Ranged Weapon Attack: +X to hit, reach 5 ft. or range 20/60 ft., one target."
+                    // Regex for "range X" or "range X/Y"
+                    if (act.Entries == null) continue;
+                    foreach (var entryObj in act.Entries)
+                    {
+                        var entry = entryObj.ToString();
+                        if (string.IsNullOrWhiteSpace(entry)) continue;
+                        
+                        // Check for range > 10 (arbitrary threshold for "Ranged" vs Reach)
+                        // This regex looks for "range" followed by digits.
+                        var rangeMatch = System.Text.RegularExpressions.Regex.Match(entry, @"range\s+(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (rangeMatch.Success)
+                        {
+                             if (int.TryParse(rangeMatch.Groups[1].Value, out int rangeVal))
+                             {
+                                 if (rangeVal > 10) isArtillery = true;
+                             }
+                        }
+                    }
+                }
+            }
+            
+            if (isArtillery) dto.Tags.Add("Role:Artillery");
+
             return dto;
         }
     }

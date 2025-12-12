@@ -90,6 +90,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             // So it should Move towards B.
             
             decision.Action.Name.Should().Be("Move");
+            var moveTarget = ((OpenCombatEngine.Core.Models.Actions.PositionTarget)decision.Target).Position;
+            
             // Verify target is valid step closer to B
             // B is at (0,2).
             // Move Target should be adjacent to B (Distance 5).

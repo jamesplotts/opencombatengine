@@ -88,6 +88,10 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
                     creature.AddAction(action);
                 }
             }
+            if (dto.Tags != null)
+            {
+                creature.Tags = dto.Tags.ToList();
+            }
 
             return creature;
         }

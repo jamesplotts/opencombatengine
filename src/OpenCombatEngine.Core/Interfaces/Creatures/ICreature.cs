@@ -33,6 +33,12 @@ public interface ICreature
     IAbilityScores AbilityScores { get; }
 
     /// <summary>
+    /// Gets the tags associated with the creature (e.g. "Role:Artillery", "Undead").
+    /// </summary>
+    System.Collections.Generic.IEnumerable<string> Tags { get; }
+
+
+    /// <summary>
     /// Gets the hit points for the creature.
     /// </summary>
     IHitPoints HitPoints { get; }

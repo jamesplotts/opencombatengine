@@ -54,6 +54,9 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("action")]
         public List<MonsterActionDto>? Action { get; set; }
+
+        [JsonPropertyName("tags")]
+        public List<string>? Tags { get; set; }
     }
 
     public class HpDto
