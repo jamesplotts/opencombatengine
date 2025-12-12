@@ -23,6 +23,10 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - Ability Scores (STR, DEX, CON, INT, WIS, CHA)
   - Modifiers calculated automatically (`(Score - 10) / 2`)
   - Dice Rolling (Standard notation like `1d20+5`, Advantage/Disadvantage)
+- **Advanced AI System**:
+  - **Tier 1 (Zombie)**: Basic aggro and attack logic.
+  - **Tier 2 (Tactical)**: Intelligent targeting and self-preservation.
+  - **Tier 3 (Role-Based)**: Specialized roles like Artillery (kiting) and Brute.
 - **Creature Management**:
   - Composition-based architecture (`ICreature`, `IAbilityScores`, `IHitPoints`)
   - **Serialization**: Memento pattern support for saving/loading creature state (JSON compatible)
@@ -45,7 +49,10 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - Spell Resolution (Attack Rolls, Saving Throws, Damage)
   - Spell Resolution (Attack Rolls, Saving Throws, Damage)
   - Content Import (JSON support for Spells)
-  - **Open5e Integration**: Direct API access to SRD Spells and Monsters
+  - **Open5e Integration**: Direct API access to SRD Spells, Monsters, Weapons, and Armor.
+- **Loot & Items**:
+  - Procedural Loot Generation based on CR tiers.
+  - Standard Item Library with Weapons, Armor, and Magic Items.
 - **Magic Items**:
   - Attunement System (Max 3 items)
   - Passive Bonuses (Features/Conditions applied automatically)

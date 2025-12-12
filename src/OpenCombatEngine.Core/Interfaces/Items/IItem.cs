@@ -1,4 +1,5 @@
 using System;
+using OpenCombatEngine.Core.Enums;
 
 namespace OpenCombatEngine.Core.Interfaces.Items
 {
@@ -9,5 +10,7 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         string Description { get; }
         double Weight { get; }
         int Value { get; }
+        ItemRarity Rarity { get; }
+        ItemType Type { get; }
     }
 }

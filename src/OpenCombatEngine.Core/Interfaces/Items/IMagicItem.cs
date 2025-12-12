@@ -14,7 +14,7 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// </summary>
         bool RequiresAttunement { get; }
 
-        ItemType Type { get; }
+
 
         /// <summary>
         /// Gets the creature currently attuned to this item, if any.

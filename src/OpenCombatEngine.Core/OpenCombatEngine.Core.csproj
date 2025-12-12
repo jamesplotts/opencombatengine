@@ -19,6 +19,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/yourusername/OpenCombatEngine</RepositoryUrl>
     <PackageTags>dnd;5e;srd;combat;tabletop;rpg</PackageTags>
+    <Version>0.6.0-rc1</Version>
   </PropertyGroup>
 
 </Project>

@@ -14,6 +14,7 @@ namespace OpenCombatEngine.Implementation.Items
         public string Description { get; }
         public double Weight { get; }
         public int Value { get; }
+        public OpenCombatEngine.Core.Enums.ItemRarity Rarity { get; } = OpenCombatEngine.Core.Enums.ItemRarity.Common;
         public ItemType Type { get; }
         public bool RequiresAttunement { get; }
         public ICreature? AttunedCreature { get; private set; }

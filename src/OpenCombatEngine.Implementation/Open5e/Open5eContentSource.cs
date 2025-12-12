@@ -5,6 +5,9 @@ using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Content.Mappers;
+using OpenCombatEngine.Core.Interfaces.Items;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenCombatEngine.Implementation.Open5e
 {
@@ -61,6 +64,57 @@ namespace OpenCombatEngine.Implementation.Open5e
                 return Result<ICreature>.Failure($"Error mapping monster '{slug}': {ex.Message}");
             }
 #pragma warning restore CA1031
+        }
+
+        public async Task<IEnumerable<IWeapon>> GetAllWeaponsAsync()
+        {
+            var result = new List<IWeapon>();
+            int page = 1;
+            while (true)
+            {
+                var response = await _client.GetWeaponsAsync(page).ConfigureAwait(false);
+                if (response == null || response.Results.Count == 0) break;
+
+                result.AddRange(response.Results.Select(Open5eItemMapper.MapWeapon));
+                
+                if (string.IsNullOrEmpty(response.Next)) break;
+                page++;
+            }
+            return result;
+        }
+
+        public async Task<IEnumerable<IArmor>> GetAllArmorAsync()
+        {
+            var result = new List<IArmor>();
+            int page = 1;
+            while (true)
+            {
+                var response = await _client.GetArmorAsync(page).ConfigureAwait(false);
+                if (response == null || response.Results.Count == 0) break;
+
+                result.AddRange(response.Results.Select(Open5eItemMapper.MapArmor));
+                
+                if (string.IsNullOrEmpty(response.Next)) break;
+                page++;
+            }
+            return result;
+        }
+
+        public async Task<IEnumerable<IItem>> GetAllMagicItemsAsync()
+        {
+            var result = new List<IItem>();
+            int page = 1;
+            while (true)
+            {
+                var response = await _client.GetMagicItemsAsync(page).ConfigureAwait(false);
+                if (response == null || response.Results.Count == 0) break;
+
+                result.AddRange(response.Results.Select(Open5eItemMapper.MapMagicItem));
+                
+                if (string.IsNullOrEmpty(response.Next)) break;
+                page++;
+            }
+            return result;
         }
     }
 }

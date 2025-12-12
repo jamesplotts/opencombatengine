@@ -114,7 +114,34 @@ namespace OpenCombatEngine.Implementation.Actions
             }
             
             bool hasAdvantage = isFlanking; 
-            bool hasDisadvantage = isProne; 
+            bool hasDisadvantage = false; // Initialize to false (isProne checked below)
+
+            // 1. Condition Checks
+            if (source.Conditions != null)
+            {
+                if (source.Conditions.HasCondition(ConditionType.Blinded)) hasDisadvantage = true;
+                if (source.Conditions.HasCondition(ConditionType.Poisoned)) hasDisadvantage = true;
+                if (source.Conditions.HasCondition(ConditionType.Restrained)) hasDisadvantage = true;
+                // Prone is already checked above, but let's consolidate if possible. 
+                // isProne variable was defined above at line 107.
+                if (isProne) hasDisadvantage = true;
+                
+                if (source.Conditions.HasCondition(ConditionType.Invisible)) hasAdvantage = true;
+            }
+
+            if (target.Conditions != null)
+            {
+                 // Target Conditions granting Advantage to Attacker
+                 if (target.Conditions.HasCondition(ConditionType.Blinded)) hasAdvantage = true;
+                 if (target.Conditions.HasCondition(ConditionType.Restrained)) hasAdvantage = true;
+                 if (target.Conditions.HasCondition(ConditionType.Paralyzed)) hasAdvantage = true;
+                 if (target.Conditions.HasCondition(ConditionType.Petrified)) hasAdvantage = true;
+                 if (target.Conditions.HasCondition(ConditionType.Stunned)) hasAdvantage = true;
+                 if (target.Conditions.HasCondition(ConditionType.Unconscious)) hasAdvantage = true;
+                 
+                 // Target Invisible imposes Disadvantage
+                 if (target.Conditions.HasCondition(ConditionType.Invisible)) hasDisadvantage = true; // Assuming attacker doesn't see invisible
+            } 
 
             // Check Active Effects (Source)
             if (source.Effects != null)
