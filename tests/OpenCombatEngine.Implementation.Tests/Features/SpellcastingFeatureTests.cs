@@ -26,7 +26,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             feature.OnApplied(creature);
 
             // Assert
-            spellCaster.Received(1).LearnSpell(spell);
+            spellCaster.Received(1).LearnSpell(spell, bypassClassValidation: true);
         }
 
         [Fact]

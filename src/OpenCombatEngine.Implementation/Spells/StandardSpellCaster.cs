@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Classes;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Core.Interfaces.Spells;
@@ -31,13 +32,20 @@ namespace OpenCombatEngine.Implementation.Spells
         private readonly Func<Ability, int> _getModifier;
         private readonly Func<int> _getProficiency;
         private readonly bool _isPreparedCaster;
+        private readonly Func<IEnumerable<IClassDefinition>>? _getClasses;
 
-        public StandardSpellCaster(Ability castingAbility, Func<Ability, int> getModifier, Func<int> getProficiency, bool isPreparedCaster = true)
+        public StandardSpellCaster(
+            Ability castingAbility,
+            Func<Ability, int> getModifier,
+            Func<int> getProficiency,
+            bool isPreparedCaster = true,
+            Func<IEnumerable<IClassDefinition>>? getClasses = null)
         {
             _castingAbility = castingAbility;
             _getModifier = getModifier ?? throw new ArgumentNullException(nameof(getModifier));
             _getProficiency = getProficiency ?? throw new ArgumentNullException(nameof(getProficiency));
             _isPreparedCaster = isPreparedCaster;
+            _getClasses = getClasses;
         }
 
         public IReadOnlyList<ISpell> KnownSpells => _knownSpells.AsReadOnly();
@@ -168,9 +176,20 @@ namespace OpenCombatEngine.Implementation.Spells
             if (PactSlotsCurrent > PactSlotsMax) PactSlotsCurrent = PactSlotsMax;
         }
 
-        public void LearnSpell(ISpell spell)
+        public void LearnSpell(ISpell spell, bool bypassClassValidation = false)
         {
             ArgumentNullException.ThrowIfNull(spell);
+
+            // Spells granted outside the normal class-list flow (racial cantrips, magic items, etc.)
+            // pass bypassClassValidation: true, since those are legitimate exceptions to a class's spell list.
+            if (!bypassClassValidation && _getClasses != null)
+            {
+                var classes = _getClasses().ToList();
+                bool allowed = classes.Count == 0
+                    || classes.Any(c => SpellValidationService.IsSpellValidForClass(c, spell));
+                if (!allowed) return;
+            }
+
             if (!_knownSpells.Any(s => s.Name == spell.Name))
             {
                 _knownSpells.Add(spell);

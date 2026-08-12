@@ -54,7 +54,12 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         /// <summary>
         /// Adds a spell to the known spells list.
         /// </summary>
-        void LearnSpell(ISpell spell);
+        /// <param name="spell">The spell to learn.</param>
+        /// <param name="bypassClassValidation">
+        /// When true, skips the class spell-list check. Use for grants that legitimately fall
+        /// outside the normal class spell list (racial cantrips, magic items, etc.).
+        /// </param>
+        void LearnSpell(ISpell spell, bool bypassClassValidation = false);
 
         /// <summary>
         /// Prepares a spell from the known spells list.

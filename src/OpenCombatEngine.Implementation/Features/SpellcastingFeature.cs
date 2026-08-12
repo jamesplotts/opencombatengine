@@ -25,7 +25,9 @@ namespace OpenCombatEngine.Implementation.Features
             {
                 foreach (var spell in Spells)
                 {
-                    creature.Spellcasting.LearnSpell(spell);
+                    // Racial/feature-granted spells (e.g. a High Elf's cantrip) are not restricted
+                    // by the creature's class spell list.
+                    creature.Spellcasting.LearnSpell(spell, bypassClassValidation: true);
                 }
             }
         }

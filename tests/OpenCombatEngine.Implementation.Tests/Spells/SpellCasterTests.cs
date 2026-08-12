@@ -199,5 +199,59 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
             caster.PreparedSpells.Should().Contain(s => s.Name == "Test1");
             caster.PreparedSpells.Should().NotContain(s => s.Name == "Test2");
         }
+
+        [Fact]
+        public void LearnSpell_Should_Reject_Spell_Not_On_Any_Class_List()
+        {
+            var wizardList = new OpenCombatEngine.Core.Models.Spells.SpellList("Wizard", new[] { "Fireball" });
+            var wizard = new OpenCombatEngine.Implementation.Classes.ClassDefinition("Wizard", 6, spellList: wizardList);
+            var caster = new StandardSpellCaster(
+                Ability.Intelligence,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus,
+                getClasses: () => new[] { (OpenCombatEngine.Core.Interfaces.Classes.IClassDefinition)wizard }
+            );
+            var offListSpell = new FakeSpell("Cure Wounds", 1);
+
+            caster.LearnSpell(offListSpell);
+
+            caster.KnownSpells.Should().NotContain(s => s.Name == "Cure Wounds");
+        }
+
+        [Fact]
+        public void LearnSpell_Should_Accept_Spell_On_Class_List()
+        {
+            var wizardList = new OpenCombatEngine.Core.Models.Spells.SpellList("Wizard", new[] { "Fireball" });
+            var wizard = new OpenCombatEngine.Implementation.Classes.ClassDefinition("Wizard", 6, spellList: wizardList);
+            var caster = new StandardSpellCaster(
+                Ability.Intelligence,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus,
+                getClasses: () => new[] { (OpenCombatEngine.Core.Interfaces.Classes.IClassDefinition)wizard }
+            );
+            var onListSpell = new FakeSpell("Fireball", 3);
+
+            caster.LearnSpell(onListSpell);
+
+            caster.KnownSpells.Should().Contain(s => s.Name == "Fireball");
+        }
+
+        [Fact]
+        public void LearnSpell_Should_Bypass_Class_Validation_When_Requested()
+        {
+            var wizardList = new OpenCombatEngine.Core.Models.Spells.SpellList("Wizard", new[] { "Fireball" });
+            var wizard = new OpenCombatEngine.Implementation.Classes.ClassDefinition("Wizard", 6, spellList: wizardList);
+            var caster = new StandardSpellCaster(
+                Ability.Intelligence,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus,
+                getClasses: () => new[] { (OpenCombatEngine.Core.Interfaces.Classes.IClassDefinition)wizard }
+            );
+            var racialCantrip = new FakeSpell("Dancing Lights", 0);
+
+            caster.LearnSpell(racialCantrip, bypassClassValidation: true);
+
+            caster.KnownSpells.Should().Contain(s => s.Name == "Dancing Lights");
+        }
     }
 }

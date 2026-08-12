@@ -38,7 +38,7 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
             public int GetMaxSlots(int level) => Slots.TryGetValue(level, out int v) ? v : 0;
             public Result<bool> ConsumeSlot(int level) => throw new NotImplementedException();
             public void RestoreAllSlots() { }
-            public void LearnSpell(ISpell spell) { }
+            public void LearnSpell(ISpell spell, bool bypassClassValidation = false) { }
             public Result<bool> PrepareSpell(ISpell spell) => throw new NotImplementedException();
             public void UnprepareSpell(ISpell spell) { }
             public void UnlearnSpell(ISpell spell) { }
