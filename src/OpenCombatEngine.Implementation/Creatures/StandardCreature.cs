@@ -91,7 +91,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             ISpellCaster? spellcasting = null,
             IEffectManager? effectManager = null,
             OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? race = null,
-            IDiceRoller? defaultDiceRoller = null)
+            IDiceRoller? defaultDiceRoller = null,
+            int armorClass = 10,
+            int speed = 30)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Id cannot be empty", nameof(id));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
@@ -107,12 +109,16 @@ namespace OpenCombatEngine.Implementation.Creatures
             // Initialize components
             // Create Equipment first so CombatStats can use it via 'this'
             Equipment = equipmentManager ?? new StandardEquipmentManager(this);
-            
+            if (Inventory is StandardInventory stdInventory)
+            {
+                stdInventory.SetEquipmentManager(Equipment);
+            }
+
             // Conditions needs 'this', so we create it here if null
             Conditions = conditions ?? new StandardConditionManager(this);
             
             // CombatStats now takes 'this'
-            CombatStats = new StandardCombatStats(creature: this);
+            CombatStats = new StandardCombatStats(creature: this, armorClass: armorClass, speed: speed);
 
             if (effectManager == null)
             {
@@ -209,7 +215,11 @@ namespace OpenCombatEngine.Implementation.Creatures
                 : new StandardConditionManager(this);
             
             Equipment = new StandardEquipmentManager(this); // Pass 'this'
-            
+            if (Inventory is StandardInventory stdInventory)
+            {
+                stdInventory.SetEquipmentManager(Equipment);
+            }
+
             // CombatStats takes 'this' and state
             CombatStats = state.CombatStats != null 
                 ? new StandardCombatStats(state.CombatStats, this) 
@@ -218,7 +228,9 @@ namespace OpenCombatEngine.Implementation.Creatures
             HitPoints = new StandardHitPoints(state.HitPoints, CombatStats);
             
             TurnManager = new StandardTurnManager(new StandardDiceRoller());
-            ActionEconomy = new StandardActionEconomy();
+            ActionEconomy = state.ActionEconomy != null
+                ? new StandardActionEconomy(state.ActionEconomy)
+                : new StandardActionEconomy();
             
             var stdMove = new StandardMovement(CombatStats, Conditions);
             stdMove.Creature = this;
@@ -356,7 +368,9 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             var levelState = (LevelManager as IStateful<LevelManagerState>)?.GetState();
 
-            return new CreatureState(Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState);
+            var actionEconomyState = (ActionEconomy as IStateful<ActionEconomyState>)?.GetState();
+
+            return new CreatureState(Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState);
         }
 
         public void AddFeature(IFeature feature)

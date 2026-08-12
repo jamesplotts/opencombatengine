@@ -31,6 +31,17 @@ namespace OpenCombatEngine.Core.Models.States
         int Temporary);
 
     /// <summary>
+    /// Serializable state for an action economy component.
+    /// </summary>
+    /// <param name="HasAction">Whether the Action is still available this turn.</param>
+    /// <param name="HasBonusAction">Whether the Bonus Action is still available this turn.</param>
+    /// <param name="HasReaction">Whether the Reaction is still available.</param>
+    public record ActionEconomyState(
+        bool HasAction,
+        bool HasBonusAction,
+        bool HasReaction);
+
+    /// <summary>
     /// Serializable state for a creature.
     /// </summary>
     /// <param name="Id">Unique identifier.</param>
@@ -41,6 +52,7 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="CombatStats">State of combat stats.</param>
     /// <param name="Conditions">State of conditions.</param>
     /// <param name="LevelManager">State of level manager.</param>
+    /// <param name="ActionEconomy">State of action economy (Action/Bonus Action/Reaction availability).</param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -49,5 +61,6 @@ namespace OpenCombatEngine.Core.Models.States
         HitPointsState HitPoints,
         CombatStatsState? CombatStats = null,
         ConditionManagerState? Conditions = null,
-        LevelManagerState? LevelManager = null);
+        LevelManagerState? LevelManager = null,
+        ActionEconomyState? ActionEconomy = null);
 }

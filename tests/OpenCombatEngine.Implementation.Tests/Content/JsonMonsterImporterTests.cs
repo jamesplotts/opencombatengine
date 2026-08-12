@@ -59,6 +59,10 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             // HP
             goblin.HitPoints.Max.Should().Be(7);
 
+            // AC and Speed should be parsed from the stat block, not left at defaults.
+            goblin.CombatStats.ArmorClass.Should().Be(15);
+            goblin.CombatStats.Speed.Should().Be(30);
+
             // Actions
             var actions = goblin.Actions.ToList();
             var scimitar = actions.OfType<MonsterAttackAction>().FirstOrDefault();

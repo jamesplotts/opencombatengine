@@ -21,7 +21,8 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
 
         public CombatSerializationTests()
         {
-            _diceRoller = new StandardDiceRoller();
+            // Seeded so initiative order (Hero vs Goblin) is deterministic across runs.
+            _diceRoller = new StandardDiceRoller { Seed = 3 };
             _turnManager = new StandardTurnManager(_diceRoller);
             _combatManager = new StandardCombatManager(_turnManager);
             _serializer = new CombatSerializer();
@@ -61,6 +62,10 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             hero.HitPoints.TakeDamage(5); // Current: 15
             goblin.HitPoints.TakeDamage(2); // Current: 8
 
+            // Spend Hero's Action and Bonus Action for the turn
+            hero.ActionEconomy.UseAction();
+            hero.ActionEconomy.UseBonusAction();
+
             // 3. Serialize
             var json = _serializer.Serialize(_combatManager);
 
@@ -79,6 +84,13 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
 
             var restoredGoblin = newCombatManager.Participants.First(p => p.Name == "Goblin");
             restoredGoblin.HitPoints.Current.Should().Be(8);
+
+            // Action economy must round-trip: a creature that already used its Action/Bonus
+            // Action this turn should not come back with a free extra turn's worth of resources.
+            restoredHero.ActionEconomy.HasAction.Should().BeFalse();
+            restoredHero.ActionEconomy.HasBonusAction.Should().BeFalse();
+            restoredHero.ActionEconomy.HasReaction.Should().BeTrue();
+            restoredGoblin.ActionEconomy.HasAction.Should().BeTrue();
 
             // Verify Turn Manager
             newTurnManager.CurrentRound.Should().Be(2, "Should be round 2");

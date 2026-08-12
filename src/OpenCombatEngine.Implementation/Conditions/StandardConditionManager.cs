@@ -48,7 +48,14 @@ namespace OpenCombatEngine.Implementation.Conditions
 
             // Check immunities, etc.
             // Simplified for now.
-            if (_conditions.Any(c => c.Name == condition.Name))
+            // Standard condition types (Poisoned, Blinded, etc.) don't stack in 5e regardless of
+            // source/label, so dedupe those by Type to match HasCondition's Type-based lookup.
+            // Custom/None conditions have no meaningful Type to compare, so fall back to Name.
+            bool isDuplicate = condition.Type != ConditionType.Custom && condition.Type != ConditionType.None
+                ? _conditions.Any(c => c.Type == condition.Type)
+                : _conditions.Any(c => c.Name.Equals(condition.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (isDuplicate)
             {
                 return Result<bool>.Failure($"Condition '{condition.Name}' already active.");
             }

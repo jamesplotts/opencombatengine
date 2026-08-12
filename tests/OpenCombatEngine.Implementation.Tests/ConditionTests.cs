@@ -75,5 +75,43 @@ namespace OpenCombatEngine.Implementation.Tests
             // Assert
             condition.Received(1).OnRemoved(creature);
         }
+
+        [Fact]
+        public void AddCondition_Should_Reject_Duplicate_Type_Even_With_Different_Names()
+        {
+            // Arrange
+            var creature = Substitute.For<ICreature>();
+            var manager = new StandardConditionManager(creature);
+            var trapPoison = new Condition("Poisoned: Trap", "From a trap", 3, ConditionType.Poisoned);
+            var spellPoison = new Condition("Poisoned: Spell", "From a spell", 3, ConditionType.Poisoned);
+
+            // Act
+            manager.AddCondition(trapPoison);
+            var result = manager.AddCondition(spellPoison);
+
+            // Assert
+            result.IsSuccess.Should().BeFalse();
+            manager.ActiveConditions.Should().ContainSingle();
+            manager.HasCondition(ConditionType.Poisoned).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddCondition_Should_Allow_Different_Custom_Conditions_By_Name()
+        {
+            // Arrange
+            var creature = Substitute.For<ICreature>();
+            var manager = new StandardConditionManager(creature);
+            var blessed = new Condition("Blessed", "Blessed by a cleric", 3);
+            var cursed = new Condition("Cursed", "Cursed by a witch", 3);
+
+            // Act
+            var result1 = manager.AddCondition(blessed);
+            var result2 = manager.AddCondition(cursed);
+
+            // Assert
+            result1.IsSuccess.Should().BeTrue();
+            result2.IsSuccess.Should().BeTrue();
+            manager.ActiveConditions.Should().HaveCount(2);
+        }
     }
 }

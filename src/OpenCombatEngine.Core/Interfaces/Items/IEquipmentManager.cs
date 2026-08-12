@@ -32,6 +32,13 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         void UnequipShield();
 
         /// <summary>
+        /// Unequips the given item from whichever slot(s) it currently occupies, if any.
+        /// </summary>
+        /// <param name="item">The item to unequip.</param>
+        /// <returns>Success if the item was found and unequipped; failure if it was not equipped.</returns>
+        Result<bool> UnequipItem(IItem item);
+
+        /// <summary>
         /// Gets the list of currently attuned magic items.
         /// </summary>
         System.Collections.Generic.IReadOnlyList<IMagicItem> AttunedItems { get; }

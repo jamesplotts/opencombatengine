@@ -1,3 +1,4 @@
+using System.Linq;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Results;
@@ -40,7 +41,17 @@ namespace OpenCombatEngine.Implementation.Items
         public Result<bool> Equip(IItem item, OpenCombatEngine.Core.Enums.EquipmentSlot slot)
         {
             if (item == null) return Result<bool>.Failure("Item cannot be null.");
-            
+
+            // The same physical item cannot occupy more than one slot at once.
+            var otherSlots = _equippedItems
+                .Where(kvp => kvp.Key != slot && ReferenceEquals(kvp.Value, item))
+                .Select(kvp => kvp.Key)
+                .ToList();
+            foreach (var otherSlot in otherSlots)
+            {
+                Unequip(otherSlot);
+            }
+
             Result<bool> result = Result<bool>.Failure("Unknown error");
 
             switch (slot)
@@ -151,6 +162,24 @@ namespace OpenCombatEngine.Implementation.Items
         public void UnequipOffHand() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
         public void UnequipArmor() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.Armor);
         public void UnequipShield() => Unequip(OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand);
+
+        public Result<bool> UnequipItem(IItem item)
+        {
+            if (item == null) return Result<bool>.Failure("Item cannot be null.");
+
+            var slots = _equippedItems
+                .Where(kvp => ReferenceEquals(kvp.Value, item))
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            if (slots.Count == 0) return Result<bool>.Failure("Item is not equipped.");
+
+            foreach (var slot in slots)
+            {
+                Unequip(slot);
+            }
+            return Result<bool>.Success(true);
+        }
 
         public Result<bool> AttuneItem(IMagicItem item)
         {

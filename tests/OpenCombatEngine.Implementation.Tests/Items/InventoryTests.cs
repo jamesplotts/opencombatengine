@@ -33,6 +33,24 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             inventory.GetItem("Sword").Should().Be(item);
             inventory.GetItem("Shield").Should().BeNull();
         }
+
+        [Fact]
+        public void RemoveItem_Should_Unequip_If_Currently_Equipped()
+        {
+            var owner = Substitute.For<ICreature>();
+            var inventory = new StandardInventory();
+            var equipment = new StandardEquipmentManager(owner);
+            inventory.SetEquipmentManager(equipment);
+
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            inventory.AddItem(sword);
+            equipment.EquipMainHand(sword);
+
+            inventory.RemoveItem(sword);
+
+            equipment.MainHand.Should().BeNull();
+            equipment.GetEquippedItems().Should().BeEmpty();
+        }
     }
 
     public class EquipmentTests

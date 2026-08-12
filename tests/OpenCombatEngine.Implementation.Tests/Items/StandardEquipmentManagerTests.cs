@@ -83,5 +83,20 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             owner.Received().RemoveFeature(feature);
             conditions.Received().RemoveCondition(condition.Name);
         }
+
+        [Fact]
+        public void EquipOffHand_Should_Unequip_Same_Item_From_MainHand()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+
+            manager.EquipMainHand(sword);
+            manager.EquipOffHand(sword);
+
+            manager.MainHand.Should().BeNull();
+            manager.OffHand.Should().Be(sword);
+            manager.GetEquippedItems().Should().ContainSingle();
+        }
     }
 }

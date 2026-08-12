@@ -28,25 +28,20 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
 
             var inventory = new StandardInventory();
             var turnManager = new StandardTurnManager(new StandardDiceRoller());
-            
+
+            var armorClass = ParseArmorClass(dto.Ac);
+            var speed = ParseSpeed(dto.Speed);
+
             var creature = new StandardCreature(
                 Guid.NewGuid().ToString(),
                 dto.Name ?? "Unknown Monster",
                 abilities,
                 hitPoints,
                 inventory,
-                turnManager
+                turnManager,
+                armorClass: armorClass,
+                speed: speed
             );
-            
-            // AC Logic
-            if (dto.Ac != null && dto.Ac.Count > 0)
-            {
-                var firstAc = dto.Ac.First();
-                if (firstAc is JsonElement elem && elem.ValueKind == JsonValueKind.Number)
-                {
-                    // Basic AC logic placeholder
-                }
-            }
 
             // Actions
             if (dto.Action != null)
@@ -94,6 +89,45 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
             }
 
             return creature;
+        }
+
+        private static int ParseArmorClass(List<object>? acList)
+        {
+            if (acList == null || acList.Count == 0) return 10;
+            if (acList.First() is not JsonElement elem) return 10;
+
+            if (elem.ValueKind == JsonValueKind.Number && elem.TryGetInt32(out var flatAc))
+            {
+                return flatAc;
+            }
+
+            if (elem.ValueKind == JsonValueKind.Object
+                && elem.TryGetProperty("ac", out var acProp)
+                && acProp.TryGetInt32(out var objectAc))
+            {
+                return objectAc;
+            }
+
+            return 10;
+        }
+
+        private static int ParseSpeed(object? speedObj)
+        {
+            if (speedObj is not JsonElement elem) return 30;
+
+            if (elem.ValueKind == JsonValueKind.Number && elem.TryGetInt32(out var flatSpeed))
+            {
+                return flatSpeed;
+            }
+
+            if (elem.ValueKind == JsonValueKind.Object
+                && elem.TryGetProperty("walk", out var walkProp)
+                && walkProp.TryGetInt32(out var walkSpeed))
+            {
+                return walkSpeed;
+            }
+
+            return 30;
         }
     }
 }
