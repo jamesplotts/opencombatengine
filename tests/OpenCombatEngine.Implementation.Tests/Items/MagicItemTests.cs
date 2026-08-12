@@ -88,5 +88,25 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             original.AttunedCreature.Should().Be(creature);
             original.Charges.Should().Be(2);
         }
+
+        [Fact]
+        public void Rarity_Should_Default_To_Common_But_Be_Settable()
+        {
+            var defaulted = new MagicItem("Ring", "A ring", 0.1, 100, ItemType.Accessory, true);
+            var rare = new MagicItem("Ring", "A ring", 0.1, 100, ItemType.Accessory, true, rarity: ItemRarity.Rare);
+
+            defaulted.Rarity.Should().Be(ItemRarity.Common);
+            rare.Rarity.Should().Be(ItemRarity.Rare);
+        }
+
+        [Fact]
+        public void Clone_Should_Preserve_Rarity()
+        {
+            var item = new MagicItem("Ring", "A ring", 0.1, 100, ItemType.Accessory, true, rarity: ItemRarity.Legendary);
+
+            var clone = item.Clone();
+
+            clone.Rarity.Should().Be(ItemRarity.Legendary);
+        }
     }
 }

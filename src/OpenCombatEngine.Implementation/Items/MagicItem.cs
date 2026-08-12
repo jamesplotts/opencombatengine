@@ -14,7 +14,7 @@ namespace OpenCombatEngine.Implementation.Items
         public string Description { get; }
         public double Weight { get; }
         public int Value { get; }
-        public OpenCombatEngine.Core.Enums.ItemRarity Rarity { get; } = OpenCombatEngine.Core.Enums.ItemRarity.Common;
+        public OpenCombatEngine.Core.Enums.ItemRarity Rarity { get; }
         public ItemType Type { get; }
         public bool RequiresAttunement { get; }
         public ICreature? AttunedCreature { get; private set; }
@@ -53,13 +53,15 @@ namespace OpenCombatEngine.Implementation.Items
             IArmor? armorProperties = null,
             IContainer? containerProperties = null,
             OpenCombatEngine.Core.Enums.EquipmentSlot? defaultSlot = null,
-            IEnumerable<IMagicItemAbility>? abilities = null)
+            IEnumerable<IMagicItemAbility>? abilities = null,
+            OpenCombatEngine.Core.Enums.ItemRarity rarity = OpenCombatEngine.Core.Enums.ItemRarity.Common)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             Name = name;
             Description = description;
             Weight = weight;
             Value = value;
+            Rarity = rarity;
             Type = itemType;
             RequiresAttunement = requiresAttunement;
             MaxCharges = maxCharges;
@@ -120,7 +122,7 @@ namespace OpenCombatEngine.Implementation.Items
             return new MagicItem(
                 Name, Description, Weight, Value, Type, RequiresAttunement,
                 _features, _conditions, MaxCharges, RechargeRate, RechargeFrequency, RechargeFormula,
-                WeaponProperties, ArmorProperties, ContainerProperties, DefaultSlot, _abilities);
+                WeaponProperties, ArmorProperties, ContainerProperties, DefaultSlot, _abilities, Rarity);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Implementation.Items;
@@ -69,21 +70,71 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
         {
             ArgumentNullException.ThrowIfNull(source);
 
-            // Need a Generic Magic Item implementation or map to Weapon/Armor if applicable?
-            // Since Open5e separates "magicitems" from "weapons", a "Weapon +1" in magicitems is complex.
-            // For now, map as Generic Item with Rarity.
-            
-            var item = new StandardItem(
-                Guid.NewGuid(),
+            // The Open5e magicitems endpoint only gives us name/slug/desc/type/rarity/
+            // requires_attunement - no structured weight, cost, charges, recharge, or bonus
+            // data (unlike the 5e.tools-style JsonMagicItemImporter DTO). We build a real
+            // IMagicItem (rather than degrading to a plain StandardItem) so attunement works,
+            // and best-effort extract charges/recharge from the free-text description, since
+            // SRD item descriptions consistently phrase those in a small number of ways.
+            bool requiresAttunement = source.RequiresAttunement.Contains("attunement", StringComparison.OrdinalIgnoreCase);
+            var (maxCharges, rechargeFrequency, rechargeFormula) = ParseChargesAndRecharge(source.Desc);
+
+            string rechargeRate = maxCharges > 0 && rechargeFormula.Length > 0
+                ? $"{rechargeFormula} {DescribeFrequency(rechargeFrequency)}".Trim()
+                : string.Empty;
+
+            return new MagicItem(
                 source.Name,
                 source.Desc,
-                0, // Weight often missing in magicitems endpoint or inside Desc
-                0, // Value variable
-                ParseRarity(source.Rarity),
-                ParseType(source.Type)
+                weight: 0, // Not provided by the Open5e magicitems endpoint
+                value: 0,  // Not provided by the Open5e magicitems endpoint
+                ParseType(source.Type),
+                requiresAttunement,
+                maxCharges: maxCharges,
+                rechargeRate: rechargeRate,
+                rechargeFrequency: rechargeFrequency,
+                rechargeFormula: rechargeFormula,
+                rarity: ParseRarity(source.Rarity)
             );
-            return item;
         }
+
+        private static readonly Regex ChargesRegex = new(
+            @"\b(?:has|with)\s+(\d+)\s+charges\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex RechargeFormulaRegex = new(
+            @"regains?\s+(\d+d\d+(?:\s*[+-]\s*\d+)?)\s+(?:of\s+its\s+)?(?:expended\s+)?charges",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static (int MaxCharges, RechargeFrequency Frequency, string Formula) ParseChargesAndRecharge(string desc)
+        {
+            if (string.IsNullOrWhiteSpace(desc)) return (0, RechargeFrequency.Unspecified, string.Empty);
+
+            var chargesMatch = ChargesRegex.Match(desc);
+            int maxCharges = chargesMatch.Success && int.TryParse(chargesMatch.Groups[1].Value, out int parsed) ? parsed : 0;
+            if (maxCharges == 0) return (0, RechargeFrequency.Unspecified, string.Empty);
+
+            var frequency = RechargeFrequency.Unspecified;
+            if (desc.Contains("dawn", StringComparison.OrdinalIgnoreCase)) frequency = RechargeFrequency.Dawn;
+            else if (desc.Contains("dusk", StringComparison.OrdinalIgnoreCase)) frequency = RechargeFrequency.Dusk;
+            else if (desc.Contains("midnight", StringComparison.OrdinalIgnoreCase)) frequency = RechargeFrequency.Midnight;
+            else if (desc.Contains("short rest", StringComparison.OrdinalIgnoreCase)) frequency = RechargeFrequency.ShortRest;
+            else if (desc.Contains("long rest", StringComparison.OrdinalIgnoreCase)) frequency = RechargeFrequency.LongRest;
+
+            var formulaMatch = RechargeFormulaRegex.Match(desc);
+            string formula = formulaMatch.Success ? formulaMatch.Groups[1].Value.Replace(" ", "", StringComparison.Ordinal) : string.Empty;
+
+            return (maxCharges, frequency, formula);
+        }
+
+        private static string DescribeFrequency(RechargeFrequency frequency) => frequency switch
+        {
+            RechargeFrequency.Dawn => "at dawn",
+            RechargeFrequency.Dusk => "at dusk",
+            RechargeFrequency.Midnight => "at midnight",
+            RechargeFrequency.ShortRest => "per short rest",
+            RechargeFrequency.LongRest => "per long rest",
+            _ => string.Empty
+        };
 
         private static double ParseWeight(string input)
         {
