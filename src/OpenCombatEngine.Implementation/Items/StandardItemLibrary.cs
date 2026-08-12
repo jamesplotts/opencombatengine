@@ -5,7 +5,11 @@ using System.Threading.Tasks;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Spells;
+using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Content;
 using OpenCombatEngine.Implementation.Open5e;
+using OpenCombatEngine.Implementation.Spells;
 
 namespace OpenCombatEngine.Implementation.Items
 {
@@ -13,13 +17,18 @@ namespace OpenCombatEngine.Implementation.Items
     {
         private readonly Open5eContentSource _contentSource;
         private readonly IDiceRoller _diceRoller;
+        private readonly ISpellRepository _spellRepository;
         private readonly List<IItem> _items = new();
         private bool _isInitialized;
 
-        public StandardItemLibrary(Open5eContentSource contentSource, IDiceRoller diceRoller)
+        public StandardItemLibrary(Open5eContentSource contentSource, IDiceRoller diceRoller, ISpellRepository? spellRepository = null)
         {
             _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
             _diceRoller = diceRoller ?? throw new ArgumentNullException(nameof(diceRoller));
+            // Only needed to resolve CastSpellFromItemAbility references on items imported via
+            // ImportMagicItemsFromJson; spell resolution there is lazy (at ability-execute time),
+            // so an empty repository is a harmless default when the caller doesn't need it.
+            _spellRepository = spellRepository ?? new InMemorySpellRepository();
         }
 
         public async Task InitializeAsync()
@@ -35,6 +44,25 @@ namespace OpenCombatEngine.Implementation.Items
             _items.AddRange(magicItems);
 
             _isInitialized = true;
+        }
+
+        /// <summary>
+        /// Imports magic items from 5eTools-style JSON (via <see cref="JsonMagicItemImporter"/>)
+        /// and adds them to the library alongside whatever was loaded from Open5e. Unlike Open5e's
+        /// magicitems endpoint, this format carries structured charges/recharge, weapon/armor
+        /// bonuses, and attached-spell abilities, so items imported this way get full IMagicItem
+        /// fidelity rather than the best-effort extraction Open5e content is limited to.
+        /// </summary>
+        /// <param name="json">Raw JSON content (single item, array, or a compendium-style {"item": [...]} wrapper).</param>
+        public Result<IEnumerable<IMagicItem>> ImportMagicItemsFromJson(string json)
+        {
+            var importer = new JsonMagicItemImporter(_spellRepository, _diceRoller);
+            var result = importer.Import(json);
+            if (!result.IsSuccess) return result;
+
+            var imported = result.Value.ToList();
+            _items.AddRange(imported);
+            return Result<IEnumerable<IMagicItem>>.Success(imported);
         }
 
         public IItem? GetItem(string slug)
