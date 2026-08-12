@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using OpenCombatEngine.Core.Enums;
@@ -63,6 +64,41 @@ namespace OpenCombatEngine.Implementation.Items
             var imported = result.Value.ToList();
             _items.AddRange(imported);
             return Result<IEnumerable<IMagicItem>>.Success(imported);
+        }
+
+        /// <summary>
+        /// Convenience wrapper around <see cref="ImportMagicItemsFromJson"/> that reads the JSON
+        /// from disk first, so callers don't need their own file-reading boilerplate. See
+        /// <see cref="ImportMagicItemsFromJson"/> for the accepted JSON shapes and what importing
+        /// actually does.
+        /// </summary>
+        /// <param name="filePath">
+        /// Path to a JSON file in the same format accepted by <see cref="ImportMagicItemsFromJson"/>
+        /// (single item, array, or a compendium-style <c>{"item": [...]}</c> wrapper).
+        /// </param>
+        /// <returns>
+        /// A <see cref="Result{T}"/> containing the imported items on success. Failure (never a
+        /// thrown exception) covers both a file that can't be found/read and JSON that fails to
+        /// parse - <see cref="Result{T}.Error"/> distinguishes which.
+        /// </returns>
+        public Result<IEnumerable<IMagicItem>> ImportMagicItemsFromFile(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return Result<IEnumerable<IMagicItem>>.Failure("File path cannot be empty.");
+            }
+
+            string json;
+            try
+            {
+                json = File.ReadAllText(filePath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                return Result<IEnumerable<IMagicItem>>.Failure($"Failed to read '{filePath}': {ex.Message}");
+            }
+
+            return ImportMagicItemsFromJson(json);
         }
 
         public IItem? GetItem(string slug)

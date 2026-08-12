@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using FluentAssertions;
@@ -100,6 +101,48 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             library.ImportMagicItemsFromJson(@"{ ""name"": ""Custom Amulet"", ""type"": ""W"" }");
 
             library.GetAllItems().Should().ContainSingle(i => i.Name == "Custom Amulet");
+        }
+
+        [Fact]
+        public void ImportMagicItemsFromFile_Should_Read_And_Import_Same_As_FromJson()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(path, @"{ ""name"": ""Boots of Speed"", ""type"": ""W"", ""reqAttune"": true }");
+
+                var library = new StandardItemLibrary(_contentSource, _diceRoller);
+                var result = library.ImportMagicItemsFromFile(path);
+
+                result.IsSuccess.Should().BeTrue();
+                result.Value.Should().ContainSingle(i => i.Name == "Boots of Speed");
+                library.GetItem("Boots of Speed").Should().NotBeNull();
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Fact]
+        public void ImportMagicItemsFromFile_Should_Fail_Gracefully_If_File_Missing()
+        {
+            var library = new StandardItemLibrary(_contentSource, _diceRoller);
+
+            var result = library.ImportMagicItemsFromFile(Path.Combine(Path.GetTempPath(), "does-not-exist-" + System.Guid.NewGuid() + ".json"));
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().NotBeNullOrWhiteSpace();
+        }
+
+        [Fact]
+        public void ImportMagicItemsFromFile_Should_Fail_Gracefully_If_Path_Empty()
+        {
+            var library = new StandardItemLibrary(_contentSource, _diceRoller);
+
+            var result = library.ImportMagicItemsFromFile(string.Empty);
+
+            result.IsSuccess.Should().BeFalse();
         }
     }
 }
