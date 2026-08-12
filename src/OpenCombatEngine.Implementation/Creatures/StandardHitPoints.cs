@@ -33,9 +33,8 @@ namespace OpenCombatEngine.Implementation.Creatures
 
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
         public event EventHandler<HealedEventArgs>? Healed;
-#pragma warning disable CS0067 // The event 'StandardHitPoints.Died' is never used
+        public event EventHandler<DeathEventArgs>? Downed;
         public event EventHandler<DeathEventArgs>? Died;
-#pragma warning restore CS0067
 
         public StandardHitPoints(int max, int current, int temporary, ICombatStats? combatStats = null, string hitDice = "1d8", int hitDiceTotal = 1, IDiceRoller? diceRoller = null)
         {
@@ -92,6 +91,8 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             if (amount == 0) return;
 
+            int previousCurrent = Current;
+
             int damageToTemp = Math.Min(Temporary, amount);
             Temporary -= damageToTemp;
             int remainingDamage = amount - damageToTemp;
@@ -101,12 +102,11 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             DamageTaken?.Invoke(this, new DamageTakenEventArgs(amount, type, Current, Temporary));
 
-            if (Current == 0 && !IsStable)
+            // Check for massive damage instant death (optional rule, not implementing yet)
+            // Dropping to 0 HP means unconscious/dying, not dead - only fire once, on the transition.
+            if (previousCurrent > 0 && Current == 0 && !IsStable)
             {
-                // Check for massive damage instant death (optional rule, not implementing yet)
-                // Trigger death logic if needed
-                // For now, just event
-                Died?.Invoke(this, new DeathEventArgs()); 
+                Downed?.Invoke(this, new DeathEventArgs());
             }
         }
 

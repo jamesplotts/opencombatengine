@@ -106,5 +106,16 @@ public interface IHitPoints
 
     event EventHandler<DamageTakenEventArgs> DamageTaken;
     event EventHandler<HealedEventArgs> Healed;
+
+    /// <summary>
+    /// Fires once when the creature drops to 0 hit points (unconscious/dying), not on every
+    /// subsequent hit while already at 0. This is distinct from <see cref="Died"/>: a creature
+    /// at 0 HP is still alive and can be stabilized or healed.
+    /// </summary>
+    event EventHandler<DeathEventArgs> Downed;
+
+    /// <summary>
+    /// Fires when the creature actually dies (e.g. 3 failed death saving throws).
+    /// </summary>
     event EventHandler<DeathEventArgs> Died;
 }

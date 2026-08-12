@@ -41,10 +41,12 @@ namespace OpenCombatEngine.Implementation.Combat
 
             if (_participants.Count == 0) throw new ArgumentException("Cannot start encounter with no participants.");
 
-            // Subscribe to death events
+            // Subscribe to death/downed events. Downed (0 HP) already counts as "out" for
+            // LastTeamStandingWinCondition, so the win condition must be rechecked on both.
             foreach (var p in _participants)
             {
                 p.HitPoints.Died += OnParticipantDied;
+                p.HitPoints.Downed += OnParticipantDied;
             }
 
             // Start Turns
@@ -78,6 +80,7 @@ namespace OpenCombatEngine.Implementation.Combat
             foreach (var p in _participants)
             {
                 p.HitPoints.Died -= OnParticipantDied;
+                p.HitPoints.Downed -= OnParticipantDied;
             }
 
             EncounterEnded?.Invoke(this, new EncounterEndedEventArgs(winner));
@@ -110,6 +113,7 @@ namespace OpenCombatEngine.Implementation.Combat
             {
                 var creature = new StandardCreature(pState);
                 creature.HitPoints.Died += OnParticipantDied;
+                creature.HitPoints.Downed += OnParticipantDied;
                 _participants.Add(creature);
             }
 

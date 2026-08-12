@@ -78,5 +78,54 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             act.Should().Throw<ArgumentOutOfRangeException>()
                 .WithMessage("*must be positive*");
         }
+
+        [Fact]
+        public void TakeDamage_Should_Fire_Downed_Not_Died_When_Dropping_To_Zero()
+        {
+            var hp = new StandardHitPoints(10, 10, 0);
+            int downedCount = 0;
+            int diedCount = 0;
+            hp.Downed += (s, e) => downedCount++;
+            hp.Died += (s, e) => diedCount++;
+
+            hp.TakeDamage(10);
+
+            hp.Current.Should().Be(0);
+            downedCount.Should().Be(1);
+            diedCount.Should().Be(0);
+        }
+
+        [Fact]
+        public void TakeDamage_Should_Not_ReFire_Downed_On_Subsequent_Hits_At_Zero()
+        {
+            var hp = new StandardHitPoints(10, 10, 0);
+            int downedCount = 0;
+            hp.Downed += (s, e) => downedCount++;
+
+            hp.TakeDamage(10); // Drops to 0 -> fires once
+            hp.TakeDamage(5);  // Already at 0 -> should not fire again
+            hp.TakeDamage(5);  // Still at 0 -> should not fire again
+
+            downedCount.Should().Be(1);
+        }
+
+        [Fact]
+        public void Died_Should_Only_Fire_After_Three_Failed_Death_Saves()
+        {
+            var hp = new StandardHitPoints(10, 10, 0);
+            int diedCount = 0;
+            hp.Died += (s, e) => diedCount++;
+
+            hp.TakeDamage(10);
+            diedCount.Should().Be(0);
+
+            hp.RecordDeathSave(false);
+            hp.RecordDeathSave(false);
+            diedCount.Should().Be(0);
+
+            hp.RecordDeathSave(false);
+            diedCount.Should().Be(1);
+            hp.IsDead.Should().BeTrue();
+        }
     }
 }

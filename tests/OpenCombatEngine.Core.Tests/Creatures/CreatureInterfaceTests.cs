@@ -61,6 +61,7 @@ public class CreatureInterfaceTests
 
         public event EventHandler<DamageTakenEventArgs>? DamageTaken;
         public event EventHandler<HealedEventArgs>? Healed;
+        public event EventHandler<DeathEventArgs>? Downed;
         public event EventHandler<DeathEventArgs>? Died;
 
         public void TakeDamage(int amount, DamageType type = DamageType.Bludgeoning) { }

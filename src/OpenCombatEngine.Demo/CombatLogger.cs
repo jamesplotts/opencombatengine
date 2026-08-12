@@ -80,6 +80,7 @@ namespace OpenCombatEngine.Demo
              
              // Wrap internal components events
              creature.HitPoints.DamageTaken += (s, e) => LogDamageTaken(creature, e);
+             creature.HitPoints.Downed += (s, e) => LogDowned(creature, e);
              creature.HitPoints.Died += (s, e) => LogDied(creature, e);
              
              creature.Conditions.ConditionAdded += (s, e) => LogConditionAdded(creature, e);
@@ -103,6 +104,13 @@ namespace OpenCombatEngine.Demo
         {
              Console.ForegroundColor = ConsoleColor.Red;
              Console.WriteLine($"{subject.Name} took {e.Amount} damage (Remaining: {subject.HitPoints.Current}/{subject.HitPoints.Max}).");
+             Console.ResetColor();
+        }
+
+        private void LogDowned(ICreature subject, EventArgs e)
+        {
+             Console.ForegroundColor = ConsoleColor.DarkYellow;
+             Console.WriteLine($"{subject.Name} drops to 0 HP and falls unconscious!");
              Console.ResetColor();
         }
 
