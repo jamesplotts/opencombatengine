@@ -71,7 +71,7 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // 0. Check Action Economy
-            if (source.ActionEconomy != null)
+            if (source.ActionEconomy != null && !context.BypassActionEconomy)
             {
                 bool canAct = Type switch
                 {

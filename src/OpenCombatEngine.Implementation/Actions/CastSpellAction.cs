@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Actions;
 using OpenCombatEngine.Core.Interfaces.Creatures;
@@ -116,6 +118,23 @@ namespace OpenCombatEngine.Implementation.Actions
                 }
             }
 
+            // Check Action Economy
+            if (source.ActionEconomy != null && !context.BypassActionEconomy)
+            {
+                bool canAct = Type switch
+                {
+                    ActionType.Action => source.ActionEconomy.HasAction,
+                    ActionType.BonusAction => source.ActionEconomy.HasBonusAction,
+                    ActionType.Reaction => source.ActionEconomy.HasReaction,
+                    _ => true
+                };
+
+                if (!canAct)
+                {
+                    return Result<ActionResult>.Failure($"Cannot perform {Type}: Resource already used.");
+                }
+            }
+
             var spellcasting = source.Spellcasting;
             if (spellcasting == null)
             {
@@ -133,6 +152,23 @@ namespace OpenCombatEngine.Implementation.Actions
             if (!consumeResult.IsSuccess)
             {
                 return Result<ActionResult>.Failure(consumeResult.Error);
+            }
+
+            // Consume the Action Economy resource now that the cast is committed.
+            if (source.ActionEconomy != null && !context.BypassActionEconomy)
+            {
+                switch (Type)
+                {
+                    case ActionType.Action:
+                        source.ActionEconomy.UseAction();
+                        break;
+                    case ActionType.BonusAction:
+                        source.ActionEconomy.UseBonusAction();
+                        break;
+                    case ActionType.Reaction:
+                        source.ActionEconomy.UseReaction();
+                        break;
+                }
             }
 
             // Set Concentration
@@ -168,7 +204,7 @@ namespace OpenCombatEngine.Implementation.Actions
             else
             {
                 // Single Target Execution
-                // LOS Check
+                // Range and LOS Check
                 if (context.Grid != null && creatureTarget != null)
                 {
                     var sourcePos = context.Grid.GetPosition(source);
@@ -176,6 +212,16 @@ namespace OpenCombatEngine.Implementation.Actions
 
                     if (sourcePos != null && targetPos != null)
                     {
+                        var rangeFeet = ParseRangeInFeet(_spell.Range);
+                        if (rangeFeet.HasValue && rangeFeet.Value > 0)
+                        {
+                            var distance = context.Grid.GetDistance(sourcePos.Value, targetPos.Value);
+                            if (distance > rangeFeet.Value)
+                            {
+                                return Result<ActionResult>.Failure($"Target is out of range. Distance: {distance}, Range: {rangeFeet.Value}");
+                            }
+                        }
+
                         if (!context.Grid.HasLineOfSight(sourcePos.Value, targetPos.Value))
                         {
                             return Result<ActionResult>.Failure("No line of sight to target.");
@@ -198,6 +244,18 @@ namespace OpenCombatEngine.Implementation.Actions
                 var resolution = castResult.Value;
                 return Result<ActionResult>.Success(new ActionResult(true, $"{resolution.Message} {string.Join("; ", messages)}"));
             }
+        }
+
+        private static int? ParseRangeInFeet(string range)
+        {
+            if (string.IsNullOrWhiteSpace(range)) return null;
+            if (range.Equals("Self", StringComparison.OrdinalIgnoreCase)) return 0;
+            if (range.Equals("Touch", StringComparison.OrdinalIgnoreCase)) return 5;
+
+            var digits = new string(range.TakeWhile(char.IsDigit).ToArray());
+            return int.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out int feet)
+                ? feet
+                : null;
         }
 
         private void ApplySpellEffects(ICreature source, ICreature target, System.Collections.Generic.List<string> messages)

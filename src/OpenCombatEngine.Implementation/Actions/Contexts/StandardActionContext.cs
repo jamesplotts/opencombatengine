@@ -12,19 +12,22 @@ namespace OpenCombatEngine.Implementation.Actions.Contexts
         public IGridManager? Grid { get; }
         public OpenCombatEngine.Core.Enums.CoverType TargetCover { get; }
         public OpenCombatEngine.Core.Enums.ObscurementType TargetObscurement { get; }
+        public bool BypassActionEconomy { get; }
 
         public StandardActionContext(
-            ICreature source, 
-            IActionTarget target, 
+            ICreature source,
+            IActionTarget target,
             IGridManager? grid = null,
             OpenCombatEngine.Core.Enums.CoverType targetCover = OpenCombatEngine.Core.Enums.CoverType.None,
-            OpenCombatEngine.Core.Enums.ObscurementType targetObscurement = OpenCombatEngine.Core.Enums.ObscurementType.None)
+            OpenCombatEngine.Core.Enums.ObscurementType targetObscurement = OpenCombatEngine.Core.Enums.ObscurementType.None,
+            bool bypassActionEconomy = false)
         {
             Source = source ?? throw new System.ArgumentNullException(nameof(source));
             Target = target ?? throw new System.ArgumentNullException(nameof(target));
             Grid = grid;
             TargetCover = targetCover;
             TargetObscurement = targetObscurement;
+            BypassActionEconomy = bypassActionEconomy;
         }
     }
 }

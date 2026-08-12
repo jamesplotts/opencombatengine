@@ -78,13 +78,12 @@ namespace OpenCombatEngine.Implementation.Reactions
                 var actionContext = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
                     _attacker,
                     new CreatureTarget(target),
-                    context.Grid
+                    context.Grid,
+                    bypassActionEconomy: true
                 );
 
-                // Note: We ignore ActionEconomy check for the action itself (Standard Action), 
-                // because the Reaction allows us to use it.
-                // Assuming PerformAction doesn't enforce economy validation (it typically doesn't, it just runs it).
-                
+                // The Reaction resource was already consumed above; the attack itself must not
+                // also gate on or consume the attacker's normal Action/BonusAction.
                 var result = _attacker.PerformAction(attackAction, actionContext);
                 return result;
             }

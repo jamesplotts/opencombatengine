@@ -28,6 +28,7 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             _spell = Substitute.For<ISpell>();
             
             _context.Source.Returns(_user);
+            _user.ActionEconomy.HasAction.Returns(true);
             _spell.Name.Returns("Fireball");
             _spell.Level.Returns(3);
         }

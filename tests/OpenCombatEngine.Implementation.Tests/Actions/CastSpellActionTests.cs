@@ -21,6 +21,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             var action = new CastSpellAction(spell);
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns((ISpellCaster?)null);
+            creature.ActionEconomy.HasAction.Returns(true);
 
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
                 creature, 
@@ -44,15 +45,41 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
+            creature.ActionEconomy.HasAction.Returns(true);
 
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
-                creature, 
+                creature,
                 new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
             );
             var result = action.Execute(context);
 
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("No spell slots");
+        }
+
+        [Fact]
+        public void Execute_Should_Fail_If_No_Action_Available()
+        {
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
+            var action = new CastSpellAction(spell);
+
+            var spellCaster = Substitute.For<ISpellCaster>();
+            spellCaster.HasSlot(1).Returns(true);
+            spellCaster.PreparedSpells.Returns(new[] { spell });
+
+            var creature = Substitute.For<ICreature>();
+            creature.Spellcasting.Returns(spellCaster);
+            creature.ActionEconomy.HasAction.Returns(false);
+
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature,
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("Resource already used");
+            spellCaster.DidNotReceive().ConsumeSlot(Arg.Any<int>());
         }
 
         [Fact]
@@ -68,15 +95,17 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
+            creature.ActionEconomy.HasAction.Returns(true);
 
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
-                creature, 
+                creature,
                 new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
             );
             var result = action.Execute(context);
 
             result.IsSuccess.Should().BeTrue();
             spellCaster.Received().ConsumeSlot(1);
+            creature.ActionEconomy.Received().UseAction();
         }
 
         [Fact]
@@ -90,9 +119,10 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             var creature = Substitute.For<ICreature>();
             creature.Spellcasting.Returns(spellCaster);
+            creature.ActionEconomy.HasAction.Returns(true);
 
             var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
-                creature, 
+                creature,
                 new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
             );
             var result = action.Execute(context);

@@ -90,6 +90,7 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             // Mock creature with spellcasting but NO slots
             var creature = Substitute.For<ICreature>();
             creature.Name.Returns("Wizard");
+            creature.ActionEconomy.HasAction.Returns(true);
             var spellcasting = Substitute.For<ISpellCaster>();
             spellcasting.HasSlot(1).Returns(false); // No slots!
             creature.Spellcasting.Returns(spellcasting);

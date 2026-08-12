@@ -63,9 +63,13 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // 1. Check Action Economy
-            if (!source.ActionEconomy.HasAction)
+            if (!context.BypassActionEconomy)
             {
-                return Result<ActionResult>.Failure("No action available.");
+                if (!source.ActionEconomy.HasAction)
+                {
+                    return Result<ActionResult>.Failure("No action available.");
+                }
+                source.ActionEconomy.UseAction();
             }
 
             // 2. Roll to Hit

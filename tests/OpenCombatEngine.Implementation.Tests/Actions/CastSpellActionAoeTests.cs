@@ -32,6 +32,7 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
 
             _caster.Name.Returns("Wizard");
             _caster.Spellcasting.Returns(_spellcasting);
+            _caster.ActionEconomy.HasAction.Returns(true);
         }
 
         [Fact]
