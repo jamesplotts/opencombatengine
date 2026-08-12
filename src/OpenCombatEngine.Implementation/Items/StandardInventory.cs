@@ -49,10 +49,19 @@ namespace OpenCombatEngine.Implementation.Items
 
         public InventoryState GetState()
         {
-            var itemStates = _items
-                .Select(i => new ItemInstanceState(i.Name, (i as IMagicItem)?.Charges))
-                .ToList();
+            var itemStates = _items.Select(BuildItemState).ToList();
             return new InventoryState(new Collection<ItemInstanceState>(itemStates));
+        }
+
+        private static ItemInstanceState BuildItemState(IItem item)
+        {
+            Collection<ItemInstanceState>? contents = null;
+            if (item is IContainer container && container.Contents.Any())
+            {
+                contents = new Collection<ItemInstanceState>(container.Contents.Select(BuildItemState).ToList());
+            }
+
+            return new ItemInstanceState(item.Name, (item as IMagicItem)?.Charges, contents);
         }
     }
 }

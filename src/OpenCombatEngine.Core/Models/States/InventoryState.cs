@@ -7,7 +7,8 @@ namespace OpenCombatEngine.Core.Models.States
     /// </summary>
     /// <param name="Name">The item's name, used to resolve the base item via an item library on restore.</param>
     /// <param name="CurrentCharges">Current charges remaining, for magic items that track charges.</param>
-    public record ItemInstanceState(string Name, int? CurrentCharges = null);
+    /// <param name="Contents">Nested items, for items that are containers.</param>
+    public record ItemInstanceState(string Name, int? CurrentCharges = null, Collection<ItemInstanceState>? Contents = null);
 
     /// <summary>
     /// Serializable state for an inventory component.

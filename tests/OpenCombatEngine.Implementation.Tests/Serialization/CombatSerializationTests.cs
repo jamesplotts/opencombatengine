@@ -197,6 +197,36 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             degradedHero.Spellcasting.Should().BeNull();
         }
 
+        [Fact]
+        public void Should_Save_And_Load_Nested_Container_Contents()
+        {
+            // The library's copy of "Pouch" starts empty - if restore ends up with the Ruby
+            // inside it, that proves the nested contents were actually rebuilt from state
+            // rather than just reflecting some coincidentally-shared object.
+            var itemLibrary = new TestItemLibrary();
+            itemLibrary.Add(new ContainerItem("Pouch", baseWeight: 0.5, weightCapacity: 10));
+
+            var heroPouch = new ContainerItem("Pouch", baseWeight: 0.5, weightCapacity: 10);
+            heroPouch.AddItem(new Item("Ruby"));
+
+            var hero = (StandardCreature)CreateCreature("Hero", 20, 15, "Heroes");
+            hero.Inventory.AddItem(heroPouch);
+
+            var goblin = CreateCreature("Goblin", 10, 12, "Monsters");
+            _combatManager.StartEncounter(new[] { hero, goblin });
+
+            var json = _serializer.Serialize(_combatManager);
+
+            var newCombatManager = new StandardCombatManager(new StandardTurnManager(new StandardDiceRoller()));
+            _serializer.Deserialize(json, newCombatManager, itemLibrary: itemLibrary);
+
+            var restoredHero = newCombatManager.Participants.First(p => p.Name == "Hero");
+            var restoredPouch = restoredHero.Inventory.Items.Single() as IContainer;
+
+            restoredPouch.Should().NotBeNull();
+            restoredPouch!.Contents.Should().ContainSingle(i => i.Name == "Ruby");
+        }
+
         private sealed class TestItemLibrary : IItemLibrary
         {
             private readonly Dictionary<string, IItem> _items = new(StringComparer.OrdinalIgnoreCase);

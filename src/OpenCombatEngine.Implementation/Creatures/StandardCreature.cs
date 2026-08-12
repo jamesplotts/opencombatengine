@@ -215,24 +215,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             {
                 foreach (var itemState in state.Inventory.Items)
                 {
-                    // Resolve via the item library by name; fall back to a bare placeholder
-                    // (rather than dropping the item) so nothing silently vanishes and index
-                    // alignment with EquipmentState/AttunedItemIndices is preserved either way.
-                    IItem item = itemLibrary?.GetItem(itemState.Name)
-                        ?? new StandardItem(Guid.NewGuid(), itemState.Name, string.Empty, 0, 0);
-
-                    if (item is IMagicItem magicItem && itemState.CurrentCharges.HasValue)
-                    {
-                        // Adjust from the resolved item's CURRENT charge count, not an assumed
-                        // fresh-at-max baseline: a shared item (e.g. from a long-lived item
-                        // library) may already be at some other charge count if this is a
-                        // same-process resave rather than a fresh load.
-                        int delta = itemState.CurrentCharges.Value - magicItem.Charges;
-                        if (delta > 0) magicItem.Recharge(delta);
-                        else if (delta < 0) magicItem.ConsumeCharges(-delta);
-                    }
-
-                    Inventory.AddItem(item);
+                    Inventory.AddItem(ResolveItem(itemState, itemLibrary));
                 }
             }
 
@@ -447,6 +430,36 @@ namespace OpenCombatEngine.Implementation.Creatures
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
                 inventoryState, equipmentState, spellcastingState);
+        }
+
+        private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)
+        {
+            // Resolve via the item library by name; fall back to a bare placeholder (rather than
+            // dropping the item) so nothing silently vanishes and index alignment with
+            // EquipmentState/AttunedItemIndices is preserved either way.
+            IItem item = itemLibrary?.GetItem(itemState.Name)
+                ?? new StandardItem(Guid.NewGuid(), itemState.Name, string.Empty, 0, 0);
+
+            if (item is IMagicItem magicItem && itemState.CurrentCharges.HasValue)
+            {
+                // Adjust from the resolved item's CURRENT charge count, not an assumed
+                // fresh-at-max baseline: a shared item (e.g. from a library that doesn't clone
+                // magic items) may already be at some other charge count if this is a
+                // same-process resave rather than a fresh load.
+                int delta = itemState.CurrentCharges.Value - magicItem.Charges;
+                if (delta > 0) magicItem.Recharge(delta);
+                else if (delta < 0) magicItem.ConsumeCharges(-delta);
+            }
+
+            if (itemState.Contents != null && item is IContainer container)
+            {
+                foreach (var nestedState in itemState.Contents)
+                {
+                    container.AddItem(ResolveItem(nestedState, itemLibrary));
+                }
+            }
+
+            return item;
         }
 
         private EquipmentState? BuildEquipmentState()

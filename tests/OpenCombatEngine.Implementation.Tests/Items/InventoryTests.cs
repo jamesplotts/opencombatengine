@@ -71,6 +71,24 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             state.Items[1].Name.Should().Be("Wand of Magic Missiles");
             state.Items[1].CurrentCharges.Should().Be(4);
         }
+
+        [Fact]
+        public void GetState_Should_Capture_Nested_Container_Contents()
+        {
+            var inventory = new StandardInventory();
+            var pouch = new ContainerItem("Pouch", baseWeight: 0.5, weightCapacity: 10);
+            var gem = new Item("Ruby");
+            pouch.AddItem(gem);
+
+            inventory.AddItem(pouch);
+
+            var state = inventory.GetState();
+
+            state.Items.Should().ContainSingle();
+            state.Items[0].Name.Should().Be("Pouch");
+            state.Items[0].Contents.Should().NotBeNull();
+            state.Items[0].Contents.Should().ContainSingle(i => i.Name == "Ruby");
+        }
     }
 
     public class EquipmentTests
