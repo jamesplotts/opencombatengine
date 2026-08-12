@@ -1,11 +1,14 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Core.Results;
 
 namespace OpenCombatEngine.Implementation.Items
 {
-    public class StandardInventory : IInventory
+    public class StandardInventory : IInventory, IStateful<InventoryState>
     {
         private readonly List<IItem> _items = new();
         private OpenCombatEngine.Core.Interfaces.Items.IEquipmentManager? _equipmentManager;
@@ -42,6 +45,14 @@ namespace OpenCombatEngine.Implementation.Items
         public IItem? GetItem(string name)
         {
             return _items.FirstOrDefault(i => i.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
+        }
+
+        public InventoryState GetState()
+        {
+            var itemStates = _items
+                .Select(i => new ItemInstanceState(i.Name, (i as IMagicItem)?.Charges))
+                .ToList();
+            return new InventoryState(new Collection<ItemInstanceState>(itemStates));
         }
     }
 }

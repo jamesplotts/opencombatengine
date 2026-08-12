@@ -51,6 +51,26 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             equipment.MainHand.Should().BeNull();
             equipment.GetEquippedItems().Should().BeEmpty();
         }
+
+        [Fact]
+        public void GetState_Should_Capture_Item_Names_And_Magic_Item_Charges()
+        {
+            var inventory = new StandardInventory();
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            var wand = new MagicItem("Wand of Magic Missiles", "A wand", 1, 500, ItemType.Wand, false, maxCharges: 7);
+            wand.ConsumeCharges(3);
+
+            inventory.AddItem(sword);
+            inventory.AddItem(wand);
+
+            var state = inventory.GetState();
+
+            state.Items.Should().HaveCount(2);
+            state.Items[0].Name.Should().Be("Longsword");
+            state.Items[0].CurrentCharges.Should().BeNull();
+            state.Items[1].Name.Should().Be("Wand of Magic Missiles");
+            state.Items[1].CurrentCharges.Should().Be(4);
+        }
     }
 
     public class EquipmentTests

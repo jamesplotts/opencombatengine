@@ -103,7 +103,10 @@ namespace OpenCombatEngine.Implementation.Combat
             return new CombatState(participantStates, turnState, winType);
         }
 
-        public void RestoreState(CombatState state)
+        public void RestoreState(
+            CombatState state,
+            OpenCombatEngine.Core.Interfaces.Spells.ISpellRepository? spellRepository = null,
+            OpenCombatEngine.Core.Interfaces.Items.IItemLibrary? itemLibrary = null)
         {
             ArgumentNullException.ThrowIfNull(state);
 
@@ -111,7 +114,7 @@ namespace OpenCombatEngine.Implementation.Combat
             _participants.Clear();
             foreach (var pState in state.Participants)
             {
-                var creature = new StandardCreature(pState);
+                var creature = new StandardCreature(pState, spellRepository, itemLibrary);
                 creature.HitPoints.Died += OnParticipantDied;
                 creature.HitPoints.Downed += OnParticipantDied;
                 _participants.Add(creature);

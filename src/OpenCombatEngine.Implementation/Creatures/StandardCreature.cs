@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
@@ -200,7 +201,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             ReactionManager.AddReaction(new OpenCombatEngine.Implementation.Reactions.OpportunityAttackReaction(this));
         }
 
-        public StandardCreature(CreatureState state)
+        public StandardCreature(CreatureState state, ISpellRepository? spellRepository = null, IItemLibrary? itemLibrary = null)
         {
             ArgumentNullException.ThrowIfNull(state);
 
@@ -208,16 +209,70 @@ namespace OpenCombatEngine.Implementation.Creatures
             Name = state.Name;
             Team = state.Team;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
-            
+
             Inventory = new StandardInventory();
-            Conditions = state.Conditions != null 
-                ? new StandardConditionManager(this, state.Conditions) 
+            if (state.Inventory != null)
+            {
+                foreach (var itemState in state.Inventory.Items)
+                {
+                    // Resolve via the item library by name; fall back to a bare placeholder
+                    // (rather than dropping the item) so nothing silently vanishes and index
+                    // alignment with EquipmentState/AttunedItemIndices is preserved either way.
+                    IItem item = itemLibrary?.GetItem(itemState.Name)
+                        ?? new StandardItem(Guid.NewGuid(), itemState.Name, string.Empty, 0, 0);
+
+                    if (item is IMagicItem magicItem && itemState.CurrentCharges.HasValue)
+                    {
+                        // Adjust from the resolved item's CURRENT charge count, not an assumed
+                        // fresh-at-max baseline: a shared item (e.g. from a long-lived item
+                        // library) may already be at some other charge count if this is a
+                        // same-process resave rather than a fresh load.
+                        int delta = itemState.CurrentCharges.Value - magicItem.Charges;
+                        if (delta > 0) magicItem.Recharge(delta);
+                        else if (delta < 0) magicItem.ConsumeCharges(-delta);
+                    }
+
+                    Inventory.AddItem(item);
+                }
+            }
+
+            Conditions = state.Conditions != null
+                ? new StandardConditionManager(this, state.Conditions)
                 : new StandardConditionManager(this);
-            
+
             Equipment = new StandardEquipmentManager(this); // Pass 'this'
             if (Inventory is StandardInventory stdInventory)
             {
                 stdInventory.SetEquipmentManager(Equipment);
+            }
+
+            if (state.Equipment != null)
+            {
+                var inventoryItems = Inventory.Items.ToList();
+
+                foreach (var slotState in state.Equipment.EquippedSlots)
+                {
+                    if (slotState.ItemIndex >= 0 && slotState.ItemIndex < inventoryItems.Count)
+                    {
+                        Equipment.Equip(inventoryItems[slotState.ItemIndex], slotState.Slot);
+                    }
+                }
+
+                foreach (var index in state.Equipment.AttunedItemIndices)
+                {
+                    if (index >= 0 && index < inventoryItems.Count && inventoryItems[index] is IMagicItem attunedItem)
+                    {
+                        // A resolved item may be a shared object (e.g. from an item library) that
+                        // still thinks it's attuned to whatever creature last held it - including
+                        // the pre-restore version of this same creature. Clear that first so
+                        // attunement can be re-established on the restored creature.
+                        if (attunedItem.AttunedCreature != null)
+                        {
+                            attunedItem.Unattune();
+                        }
+                        Equipment.AttuneItem(attunedItem);
+                    }
+                }
             }
 
             // CombatStats takes 'this' and state
@@ -241,11 +296,26 @@ namespace OpenCombatEngine.Implementation.Creatures
             
             Checks = new StandardCheckManager(new StandardDiceRoller(), this);
             // Equipment already created above
-            Spellcasting = null; 
 
-            LevelManager = state.LevelManager != null 
-                ? new StandardLevelManager(this, state.LevelManager) 
+            LevelManager = state.LevelManager != null
+                ? new StandardLevelManager(this, state.LevelManager)
                 : new StandardLevelManager(this);
+
+            if (state.Spellcasting != null && spellRepository != null)
+            {
+                var restoredCaster = new StandardSpellCaster(
+                    state.Spellcasting,
+                    spellRepository,
+                    a => AbilityScores.GetModifier(a),
+                    () => LevelManager.ProficiencyBonus,
+                    () => LevelManager.Classes.Keys);
+                restoredCaster.SetEffectManager(Effects);
+                Spellcasting = restoredCaster;
+            }
+            else
+            {
+                Spellcasting = null;
+            }
 
             HitPoints.Died += OnDied;
             HitPoints.DamageTaken += OnDamageTaken;
@@ -370,7 +440,47 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             var actionEconomyState = (ActionEconomy as IStateful<ActionEconomyState>)?.GetState();
 
-            return new CreatureState(Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState);
+            var inventoryState = (Inventory as IStateful<InventoryState>)?.GetState();
+            var equipmentState = BuildEquipmentState();
+            var spellcastingState = (Spellcasting as IStateful<SpellCasterState>)?.GetState();
+
+            return new CreatureState(
+                Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
+                inventoryState, equipmentState, spellcastingState);
+        }
+
+        private EquipmentState? BuildEquipmentState()
+        {
+            var inventoryItems = Inventory.Items.ToList();
+            var equippedSlots = new List<EquippedSlotState>();
+
+            void TryAddSlot(IItem? item, EquipmentSlot slot)
+            {
+                if (item == null) return;
+                int index = inventoryItems.FindIndex(i => ReferenceEquals(i, item));
+                if (index >= 0) equippedSlots.Add(new EquippedSlotState(slot, index));
+            }
+
+            TryAddSlot(Equipment.MainHand, EquipmentSlot.MainHand);
+            TryAddSlot(Equipment.OffHand != null ? (IItem)Equipment.OffHand : Equipment.Shield, EquipmentSlot.OffHand);
+            TryAddSlot(Equipment.Armor, EquipmentSlot.Armor);
+            TryAddSlot(Equipment.Head, EquipmentSlot.Head);
+            TryAddSlot(Equipment.Neck, EquipmentSlot.Neck);
+            TryAddSlot(Equipment.Shoulders, EquipmentSlot.Shoulders);
+            TryAddSlot(Equipment.Hands, EquipmentSlot.Hands);
+            TryAddSlot(Equipment.Waist, EquipmentSlot.Waist);
+            TryAddSlot(Equipment.Feet, EquipmentSlot.Feet);
+            TryAddSlot(Equipment.Ring1, EquipmentSlot.Ring1);
+            TryAddSlot(Equipment.Ring2, EquipmentSlot.Ring2);
+
+            var attunedIndices = Equipment.AttunedItems
+                .Select(item => inventoryItems.FindIndex(i => ReferenceEquals(i, item)))
+                .Where(index => index >= 0)
+                .ToList();
+
+            if (equippedSlots.Count == 0 && attunedIndices.Count == 0) return null;
+
+            return new EquipmentState(new Collection<EquippedSlotState>(equippedSlots), new Collection<int>(attunedIndices));
         }
 
         public void AddFeature(IFeature feature)

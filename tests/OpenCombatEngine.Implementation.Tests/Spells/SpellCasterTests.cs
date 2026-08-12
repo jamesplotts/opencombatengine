@@ -253,5 +253,75 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
 
             caster.KnownSpells.Should().Contain(s => s.Name == "Dancing Lights");
         }
+
+        [Fact]
+        public void GetState_And_Restore_Should_Round_Trip_Known_Prepared_Slots_And_Concentration()
+        {
+            var fireball = new FakeSpell("Fireball", 3);
+            var magicMissile = new FakeSpell("Magic Missile", 1);
+
+            var repository = new InMemorySpellRepository();
+            repository.AddSpell(fireball);
+            repository.AddSpell(magicMissile);
+
+            var caster = CreateCaster(isPrepared: true);
+            caster.LearnSpell(fireball);
+            caster.LearnSpell(magicMissile);
+            caster.PrepareSpell(fireball);
+            caster.SetSlots(1, 4);
+            caster.SetSlots(3, 2);
+            caster.ConsumeSlot(3);
+            caster.SetPactSlots(2, 5);
+            caster.SetConcentration(fireball);
+
+            var state = caster.GetState();
+
+            var restored = new StandardSpellCaster(
+                state,
+                repository,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus
+            );
+
+            restored.CastingAbility.Should().Be(Ability.Intelligence);
+            restored.KnownSpells.Should().Contain(s => s.Name == "Fireball");
+            restored.KnownSpells.Should().Contain(s => s.Name == "Magic Missile");
+            restored.PreparedSpells.Should().Contain(s => s.Name == "Fireball");
+            restored.PreparedSpells.Should().NotContain(s => s.Name == "Magic Missile");
+            restored.GetMaxSlots(1).Should().Be(4);
+            restored.GetSlots(1).Should().Be(4);
+            restored.GetMaxSlots(3).Should().Be(2);
+            restored.GetSlots(3).Should().Be(1); // one consumed before save
+            restored.PactSlotsMax.Should().Be(2);
+            restored.PactSlotsCurrent.Should().Be(2);
+            restored.PactSlotLevel.Should().Be(5);
+            restored.ConcentratingOn.Should().NotBeNull();
+            restored.ConcentratingOn!.Name.Should().Be("Fireball");
+        }
+
+        [Fact]
+        public void Restore_Should_Drop_Spells_No_Longer_In_The_Repository()
+        {
+            var known = new FakeSpell("Known", 1);
+            var vanished = new FakeSpell("Vanished", 1);
+
+            var caster = CreateCaster();
+            caster.LearnSpell(known);
+            caster.LearnSpell(vanished);
+            var state = caster.GetState();
+
+            // Repository only has "Known" - "Vanished" no longer resolves.
+            var repository = new InMemorySpellRepository();
+            repository.AddSpell(known);
+
+            var restored = new StandardSpellCaster(
+                state,
+                repository,
+                a => _creature.AbilityScores.GetModifier(a),
+                () => _creature.ProficiencyBonus
+            );
+
+            restored.KnownSpells.Should().ContainSingle(s => s.Name == "Known");
+        }
     }
 }

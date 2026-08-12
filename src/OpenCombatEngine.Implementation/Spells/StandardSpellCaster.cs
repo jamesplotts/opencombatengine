@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Classes;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Core.Interfaces.Spells;
+using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Core.Results;
 
 namespace OpenCombatEngine.Implementation.Spells
 {
-    public class StandardSpellCaster : ISpellCaster
+    public class StandardSpellCaster : ISpellCaster, IStateful<SpellCasterState>
     {
         private readonly List<ISpell> _knownSpells = new();
         private readonly List<ISpell> _preparedSpells = new();
@@ -46,6 +49,55 @@ namespace OpenCombatEngine.Implementation.Spells
             _getProficiency = getProficiency ?? throw new ArgumentNullException(nameof(getProficiency));
             _isPreparedCaster = isPreparedCaster;
             _getClasses = getClasses;
+        }
+
+        public StandardSpellCaster(
+            SpellCasterState state,
+            ISpellRepository spellRepository,
+            Func<Ability, int> getModifier,
+            Func<int> getProficiency,
+            Func<IEnumerable<IClassDefinition>>? getClasses = null)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            ArgumentNullException.ThrowIfNull(spellRepository);
+
+            _castingAbility = state.CastingAbility;
+            _getModifier = getModifier ?? throw new ArgumentNullException(nameof(getModifier));
+            _getProficiency = getProficiency ?? throw new ArgumentNullException(nameof(getProficiency));
+            _isPreparedCaster = state.IsPreparedCaster;
+            _getClasses = getClasses;
+
+            // A spell that no longer exists in the repository is dropped rather than
+            // failing the whole restore.
+            foreach (var name in state.KnownSpellNames)
+            {
+                var result = spellRepository.GetSpell(name);
+                if (result.IsSuccess) _knownSpells.Add(result.Value);
+            }
+            foreach (var name in state.PreparedSpellNames)
+            {
+                var result = spellRepository.GetSpell(name);
+                if (result.IsSuccess && !_preparedSpells.Any(s => s.Name == result.Value.Name))
+                {
+                    _preparedSpells.Add(result.Value);
+                }
+            }
+
+            foreach (var slot in state.Slots)
+            {
+                _maxSlots[slot.Level] = slot.Max;
+                _currentSlots[slot.Level] = slot.Current;
+            }
+
+            PactSlotsMax = state.PactSlotsMax;
+            PactSlotsCurrent = state.PactSlotsCurrent;
+            PactSlotLevel = state.PactSlotLevel;
+
+            if (!string.IsNullOrWhiteSpace(state.ConcentratingOnSpellName))
+            {
+                var result = spellRepository.GetSpell(state.ConcentratingOnSpellName);
+                if (result.IsSuccess) ConcentratingOn = result.Value;
+            }
         }
 
         public IReadOnlyList<ISpell> KnownSpells => _knownSpells.AsReadOnly();
@@ -263,6 +315,28 @@ namespace OpenCombatEngine.Implementation.Spells
         public void SetConcentration(ISpell spell)
         {
             ConcentratingOn = spell;
+        }
+
+        public SpellCasterState GetState()
+        {
+            var slotLevels = _maxSlots.Keys.Union(_currentSlots.Keys).OrderBy(l => l);
+            var slotStates = slotLevels
+                .Select(level => new SpellSlotState(
+                    level,
+                    _maxSlots.TryGetValue(level, out int max) ? max : 0,
+                    _currentSlots.TryGetValue(level, out int current) ? current : 0))
+                .ToList();
+
+            return new SpellCasterState(
+                _castingAbility,
+                _isPreparedCaster,
+                new Collection<string>(_knownSpells.Select(s => s.Name).ToList()),
+                new Collection<string>(_preparedSpells.Select(s => s.Name).ToList()),
+                new Collection<SpellSlotState>(slotStates),
+                PactSlotsMax,
+                PactSlotsCurrent,
+                PactSlotLevel,
+                ConcentratingOn?.Name);
         }
     }
 }

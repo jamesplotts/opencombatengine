@@ -2,6 +2,8 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OpenCombatEngine.Core.Interfaces.Combat;
+using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 
 namespace OpenCombatEngine.Implementation.Serialization
@@ -33,7 +35,11 @@ namespace OpenCombatEngine.Implementation.Serialization
             throw new NotSupportedException("Only StandardCombatManager is currently supported for serialization.");
         }
 
-        public void Deserialize(string json, ICombatManager combatManager)
+        public void Deserialize(
+            string json,
+            ICombatManager combatManager,
+            ISpellRepository? spellRepository = null,
+            IItemLibrary? itemLibrary = null)
         {
             if (string.IsNullOrWhiteSpace(json)) throw new ArgumentException("JSON cannot be empty.", nameof(json));
             ArgumentNullException.ThrowIfNull(combatManager);
@@ -43,7 +49,7 @@ namespace OpenCombatEngine.Implementation.Serialization
 
             if (combatManager is OpenCombatEngine.Implementation.Combat.StandardCombatManager stdManager)
             {
-                stdManager.RestoreState(state);
+                stdManager.RestoreState(state, spellRepository, itemLibrary);
             }
             else
             {

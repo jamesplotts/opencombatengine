@@ -53,6 +53,9 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="Conditions">State of conditions.</param>
     /// <param name="LevelManager">State of level manager.</param>
     /// <param name="ActionEconomy">State of action economy (Action/Bonus Action/Reaction availability).</param>
+    /// <param name="Inventory">State of the inventory (items owned by the creature).</param>
+    /// <param name="Equipment">State of equipped/attuned items, referencing <paramref name="Inventory"/> by index.</param>
+    /// <param name="Spellcasting">State of the spellcasting component, if the creature is a caster.</param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -62,5 +65,8 @@ namespace OpenCombatEngine.Core.Models.States
         CombatStatsState? CombatStats = null,
         ConditionManagerState? Conditions = null,
         LevelManagerState? LevelManager = null,
-        ActionEconomyState? ActionEconomy = null);
+        ActionEconomyState? ActionEconomy = null,
+        InventoryState? Inventory = null,
+        EquipmentState? Equipment = null,
+        SpellCasterState? Spellcasting = null);
 }
