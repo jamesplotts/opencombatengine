@@ -110,9 +110,17 @@ namespace OpenCombatEngine.Implementation.Items
         public Result<int> Recharge(int amount)
         {
             if (amount < 0) return Result<int>.Failure("Amount cannot be negative.");
-            
+
             Charges = Math.Min(MaxCharges, Charges + amount);
             return Result<int>.Success(Charges);
+        }
+
+        public IMagicItem Clone()
+        {
+            return new MagicItem(
+                Name, Description, Weight, Value, Type, RequiresAttunement,
+                _features, _conditions, MaxCharges, RechargeRate, RechargeFrequency, RechargeFormula,
+                WeaponProperties, ArmorProperties, ContainerProperties, DefaultSlot, _abilities);
         }
     }
 }

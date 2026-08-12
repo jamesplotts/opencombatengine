@@ -43,10 +43,16 @@ namespace OpenCombatEngine.Implementation.Items
             // StandardItem doesn't store slug explicitly in interface IItem.
             // But I stored it in my classes? Actually StandardItem constructor doesn't take slug.
             // I should search by Name (case insensitive) as a proxy for slug if slug isn't on interface.
-            // Or better, add Slug to IItem? No time to change interface again. 
+            // Or better, add Slug to IItem? No time to change interface again.
             // Matching Name is acceptable for now.
-            return _items.FirstOrDefault(i => i.Name.Equals(slug, StringComparison.OrdinalIgnoreCase) || 
+            var found = _items.FirstOrDefault(i => i.Name.Equals(slug, StringComparison.OrdinalIgnoreCase) ||
                                               i.Name.Replace(" ", "-", StringComparison.Ordinal).Equals(slug, StringComparison.OrdinalIgnoreCase));
+
+            // Magic items carry per-owner mutable state (charges, attunement). Hand out an
+            // independent copy so consuming charges or attuning on one owner's item can't leak
+            // into another owner's item of the same name. Weapons/armor/plain items have no
+            // mutable state, so sharing the cached instance is harmless and avoids needless copies.
+            return found is IMagicItem magicItem ? magicItem.Clone() : found;
         }
 
         public IWeapon? GetWeapon(string slug)
@@ -81,7 +87,11 @@ namespace OpenCombatEngine.Implementation.Items
             // Simple random pick
             var index = _diceRoller.Roll($"1d{list.Count}").Value.Total - 1;
             // Handle edge case where roll is 1-based. 1d1 -> 1. index 0.
-            return list[Math.Clamp(index, 0, list.Count - 1)];
+            var picked = list[Math.Clamp(index, 0, list.Count - 1)];
+
+            // Same reasoning as GetItem: hand out an independent copy of magic items so two
+            // separate loot drops of "the same" item don't share mutable charge/attunement state.
+            return picked is IMagicItem magicItem ? magicItem.Clone() : picked;
         }
     }
 }

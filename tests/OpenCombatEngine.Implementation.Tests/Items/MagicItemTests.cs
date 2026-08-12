@@ -62,5 +62,31 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             result.IsSuccess.Should().BeTrue();
             item.AttunedCreature.Should().BeNull();
         }
+
+        [Fact]
+        public void Clone_Should_Produce_Independent_Fresh_Instance()
+        {
+            var creature = Substitute.For<ICreature>();
+            var original = new MagicItem("Ring", "A ring", 0.1, 100, ItemType.Accessory, true, maxCharges: 5);
+            original.ConsumeCharges(3);
+            original.Attune(creature);
+
+            var clone = original.Clone();
+
+            // Base data carried over.
+            clone.Name.Should().Be("Ring");
+            clone.Description.Should().Be("A ring");
+            clone.RequiresAttunement.Should().BeTrue();
+            clone.MaxCharges.Should().Be(5);
+
+            // Mutable state is fresh, not copied - the whole point of cloning.
+            clone.Charges.Should().Be(5);
+            clone.AttunedCreature.Should().BeNull();
+
+            // Original is untouched by anything done to the clone.
+            clone.Attune(Substitute.For<ICreature>());
+            original.AttunedCreature.Should().Be(creature);
+            original.Charges.Should().Be(2);
+        }
     }
 }

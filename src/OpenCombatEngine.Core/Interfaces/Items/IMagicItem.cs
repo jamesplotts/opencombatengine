@@ -107,5 +107,13 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// Gets the default equipment slot for this item, if any.
         /// </summary>
         OpenCombatEngine.Core.Enums.EquipmentSlot? DefaultSlot { get; }
+
+        /// <summary>
+        /// Creates an independent copy of this item with the same base data (name, features,
+        /// abilities, etc.) but fresh mutable state: full charges and no attunement. Used when
+        /// handing out an instance from a shared source (e.g. an item library) so that charge
+        /// consumption or attunement on one owner's copy can't leak into another owner's.
+        /// </summary>
+        IMagicItem Clone();
     }
 }
