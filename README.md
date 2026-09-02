@@ -4,8 +4,15 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/download)
 [![C#](https://img.shields.io/badge/C%23-12.0-239120.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![SRD](https://img.shields.io/badge/SRD-5.1-red.svg)](https://dnd.wizards.com/resources/systems-reference-document)
+[![Release](https://img.shields.io/badge/release-v0.6.0--rc1-blue.svg)](RELEASE_NOTES.md)
+[![Tests](https://img.shields.io/badge/tests-512%20passing-brightgreen.svg)](tests/)
 
 An open-source, interface-driven combat engine for RPGs compatible with D&D 5e SRD mechanics. Built with extensibility, testability, and AI-assisted development in mind.
+
+Used as the reference D&D system engine for [Layforge](https://github.com/jamesplotts/layforge), an AI-Dungeon-Master TTRPG platform — Layforge's Master process calls into this engine over gRPC via a thin sidecar wrapping `OpenCombatEngine.Core`'s interfaces, rather than embedding it directly, so any system engine implementing that same contract (Vampire, Pathfinder, etc.) can substitute for a different game system.
+
+> [!TIP]
+> **v0.6.0-rc1** is out — AI behaviors, procedural loot, and full Open5e content integration. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the highlights.
 
 ## 🎯 Project Goals
 
@@ -29,7 +36,6 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
   - **Tier 3 (Role-Based)**: Specialized roles like Artillery (kiting) and Brute.
 - **Creature Management**:
   - Composition-based architecture (`ICreature`, `IAbilityScores`, `IHitPoints`)
-  - **Serialization**: Memento pattern support for saving/loading creature state (JSON compatible)
 - **Action System**:
   - Command-based Actions (`IAction`, `AttackAction`)
   - Combat Stats (AC, Initiative, Speed)
@@ -37,26 +43,30 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 - **Turn Management**:
   - Cyclic Initiative system
   - Tie-breaking using Dexterity score
-  - Cyclic Initiative system
-  - Tie-breaking using Dexterity score
   - Round tracking
 - **Health & Survival**:
   - Death Saving Throws (Success/Failure tracking, Stabilization)
+  - Distinct Downed (0 HP, stabilizable) and Died (actual death) states
   - Damage Types & Resistances (Resistance, Vulnerability, Immunity logic)
   - Ability Checks & Saving Throws
 - **Spellcasting System**:
   - Spell Slots & Preparation (Wizard/Sorcerer style support)
   - Spell Resolution (Attack Rolls, Saving Throws, Damage)
-  - Spell Resolution (Attack Rolls, Saving Throws, Damage)
+  - Class-validated spell learning (`SpellValidationService`)
   - Content Import (JSON support for Spells)
   - **Open5e Integration**: Direct API access to SRD Spells, Monsters, Weapons, and Armor.
 - **Loot & Items**:
   - Procedural Loot Generation based on CR tiers.
   - Standard Item Library with Weapons, Armor, and Magic Items.
+  - Magic items imported directly from Open5e, mapped to real `IMagicItem` (not degraded to a plain `StandardItem`)
 - **Magic Items**:
   - Attunement System (Max 3 items)
   - Passive Bonuses (Features/Conditions applied automatically)
   - Item Types (Weapons, Armor, Rings, Wondrous Items)
+  - Cloned on resolve so owners never share mutable item state
+- **Persistence**:
+  - Memento-pattern save/load for creature state (JSON compatible)
+  - Full round-trip serialization for inventory, equipment, and spellcasting — including nested container contents
 - **Extensible Design**:
   - Interface-driven architecture
   - Dependency Injection friendly
@@ -77,8 +87,8 @@ An open-source, interface-driven combat engine for RPGs compatible with D&D 5e S
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/OpenCombatEngine.git
-cd OpenCombatEngine
+git clone https://github.com/jamesplotts/opencombatengine.git
+cd opencombatengine
 
 # Build the solution
 dotnet build
@@ -125,14 +135,18 @@ dotnet run --project src/OpenCombatEngine.Demo/OpenCombatEngine.Demo.csproj
 ```
 OpenCombatEngine/
 ├── src/
-│   ├── OpenCombatEngine.Core/          # Interfaces and contracts only
-│   ├── OpenCombatEngine.Implementation/ # Concrete implementations
-│   └── OpenCombatEngine.Content/        # Content import system
+│   ├── OpenCombatEngine.Core/           # Interfaces and contracts only
+│   ├── OpenCombatEngine.Implementation/ # Concrete implementations,
+│   │                                    # including content import (Content/)
+│   └── OpenCombatEngine.Demo/           # CLI demo: Event + Reaction systems
 ├── tests/
-│   └── OpenCombatEngine.Core.Tests/    # Comprehensive unit tests
+│   ├── OpenCombatEngine.Core.Tests/            # Core contract tests
+│   └── OpenCombatEngine.Implementation.Tests/  # Implementation tests
 ├── docs/
 │   ├── architecture/                   # Architecture decisions
-│   └── implementation/                 # Implementation details
+│   ├── adr/                            # Architecture Decision Records
+│   ├── implementation/                 # Implementation details
+│   └── STRATEGY.md                     # 7-phase functional-completeness roadmap
 ├── examples/
 │   └── DiceRollerDemo.cs              # Usage examples
 └── .ai/
@@ -247,9 +261,9 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 
 ## 💬 Community
 
-- [Issues](https://github.com/yourusername/OpenCombatEngine/issues) - Bug reports and feature requests
-- [Discussions](https://github.com/yourusername/OpenCombatEngine/discussions) - General discussions
-- [Wiki](https://github.com/yourusername/OpenCombatEngine/wiki) - Community documentation
+- [Issues](https://github.com/jamesplotts/opencombatengine/issues) - Bug reports and feature requests
+- [Discussions](https://github.com/jamesplotts/opencombatengine/discussions) - General discussions
+- [Wiki](https://github.com/jamesplotts/opencombatengine/wiki) - Community documentation
 
 ## 👥 Contributors
 
