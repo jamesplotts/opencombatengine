@@ -24,7 +24,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             _creature = creature ?? throw new ArgumentNullException(nameof(creature));
         }
 
-        public Result<int> RollAbilityCheck(Ability ability, string? skillName = null)
+        public Result<DiceRollResult> RollAbilityCheck(Ability ability, string? skillName = null)
         {
             int modifier = _creature.AbilityScores.GetModifier(ability);
             int proficiencyBonus = 0;
@@ -35,19 +35,22 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
 
             var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
-            
-            if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
-            
+
+            if (!roll.IsSuccess) return Result<DiceRollResult>.Failure(roll.Error);
+
             int total = roll.Value.Total;
             if (_creature.Effects != null)
             {
                 total = _creature.Effects.ApplyStatBonuses(StatType.AbilityCheck, total);
             }
-            
-            return Result<int>.Success(total);
+
+            // Effects may have adjusted the total beyond what the raw roll
+            // produced; IndividualRolls/Notation/Modifier/RollType still
+            // describe the actual die(s) rolled, so only Total is replaced.
+            return Result<DiceRollResult>.Success(roll.Value with { Total = total });
         }
 
-        public Result<int> RollSavingThrow(Ability ability)
+        public Result<DiceRollResult> RollSavingThrow(Ability ability)
         {
             int modifier = _creature.AbilityScores.GetModifier(ability);
             int proficiencyBonus = 0;
@@ -59,7 +62,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
 
-            if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
+            if (!roll.IsSuccess) return Result<DiceRollResult>.Failure(roll.Error);
 
             int total = roll.Value.Total;
             if (_creature.Effects != null)
@@ -69,17 +72,17 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             SavingThrowRolled?.Invoke(this, new OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs(ability, total, _creature));
 
-            return Result<int>.Success(total);
+            return Result<DiceRollResult>.Success(roll.Value with { Total = total });
         }
 
         /// <inheritdoc />
         public event EventHandler<OpenCombatEngine.Core.Models.Events.SavingThrowEventArgs>? SavingThrowRolled;
 
-        public Result<int> RollDeathSave()
+        public Result<DiceRollResult> RollDeathSave()
         {
             var roll = _diceRoller.Roll("1d20");
-            if (!roll.IsSuccess) return Result<int>.Failure(roll.Error);
-            return Result<int>.Success(roll.Value.Total);
+            if (!roll.IsSuccess) return Result<DiceRollResult>.Failure(roll.Error);
+            return Result<DiceRollResult>.Success(roll.Value);
         }
 
         public void AddSkillProficiency(string skillName)

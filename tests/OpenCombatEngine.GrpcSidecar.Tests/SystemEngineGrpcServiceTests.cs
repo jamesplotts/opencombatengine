@@ -171,6 +171,13 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeTrue();
         response.Outcome.Total.Should().BeGreaterThan(0);
+        // ICheckManager now returns the full roll detail (not just the
+        // total — see ICheckManager.RollAbilityCheck's return docs), so
+        // the sidecar can populate the actual d20 face(s) rolled.
+        response.Outcome.Rolls.Should().HaveCount(1);
+        response.Outcome.Rolls[0].Sides.Should().Be(20);
+        response.Outcome.Rolls[0].Result.Should().BeInRange(1, 20);
+        response.Outcome.Rolls[0].Label.Should().Be("d20");
     }
 
     [Fact]

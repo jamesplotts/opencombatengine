@@ -95,7 +95,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         {
             // Mock target check manager to force save success
             var mockCheckManager = Substitute.For<ICheckManager>();
-            mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(20)); // High roll
+            mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult>.Success(
+                new OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult(20, "1d20", new List<int> { 20 }, 0, OpenCombatEngine.Core.Interfaces.Dice.RollType.Normal))); // High roll
             
             var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), checkManager: mockCheckManager);
 
@@ -122,8 +123,9 @@ namespace OpenCombatEngine.Implementation.Tests.Features
         public void Save_Should_Negate_Damage_For_Cantrip()
         {
             var mockCheckManager = Substitute.For<ICheckManager>();
-            mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(20)); 
-            
+            mockCheckManager.RollSavingThrow(Arg.Any<Ability>()).Returns(OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult>.Success(
+                new OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult(20, "1d20", new List<int> { 20 }, 0, OpenCombatEngine.Core.Interfaces.Dice.RollType.Normal)));
+
             var target = new StandardCreature(System.Guid.NewGuid().ToString(), "Target", new StandardAbilityScores(), new StandardHitPoints(20), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()), checkManager: mockCheckManager);
 
             var damageRolls = new List<DamageFormula> { new DamageFormula("10", DamageType.Radiant) };

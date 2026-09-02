@@ -339,7 +339,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             {
                 int dc = Math.Max(10, e.Amount / 2);
                 var saveResult = Checks.RollSavingThrow(Ability.Constitution);
-                if (saveResult.IsSuccess && saveResult.Value < dc)
+                if (saveResult.IsSuccess && saveResult.Value.Total < dc)
                 {
                     Spellcasting.BreakConcentration();
                 }
@@ -363,7 +363,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                 var rollResult = Checks.RollDeathSave();
                 if (rollResult.IsSuccess)
                 {
-                    int roll = rollResult.Value;
+                    int roll = rollResult.Value.Total;
                     if (roll == 20) HitPoints.Heal(1);
                     else if (roll == 1) HitPoints.RecordDeathSave(false, critical: true);
                     else if (roll >= 10) HitPoints.RecordDeathSave(true);

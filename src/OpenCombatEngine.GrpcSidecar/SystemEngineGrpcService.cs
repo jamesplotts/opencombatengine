@@ -8,6 +8,7 @@ using Grpc.Core;
 using Layforge.Protocol.SystemEngine.V1;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Conditions;
@@ -178,7 +179,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         var creature = creatureResult.Value;
         var checkType = GetString(request.Params, "checkType");
 
-        Result<int> rollResult;
+        Result<DiceRollResult> rollResult;
         switch (checkType)
         {
             case "ability_check":
@@ -211,15 +212,25 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         if (rollResult.IsFailure)
             return Task.FromResult(new ResolveCheckResponse { Success = false, Error = rollResult.Error });
 
-        // ICheckManager only returns the modifier-inclusive total (Result<int>) —
-        // it does not expose the raw d20 roll, so Outcome.rolls is left empty and
-        // critical_success/critical_failure cannot be determined here. Documented
-        // limitation, not an oversight (docs/design.md §12 grounding work).
-        return Task.FromResult(new ResolveCheckResponse
+        var roll = rollResult.Value;
+        var outcome = new Outcome
         {
-            Success = true,
-            Outcome = new Outcome { Total = rollResult.Value, ResultSummary = "resolved" },
-        });
+            Total = roll.Total,
+            CriticalSuccess = roll.IsCriticalSuccess,
+            CriticalFailure = roll.IsCriticalFailure,
+            ResultSummary = "resolved",
+        };
+        // ability_check/saving_throw/death_save all roll a single d20
+        // (StandardCheckManager's own "1d20+..." notation) — that's a fact
+        // about this engine's checks specifically, safe to hardcode here in
+        // the sidecar (the system-engine-specific adapter), unlike in
+        // Master's own Go code (docs/design.md §6.1, CLAUDE.md).
+        foreach (var die in roll.IndividualRolls)
+        {
+            outcome.Rolls.Add(new DieRoll { Sides = 20, Result = die, Label = "d20" });
+        }
+
+        return Task.FromResult(new ResolveCheckResponse { Success = true, Outcome = outcome });
     }
 
     public override Task StreamEvents(

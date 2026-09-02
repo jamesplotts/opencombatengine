@@ -142,9 +142,13 @@ public class CreatureInterfaceTests
 
     private class StubCheckManager : ICheckManager
     {
-        public Result<int> RollAbilityCheck(Ability ability, string? skillName = null) => Result<int>.Success(10);
-        public Result<int> RollSavingThrow(Ability ability) => Result<int>.Success(10);
-        public Result<int> RollDeathSave() => Result<int>.Success(10);
+        private static Result<Interfaces.Dice.DiceRollResult> Roll10() =>
+            Result<Interfaces.Dice.DiceRollResult>.Success(
+                new Interfaces.Dice.DiceRollResult(10, "1d20", new[] { 10 }, 0, Interfaces.Dice.RollType.Normal));
+
+        public Result<Interfaces.Dice.DiceRollResult> RollAbilityCheck(Ability ability, string? skillName = null) => Roll10();
+        public Result<Interfaces.Dice.DiceRollResult> RollSavingThrow(Ability ability) => Roll10();
+        public Result<Interfaces.Dice.DiceRollResult> RollDeathSave() => Roll10();
         
         public void AddSkillProficiency(string skillName) { }
         public void RemoveSkillProficiency(string skillName) { }

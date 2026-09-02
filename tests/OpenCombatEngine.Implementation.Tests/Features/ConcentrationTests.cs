@@ -129,7 +129,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             creature.Spellcasting!.SetConcentration(_concentrationSpell);
             
             // Mock Save Failure
-            mockCheckManager.RollSavingThrow(Ability.Constitution).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(5)); // Fail DC 10
+            mockCheckManager.RollSavingThrow(Ability.Constitution).Returns(OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult>.Success(
+                new OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult(5, "1d20", new System.Collections.Generic.List<int> { 5 }, 0, OpenCombatEngine.Core.Interfaces.Dice.RollType.Normal))); // Fail DC 10
             
             creature.HitPoints.TakeDamage(20);
             
@@ -159,7 +160,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             creature.Spellcasting!.SetConcentration(_concentrationSpell);
             
             // Mock Save Success
-            mockCheckManager.RollSavingThrow(Ability.Constitution).Returns(OpenCombatEngine.Core.Results.Result<int>.Success(15)); // Pass DC 10
+            mockCheckManager.RollSavingThrow(Ability.Constitution).Returns(OpenCombatEngine.Core.Results.Result<OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult>.Success(
+                new OpenCombatEngine.Core.Interfaces.Dice.DiceRollResult(15, "1d20", new System.Collections.Generic.List<int> { 15 }, 0, OpenCombatEngine.Core.Interfaces.Dice.RollType.Normal))); // Pass DC 10
             
             creature.HitPoints.TakeDamage(20);
             

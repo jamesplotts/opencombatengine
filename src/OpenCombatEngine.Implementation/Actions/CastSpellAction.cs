@@ -284,7 +284,7 @@ namespace OpenCombatEngine.Implementation.Actions
                 
                 if (saveResult.IsSuccess)
                 {
-                    saveSuccess = saveResult.Value >= dc;
+                    saveSuccess = saveResult.Value.Total >= dc;
                     messages.Add(saveSuccess ? "Saved!" : "Failed save.");
                 }
             }

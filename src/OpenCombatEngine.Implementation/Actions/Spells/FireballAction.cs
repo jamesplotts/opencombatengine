@@ -74,7 +74,7 @@ namespace OpenCombatEngine.Implementation.Actions.Spells
                 int damageToTake = totalDamage;
                 if (save.IsSuccess)
                 {
-                    if (save.Value >= DC)
+                    if (save.Value.Total >= DC)
                     {
                         damageToTake /= 2;
                     }
