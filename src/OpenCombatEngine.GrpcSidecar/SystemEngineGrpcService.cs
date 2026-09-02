@@ -1,0 +1,245 @@
+// Copyright (c) 2025 James Duane Plotts
+// Licensed under MIT License for code
+// Game mechanics under OGL 1.0a
+// See LEGAL.md for full disclaimers
+
+using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
+using Layforge.Protocol.SystemEngine.V1;
+using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Conditions;
+using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.GrpcSidecar.Mapping;
+using OpenCombatEngine.Implementation.Conditions;
+using OpenCombatEngine.Implementation.Creatures;
+
+namespace OpenCombatEngine.GrpcSidecar;
+
+/// <summary>
+/// Implements the System Engine gRPC contract (protocol/system_engine.proto)
+/// against OpenCombatEngine. Every method is stateless per-call: no creature
+/// state is held between calls, since Master owns campaign/character state
+/// (docs/design.md §3.1, §10) — each call reconstructs a
+/// <see cref="StandardCreature"/> from the Actor it was sent via
+/// <see cref="ActorMapping"/> and, where relevant, serializes a full Actor
+/// back out.
+/// </summary>
+/// <remarks>
+/// Response messages that carry their own success/error field
+/// (ResolveCheckResponse, ApplyEffectResponse) report failures through that
+/// field. Response messages with no such field (ToJsonResponse,
+/// GetCharacterStatusResponse) report failures as an
+/// <see cref="RpcException"/> with <see cref="StatusCode.InvalidArgument"/>
+/// instead — this is the gRPC-idiomatic error channel for a shape that
+/// doesn't have its own error field. Messages with a warnings list
+/// (ValidateCharacterResponse, FromJsonResponse) report failures as a
+/// single "error"-severity warning rather than either.
+/// </remarks>
+public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
+{
+    public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
+        GetCharacterSchemaRequest request, ServerCallContext context)
+    {
+        return Task.FromResult(new GetCharacterSchemaResponse
+        {
+            SchemaVersion = CharacterSchema.SchemaVersion,
+            JsonSchema = CharacterSchema.Json,
+        });
+    }
+
+    public override Task<ToJsonResponse> ToJson(ToJsonRequest request, ServerCallContext context)
+    {
+        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        if (creatureResult.IsFailure)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
+
+        return Task.FromResult(new ToJsonResponse
+        {
+            Json = CreatureStateJson.Serialize(creatureResult.Value.GetState()),
+            SchemaVersion = ActorMapping.SchemaVersion,
+        });
+    }
+
+    public override Task<FromJsonResponse> FromJson(FromJsonRequest request, ServerCallContext context)
+    {
+        var stateResult = CreatureStateJson.Deserialize(request.Json);
+        var response = new FromJsonResponse();
+
+        if (stateResult.IsFailure)
+        {
+            response.Warnings.Add(new ValidationWarning { FieldPath = "", Message = stateResult.Error, Severity = "error" });
+            return Task.FromResult(response);
+        }
+
+        response.Actor = ActorMapping.ToActor(new StandardCreature(stateResult.Value));
+        return Task.FromResult(response);
+    }
+
+    public override Task<GetCharacterStatusResponse> GetCharacterStatus(
+        GetCharacterStatusRequest request, ServerCallContext context)
+    {
+        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        if (creatureResult.IsFailure)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
+
+        return Task.FromResult(new GetCharacterStatusResponse
+        {
+            Status = CharacterStatusMapper.Map(creatureResult.Value.HitPoints),
+        });
+    }
+
+    public override Task<ValidateCharacterResponse> ValidateCharacter(
+        ValidateCharacterRequest request, ServerCallContext context)
+    {
+        var response = new ValidateCharacterResponse();
+
+        string json;
+        try
+        {
+            json = StructJson.ToJson(request.CharacterData);
+        }
+        catch (Google.Protobuf.InvalidJsonException ex)
+        {
+            response.Warnings.Add(new ValidationWarning { FieldPath = "", Message = ex.Message, Severity = "error" });
+            return Task.FromResult(response);
+        }
+
+        var stateResult = CreatureStateJson.Deserialize(json);
+        if (stateResult.IsFailure)
+        {
+            response.Warnings.Add(new ValidationWarning { FieldPath = "", Message = stateResult.Error, Severity = "error" });
+        }
+
+        return Task.FromResult(response);
+    }
+
+    public override Task<ApplyEffectResponse> ApplyEffect(ApplyEffectRequest request, ServerCallContext context)
+    {
+        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        if (creatureResult.IsFailure)
+            return Task.FromResult(new ApplyEffectResponse { Success = false, Error = creatureResult.Error });
+
+        var creature = creatureResult.Value;
+        var effectType = GetString(request.Effect, "effectType");
+
+        switch (effectType)
+        {
+            case "damage":
+            {
+                var amount = (int)GetNumber(request.Effect, "amount");
+                var damageTypeName = GetString(request.Effect, "damageType");
+                if (damageTypeName is not null && System.Enum.TryParse<DamageType>(damageTypeName, ignoreCase: true, out var damageType))
+                    creature.HitPoints.TakeDamage(amount, damageType);
+                else
+                    creature.HitPoints.TakeDamage(amount);
+                break;
+            }
+            case "heal":
+            {
+                var amount = (int)GetNumber(request.Effect, "amount");
+                creature.HitPoints.Heal(amount);
+                break;
+            }
+            case "condition":
+            {
+                var name = GetString(request.Effect, "name");
+                if (string.IsNullOrWhiteSpace(name))
+                    return Task.FromResult(new ApplyEffectResponse { Success = false, Error = "Missing required field 'name' for effectType 'condition'." });
+
+                var description = GetString(request.Effect, "description") ?? "";
+                var durationRounds = (int)GetNumber(request.Effect, "durationRounds");
+                var conditionTypeName = GetString(request.Effect, "conditionType");
+                var conditionType = conditionTypeName is not null && System.Enum.TryParse<ConditionType>(conditionTypeName, ignoreCase: true, out var parsed)
+                    ? parsed
+                    : ConditionType.None;
+
+                var addResult = creature.Conditions.AddCondition(new Condition(name, description, durationRounds, conditionType));
+                if (addResult.IsFailure)
+                    return Task.FromResult(new ApplyEffectResponse { Success = false, Error = addResult.Error });
+                break;
+            }
+            default:
+                return Task.FromResult(new ApplyEffectResponse
+                {
+                    Success = false,
+                    Error = $"Unknown effectType '{effectType}'. Expected 'damage', 'heal', or 'condition'.",
+                });
+        }
+
+        return Task.FromResult(new ApplyEffectResponse { Success = true, Actor = ActorMapping.ToActor(creature) });
+    }
+
+    public override Task<ResolveCheckResponse> ResolveCheck(ResolveCheckRequest request, ServerCallContext context)
+    {
+        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        if (creatureResult.IsFailure)
+            return Task.FromResult(new ResolveCheckResponse { Success = false, Error = creatureResult.Error });
+
+        var creature = creatureResult.Value;
+        var checkType = GetString(request.Params, "checkType");
+
+        Result<int> rollResult;
+        switch (checkType)
+        {
+            case "ability_check":
+            {
+                var abilityName = GetString(request.Params, "ability");
+                if (abilityName is null || !System.Enum.TryParse<Ability>(abilityName, ignoreCase: true, out var ability))
+                    return Task.FromResult(new ResolveCheckResponse { Success = false, Error = "Missing or invalid 'ability' for checkType 'ability_check'." });
+                rollResult = creature.Checks.RollAbilityCheck(ability, GetString(request.Params, "skill"));
+                break;
+            }
+            case "saving_throw":
+            {
+                var abilityName = GetString(request.Params, "ability");
+                if (abilityName is null || !System.Enum.TryParse<Ability>(abilityName, ignoreCase: true, out var ability))
+                    return Task.FromResult(new ResolveCheckResponse { Success = false, Error = "Missing or invalid 'ability' for checkType 'saving_throw'." });
+                rollResult = creature.Checks.RollSavingThrow(ability);
+                break;
+            }
+            case "death_save":
+                rollResult = creature.Checks.RollDeathSave();
+                break;
+            default:
+                return Task.FromResult(new ResolveCheckResponse
+                {
+                    Success = false,
+                    Error = $"Unknown checkType '{checkType}'. Expected 'ability_check', 'saving_throw', or 'death_save'.",
+                });
+        }
+
+        if (rollResult.IsFailure)
+            return Task.FromResult(new ResolveCheckResponse { Success = false, Error = rollResult.Error });
+
+        // ICheckManager only returns the modifier-inclusive total (Result<int>) —
+        // it does not expose the raw d20 roll, so Outcome.rolls is left empty and
+        // critical_success/critical_failure cannot be determined here. Documented
+        // limitation, not an oversight (docs/design.md §12 grounding work).
+        return Task.FromResult(new ResolveCheckResponse
+        {
+            Success = true,
+            Outcome = new Outcome { Total = rollResult.Value, ResultSummary = "resolved" },
+        });
+    }
+
+    public override Task StreamEvents(
+        StreamEventsRequest request, IServerStreamWriter<EngineEvent> responseStream, ServerCallContext context)
+    {
+        // Deliberately unimplemented: the engine's per-campaign event feed
+        // requires holding a live StandardCombatManager across the stream's
+        // lifetime, which conflicts with every other RPC on this service
+        // being stateless per-call. Revisit once Master's session model for
+        // subscribing to a running combat is designed (docs/design.md §8).
+        throw new RpcException(new Status(StatusCode.Unimplemented, "StreamEvents is not yet implemented."));
+    }
+
+    private static string? GetString(Struct? s, string key) =>
+        s is not null && s.Fields.TryGetValue(key, out var v) && v.KindCase == Value.KindOneofCase.StringValue
+            ? v.StringValue
+            : null;
+
+    private static double GetNumber(Struct? s, string key) =>
+        s is not null && s.Fields.TryGetValue(key, out var v) && v.KindCase == Value.KindOneofCase.NumberValue
+            ? v.NumberValue
+            : 0;
+}

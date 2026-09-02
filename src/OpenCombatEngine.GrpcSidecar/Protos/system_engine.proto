@@ -1,0 +1,248 @@
+// Copyright (c) 2026 James Duane Plotts
+// Licensed under the MIT License. See LICENSE in the repository root.
+//
+// System Engine contract (docs/design.md §6.1). Master calls this service
+// for all rules resolution; it never inlines system-specific logic itself.
+// OpenCombatEngine (D&D, docs/design.md §12) is the reference
+// implementation, running as an out-of-process gRPC sidecar. Any future
+// system engine (Vampire, Pathfinder, etc.) implements this same service
+// in any language with a protobuf compiler — that's the whole point of
+// this being the extensibility seam rather than an in-language interface.
+//
+// Vendored from github.com/jamesplotts/layforge's protocol/system_engine.proto,
+// which is the canonical source of truth for this contract — that repo's
+// own generate.sh regenerates Go stubs from it, and the same file is
+// copied here verbatim so this project's build can generate the C#
+// server stubs Grpc.Tools produces automatically from any .proto file
+// under Protos/ (see OpenCombatEngine.GrpcSidecar.csproj's <Protobuf>
+// item) — no separate generate step needed on this side, unlike
+// layforge's Go tooling.
+//
+// This copy is not the source of truth: if the contract changes, edit
+// layforge's copy first and re-copy here, not the other way around.
+
+syntax = "proto3";
+
+package layforge.systemengine.v1;
+
+option go_package = "github.com/jamesplotts/layforge/master/internal/systemenginepb;systemenginepb";
+option csharp_namespace = "Layforge.Protocol.SystemEngine.V1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// SystemEngine is the contract Master calls against for all mechanical
+// rules resolution. Governance gates (docs/design.md §9) are enforced by
+// Master before calling ApplyEffect-shaped methods, not inside the engine
+// — the engine answers "what would happen", Master decides "is this
+// allowed to happen".
+service SystemEngine {
+  // ResolveCheck resolves a mechanical check (attack roll, saving throw,
+  // skill check, etc.) and returns an authoritative outcome. Master
+  // treats this result as final — it narrates around it, it does not
+  // recompute or override it.
+  rpc ResolveCheck(ResolveCheckRequest) returns (ResolveCheckResponse);
+
+  // ApplyEffect applies a mechanical effect (damage, healing, condition,
+  // buff/debuff) to an actor and returns the resulting relevant state.
+  rpc ApplyEffect(ApplyEffectRequest) returns (ApplyEffectResponse);
+
+  // GetCharacterSchema returns the JSON Schema (draft 2020-12) describing
+  // this engine's character-sheet shape, so a client can render a
+  // schema-driven stat/inventory/spells/actions panel without any system
+  // hardcoded into the UI (docs/design.md §4).
+  rpc GetCharacterSchema(GetCharacterSchemaRequest) returns (GetCharacterSchemaResponse);
+
+  // GetCharacterStatus reports a character's current mechanical status,
+  // driving Master's turn-order state machine (docs/design.md §3.1, §9.3).
+  // The AI is not trusted to track this reliably over a long session —
+  // this call is the deterministic source of truth.
+  rpc GetCharacterStatus(GetCharacterStatusRequest) returns (GetCharacterStatusResponse);
+
+  // ValidateCharacter runs mechanical validation over character data
+  // (typically an uploaded/imported sheet) and returns warnings, feeding
+  // Master's character-import review panel (docs/design.md §9.4). This
+  // call does not judge legality/licensing of content — that is out of
+  // scope for the engine (docs/design.md §12, "we provide the pipes").
+  rpc ValidateCharacter(ValidateCharacterRequest) returns (ValidateCharacterResponse);
+
+  // ToJson serializes a character to this engine's canonical JSON
+  // representation, versioned via schema_version.
+  rpc ToJson(ToJsonRequest) returns (ToJsonResponse);
+
+  // FromJson deserializes a character from this engine's canonical JSON
+  // representation. Returns validation warnings inline rather than
+  // requiring a separate ValidateCharacter round trip for the common
+  // import path.
+  rpc FromJson(FromJsonRequest) returns (FromJsonResponse);
+
+  // StreamEvents re-exposes the engine's internal event feed (e.g.
+  // OpenCombatEngine's TurnStarted/DamageDealt/CombatEnded C# events,
+  // docs/design.md §12) as a server-streaming feed. Master cannot
+  // subscribe to in-process language events across the sidecar process
+  // boundary, so the engine relays each event across this stream instead
+  // of Master polling for state changes.
+  rpc StreamEvents(StreamEventsRequest) returns (stream EngineEvent);
+}
+
+// Actor identifies a character/creature and carries its current data as
+// this engine's schema defines it (see GetCharacterSchema). character_data
+// is opaque to Master — Master stores and forwards it, but only the
+// engine that owns schema_version interprets its fields.
+message Actor {
+  string actor_id = 1;
+  google.protobuf.Struct character_data = 2;
+  string schema_version = 3;
+}
+
+message ResolveCheckRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  // System-specific check parameters: check type, target DC, advantage/
+  // disadvantage, opposed-roll target, roll-spec overrides, etc. Shape is
+  // engine-defined, not assumed d20-based (docs/design.md §4).
+  google.protobuf.Struct params = 4;
+}
+
+message ResolveCheckResponse {
+  bool success = 1;
+  Outcome outcome = 2;
+  // Set when success = false; a resolution failure (e.g. malformed
+  // params), distinct from a mechanical failure result inside Outcome.
+  string error = 3;
+}
+
+message DieRoll {
+  int32 sides = 1;
+  int32 result = 2;
+  // e.g. "d20", "damage-1", "damage-2" — disambiguates multi-die pools.
+  string label = 3;
+}
+
+message Outcome {
+  repeated DieRoll rolls = 1;
+  int32 total = 2;
+  bool critical_success = 3;
+  bool critical_failure = 4;
+  // Short machine-usable label, e.g. "hit", "miss", "success", "failure".
+  // Not narrative text — Master's narrative-transform pipeline (docs/
+  // design.md §7) is responsible for prose.
+  string result_summary = 5;
+  // Engine-specific extra data (e.g. margin of success, which ability
+  // modifier applied) that Master's tool-use logging (docs/design.md §8)
+  // may want to persist verbatim.
+  google.protobuf.Struct details = 6;
+}
+
+message ApplyEffectRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // actor carries the current character_data to apply the effect to —
+  // this call is stateless across the RPC boundary like ResolveCheck:
+  // the engine holds no creature state of its own between calls (Master
+  // owns campaign state, docs/design.md §3.1, §10), so there is nothing
+  // for a bare actor_id to look up.
+  Actor actor = 3;
+  // Damage/heal/condition payload; engine-defined shape.
+  google.protobuf.Struct effect = 4;
+}
+
+message ApplyEffectResponse {
+  bool success = 1;
+  // The actor's full character_data after the effect was applied — the
+  // new authoritative state for Master to persist. Deliberately the
+  // whole actor, not a partial diff: a diff would require Master to know
+  // how to merge it back into its own copy, which is exactly the
+  // engine-specific knowledge this contract exists to avoid Master
+  // needing.
+  Actor actor = 2;
+  string error = 3;
+}
+
+message GetCharacterSchemaRequest {}
+
+message GetCharacterSchemaResponse {
+  string schema_version = 1;
+  // JSON Schema draft 2020-12, serialized as a JSON string (kept as a
+  // string rather than google.protobuf.Struct so the schema document's
+  // own JSON Schema keywords, e.g. "$ref", round-trip exactly).
+  string json_schema = 2;
+}
+
+// CharacterStatus mirrors OpenCombatEngine's status states (docs/
+// design.md §9.3). CHARACTER_STATUS_UNSPECIFIED is the required
+// proto3 zero value, not a real status — always check for it.
+enum CharacterStatus {
+  CHARACTER_STATUS_UNSPECIFIED = 0;
+  CHARACTER_STATUS_ACTIVE = 1;
+  CHARACTER_STATUS_UNCONSCIOUS = 2;
+  CHARACTER_STATUS_DYING = 3;
+  CHARACTER_STATUS_DEAD = 4;
+}
+
+message GetCharacterStatusRequest {
+  // actor carries character_data, same reasoning as ApplyEffectRequest:
+  // the engine holds no creature state of its own between calls, so
+  // there is nothing for a bare actor_id to look up.
+  Actor actor = 1;
+}
+
+message GetCharacterStatusResponse {
+  CharacterStatus status = 1;
+}
+
+message ValidateCharacterRequest {
+  google.protobuf.Struct character_data = 1;
+  string schema_version = 2;
+}
+
+message ValidationWarning {
+  // JSON Pointer or dotted path into character_data, e.g. "/abilities/str".
+  string field_path = 1;
+  string message = 2;
+  // "error" | "warning" — "error" means the character should not be
+  // importable as-is; "warning" surfaces to the review panel (docs/
+  // design.md §9.4) but doesn't block by itself.
+  string severity = 3;
+}
+
+message ValidateCharacterResponse {
+  repeated ValidationWarning warnings = 1;
+}
+
+message ToJsonRequest {
+  // actor carries character_data already in the engine's own wire
+  // format (e.g. as returned by a prior ResolveCheck/ApplyEffect call);
+  // ToJson converts it to the engine's canonical JSON string form —
+  // the reverse of FromJson, and symmetric with it for the same
+  // statelessness reason: nothing is held between calls to look an
+  // actor_id up against.
+  Actor actor = 1;
+}
+
+message ToJsonResponse {
+  string json = 1;
+  string schema_version = 2;
+}
+
+message FromJsonRequest {
+  string json = 1;
+}
+
+message FromJsonResponse {
+  Actor actor = 1;
+  repeated ValidationWarning warnings = 2;
+}
+
+message StreamEventsRequest {
+  string campaign_id = 1;
+}
+
+message EngineEvent {
+  // e.g. "TurnStarted", "DamageDealt", "CombatEnded" — engine-defined,
+  // not a closed enum here, since new engines will introduce their own.
+  string event_type = 1;
+  google.protobuf.Struct payload = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+}
