@@ -234,4 +234,52 @@ public class SystemEngineGrpcServiceTests
         var ex = await act.Should().ThrowAsync<RpcException>();
         ex.Which.StatusCode.Should().Be(StatusCode.Unimplemented);
     }
+
+    [Fact]
+    public async Task StartTurn_ActiveCreature_DoesNotRollDeathSave()
+    {
+        var response = await _service.StartTurn(
+            new StartTurnRequest { RequestId = "req-1", CampaignId = "campaign-1", Actor = MakeActor(currentHp: 24) }, null!);
+
+        response.Success.Should().BeTrue();
+        response.DeathSaveRolled.Should().BeFalse();
+        response.WokeUp.Should().BeFalse();
+        response.Actor.Should().NotBeNull();
+    }
+
+    // A 0-HP, non-dead, non-stable creature always rolls a death save on
+    // StartTurn regardless of the actual d20 result (docs/design.md §9.3)
+    // — this is the one invariant testable without controlling the real
+    // dice roller the gRPC-level Actor round trip uses internally. The
+    // roll-value-dependent branches (natural 20 heals+wakes, natural 1
+    // counts double) are already covered with a deterministic mocked
+    // roller at the Core/Implementation layer
+    // (OpenCombatEngine.Implementation.Tests/DeathSaveTests.cs) — this
+    // test only needs to confirm the RPC surfaces whatever StartTurn()
+    // reports, not re-verify each branch's game logic.
+    [Fact]
+    public async Task StartTurn_DownCreature_AlwaysRollsDeathSave()
+    {
+        var response = await _service.StartTurn(
+            new StartTurnRequest { RequestId = "req-1", CampaignId = "campaign-1", Actor = MakeActor(currentHp: 0) }, null!);
+
+        response.Success.Should().BeTrue();
+        response.DeathSaveRolled.Should().BeTrue();
+        response.DeathSaveOutcome.Should().NotBeNull();
+        response.DeathSaveOutcome.Rolls.Should().ContainSingle();
+        response.DeathSaveOutcome.Rolls[0].Sides.Should().Be(20);
+        response.DeathSaveOutcome.Rolls[0].Result.Should().BeInRange(1, 20);
+    }
+
+    [Fact]
+    public async Task StartTurn_MalformedActor_ReturnsFailureNotException()
+    {
+        var badActor = new Actor { ActorId = "x", CharacterData = new Struct(), SchemaVersion = ActorMapping.SchemaVersion };
+
+        var response = await _service.StartTurn(
+            new StartTurnRequest { RequestId = "req-1", CampaignId = "campaign-1", Actor = badActor }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().NotBeNullOrEmpty();
+    }
 }

@@ -89,6 +89,46 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         });
     }
 
+    public override Task<StartTurnResponse> StartTurn(StartTurnRequest request, ServerCallContext context)
+    {
+        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        if (creatureResult.IsFailure)
+            return Task.FromResult(new StartTurnResponse { Success = false, Error = creatureResult.Error });
+
+        var creature = creatureResult.Value;
+        var turnStartResult = creature.StartTurn();
+
+        var response = new StartTurnResponse
+        {
+            Success = true,
+            Actor = ActorMapping.ToActor(creature),
+            WokeUp = turnStartResult.WokeUp,
+        };
+
+        if (turnStartResult.DeathSaveRoll is { } roll)
+        {
+            response.DeathSaveRolled = true;
+            var outcome = new Outcome
+            {
+                Total = roll.Total,
+                CriticalSuccess = roll.IsCriticalSuccess,
+                CriticalFailure = roll.IsCriticalFailure,
+                ResultSummary = turnStartResult.WokeUp ? "woke_up" : roll.Total >= 10 ? "success" : "failure",
+            };
+            // Death saves are a straight 1d20, no modifier — same fact
+            // ResolveCheck's own death_save handling hardcodes, safe here
+            // in the sidecar (the system-engine-specific adapter) per the
+            // same reasoning as that call site.
+            foreach (var die in roll.IndividualRolls)
+            {
+                outcome.Rolls.Add(new DieRoll { Sides = 20, Result = die, Label = "d20" });
+            }
+            response.DeathSaveOutcome = outcome;
+        }
+
+        return Task.FromResult(response);
+    }
+
     public override Task<ValidateCharacterResponse> ValidateCharacter(
         ValidateCharacterRequest request, ServerCallContext context)
     {

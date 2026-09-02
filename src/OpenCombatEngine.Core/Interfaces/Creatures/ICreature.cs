@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Combat;
+using OpenCombatEngine.Core.Models.Creatures;
 
 namespace OpenCombatEngine.Core.Interfaces.Creatures;
 
@@ -54,9 +55,17 @@ public interface ICreature
     IConditionManager Conditions { get; }
 
     /// <summary>
-    /// Called at the start of the creature's turn.
+    /// Called at the start of the creature's turn: resets action economy
+    /// and movement, ticks conditions/effects, and — if the creature is at
+    /// 0 HP, not dead, and not stable — automatically rolls and records a
+    /// death saving throw, since SRD death saves happen every turn a
+    /// creature is dying, not on request.
     /// </summary>
-    void StartTurn();
+    /// <returns>
+    /// The death saving throw actually rolled this call, if any — see
+    /// <see cref="TurnStartResult"/>.
+    /// </returns>
+    TurnStartResult StartTurn();
 
     /// <summary>
     /// Called at the end of the creature's turn.

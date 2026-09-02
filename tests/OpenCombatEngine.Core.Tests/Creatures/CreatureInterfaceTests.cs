@@ -125,7 +125,7 @@ public class CreatureInterfaceTests
             Inventory = null!; // Placeholder for actual implementation
             Equipment = null!; // Placeholder for actual implementation
         }
-        public void StartTurn() { }
+        public OpenCombatEngine.Core.Models.Creatures.TurnStartResult StartTurn() => new();
         public void EndTurn() { }
         public void Rest(RestType type, int hitDiceToSpend = 0) { }
         public OpenCombatEngine.Core.Models.Combat.AttackOutcome ResolveAttack(OpenCombatEngine.Core.Models.Combat.AttackResult attack)

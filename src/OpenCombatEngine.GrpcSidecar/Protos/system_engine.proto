@@ -59,6 +59,19 @@ service SystemEngine {
   // this call is the deterministic source of truth.
   rpc GetCharacterStatus(GetCharacterStatusRequest) returns (GetCharacterStatusResponse);
 
+  // StartTurn runs the engine's own start-of-turn bookkeeping for actor
+  // — today, an automatic death saving throw (docs/design.md §9.3) if
+  // actor is at 0 HP, not dead, and not stable, plus the engine's other
+  // per-turn resets (action economy, condition/effect duration ticks).
+  // Master calls this exactly once, when its turn-order state machine
+  // (docs/design.md §3.1) advances to a character's turn — the SRD rule
+  // that a dying character re-rolls a death save every turn is
+  // mechanical, not something the DM decides or has to remember.
+  // Stateless across the RPC boundary like ApplyEffect: the full actor
+  // (with any mutation already applied) comes back for Master to
+  // persist.
+  rpc StartTurn(StartTurnRequest) returns (StartTurnResponse);
+
   // ValidateCharacter runs mechanical validation over character data
   // (typically an uploaded/imported sheet) and returns warnings, feeding
   // Master's character-import review panel (docs/design.md §9.4). This
@@ -190,6 +203,36 @@ message GetCharacterStatusRequest {
 
 message GetCharacterStatusResponse {
   CharacterStatus status = 1;
+}
+
+message StartTurnRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // actor carries character_data, same statelessness reasoning as
+  // ApplyEffectRequest/GetCharacterStatusRequest.
+  Actor actor = 3;
+}
+
+message StartTurnResponse {
+  bool success = 1;
+  // The actor's full character_data after start-of-turn bookkeeping —
+  // same reasoning as ApplyEffectResponse.actor: the whole actor, not a
+  // partial diff, so Master never needs engine-specific merge logic.
+  Actor actor = 2;
+  // Set when actor was at 0 HP, not dead, and not stable, so an
+  // automatic death saving throw was rolled this call.
+  bool death_save_rolled = 3;
+  // The real rolled death save, set only when death_save_rolled is true
+  // — Master broadcasts this the same way any other roll is broadcast
+  // (docs/design.md §3.1, §4), never invents or silently applies it.
+  Outcome death_save_outcome = 4;
+  // True when the death save (if rolled) was a natural 20 — the
+  // character regains 1 HP and wakes up, per SRD rules.
+  bool woke_up = 5;
+  // Set when success = false; a resolution failure, distinct from a
+  // legitimate "no death save this turn" result (death_save_rolled =
+  // false with success = true).
+  string error = 6;
 }
 
 message ValidateCharacterRequest {

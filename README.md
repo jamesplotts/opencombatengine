@@ -5,7 +5,7 @@
 [![C#](https://img.shields.io/badge/C%23-12.0-239120.svg)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![SRD](https://img.shields.io/badge/SRD-5.1-red.svg)](https://dnd.wizards.com/resources/systems-reference-document)
 [![Release](https://img.shields.io/badge/release-v0.6.0--rc1-blue.svg)](RELEASE_NOTES.md)
-[![Tests](https://img.shields.io/badge/tests-546%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-550%20passing-brightgreen.svg)](tests/)
 
 An open-source, interface-driven combat engine for RPGs compatible with D&D 5e SRD mechanics. Built with extensibility, testability, and AI-assisted development in mind.
 

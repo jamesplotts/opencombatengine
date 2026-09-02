@@ -14,6 +14,7 @@ using OpenCombatEngine.Core.Interfaces.Races;
 using OpenCombatEngine.Core.Interfaces.Spatial;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Combat;
+using OpenCombatEngine.Core.Models.Creatures;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Dice;
@@ -346,30 +347,38 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
         }
 
-        public void StartTurn()
+        public TurnStartResult StartTurn()
         {
             ActionEconomy.ResetTurn();
             Movement.ResetTurn();
             Conditions.Tick();
             Effects.Tick();
-            
+
             foreach (var feature in _features)
             {
                 feature.OnStartTurn(this);
             }
-            
+
             if (HitPoints.Current <= 0 && !HitPoints.IsDead && !HitPoints.IsStable)
             {
                 var rollResult = Checks.RollDeathSave();
                 if (rollResult.IsSuccess)
                 {
                     int roll = rollResult.Value.Total;
-                    if (roll == 20) HitPoints.Heal(1);
+                    if (roll == 20)
+                    {
+                        HitPoints.Heal(1);
+                        return new TurnStartResult(rollResult.Value, wokeUp: true);
+                    }
                     else if (roll == 1) HitPoints.RecordDeathSave(false, critical: true);
                     else if (roll >= 10) HitPoints.RecordDeathSave(true);
                     else HitPoints.RecordDeathSave(false);
+
+                    return new TurnStartResult(rollResult.Value);
                 }
             }
+
+            return new TurnStartResult();
         }
 
         public void EndTurn()
