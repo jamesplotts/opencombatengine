@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.GrpcSidecar;
+using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Open5e;
 using OpenCombatEngine.Implementation.Spells;
@@ -23,31 +24,82 @@ builder.Services.AddGrpc();
 // would leave a window where an early request for a spellcaster silently
 // got an empty repository instead of a complete one — the whole point
 // here is to stop that kind of silent gap, not introduce a new one.
+//
+// Cache-first, not fetch-then-cache-as-a-fallback: a repeated local
+// restart (or a CI/test run) re-fetching ~1400 SRD spells from Open5e
+// every single time is real, observed, unnecessary load — enough of it
+// against Open5e's own Cloudflare front can (and did, during this
+// project's own development) get this environment rate-limited or
+// blocked outright, leaving the sidecar unable to start at all. SRD
+// spell content is effectively static, so a week-old cache is exactly
+// as good as a fresh fetch for this engine's purposes — see
+// Open5eSpellCache's own doc comment for why age-based staleness is
+// preferred over a conditional-request scheme.
 var spellRepository = new InMemorySpellRepository();
+var spellCachePath = Environment.GetEnvironmentVariable("OPEN5E_SPELL_CACHE_PATH")
+    ?? Path.Combine(AppContext.BaseDirectory, "open5e-cache", "spells.json");
+var spellCacheMaxAge = TimeSpan.FromDays(7);
+var spellDiceRoller = new StandardDiceRoller();
+
+static string FormatAge(TimeSpan? age) => age is { } a ? $"{(int)a.TotalDays}d {a.Hours}h old" : "unknown age";
+
 #pragma warning disable CA1031
 try
 {
-    using var open5eHttpClient = new HttpClient();
-    var open5eClient = new Open5eClient(open5eHttpClient);
-    var open5eContentSource = new Open5eContentSource(open5eClient, new StandardDiceRoller());
-    var spellCount = 0;
-    foreach (var spell in await open5eContentSource.GetAllSpellsAsync())
+    var freshCached = Open5eSpellCache.TryLoadFresh(spellCachePath, spellCacheMaxAge);
+    if (freshCached != null)
     {
-        spellRepository.AddSpell(spell);
-        spellCount++;
+        foreach (var dto in freshCached)
+        {
+            spellRepository.AddSpell(SpellMapper.Map(dto, spellDiceRoller));
+        }
+        Console.WriteLine($"Loaded {freshCached.Count} SRD spells from local cache ({spellCachePath}, {FormatAge(Open5eSpellCache.Age(spellCachePath))}) — skipped the live Open5e fetch.");
     }
-    Console.WriteLine($"Loaded {spellCount} SRD spells from Open5e.");
+    else
+    {
+        // Bounded well under HttpClient's 100-second default: a startup
+        // path should fail fast into the cache fallback below, not leave
+        // an operator staring at an unresponsive process for a minute
+        // and a half before finding out Open5e is unreachable.
+        using var open5eHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        var open5eClient = new Open5eClient(open5eHttpClient);
+        var open5eContentSource = new Open5eContentSource(open5eClient, spellDiceRoller);
+        var dtos = await open5eContentSource.GetAllSpellDtosAsync();
+        if (dtos.Count == 0)
+        {
+            throw new InvalidOperationException("Open5e returned no spells (empty or unreachable).");
+        }
+        foreach (var dto in dtos)
+        {
+            spellRepository.AddSpell(SpellMapper.Map(dto, spellDiceRoller));
+        }
+        Open5eSpellCache.Save(spellCachePath, dtos);
+        Console.WriteLine($"Loaded {dtos.Count} SRD spells from Open5e (cached to {spellCachePath} for future startups).");
+    }
 }
 catch (Exception ex)
 {
-    // Open5e unreachable, or some other unexpected failure, at startup —
-    // not fatal, same "degrade rather than crash" posture Master itself
-    // uses for its own optional startup dependencies. The sidecar starts
-    // with whatever was fetched before the failure (possibly nothing);
-    // spellcasting for a creature referencing a spell that never got
-    // loaded is simply dropped on restore, not an error
-    // (StandardSpellCaster's own documented behavior).
-    Console.Error.WriteLine($"Warning: failed to populate spell repository from Open5e at startup: {ex.Message}");
+    // Live fetch failed (or no cache was fresh enough to skip it) — a
+    // stale cache is still far more useful than an empty spell
+    // repository, so try one before giving up entirely. Same
+    // "degrade rather than crash" posture Master itself uses for its
+    // own optional startup dependencies either way.
+    var staleCached = Open5eSpellCache.TryLoadAny(spellCachePath);
+    if (staleCached != null)
+    {
+        foreach (var dto in staleCached)
+        {
+            spellRepository.AddSpell(SpellMapper.Map(dto, spellDiceRoller));
+        }
+        Console.Error.WriteLine($"Warning: live Open5e fetch failed ({ex.Message}); using stale local cache instead ({staleCached.Count} spells, {FormatAge(Open5eSpellCache.Age(spellCachePath))}).");
+    }
+    else
+    {
+        // spellcasting for a creature referencing a spell that never got
+        // loaded is simply dropped on restore, not an error
+        // (StandardSpellCaster's own documented behavior).
+        Console.Error.WriteLine($"Warning: failed to populate spell repository from Open5e at startup, and no local cache exists: {ex.Message}");
+    }
 }
 #pragma warning restore CA1031
 builder.Services.AddSingleton<ISpellRepository>(spellRepository);

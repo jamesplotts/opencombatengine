@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Content.Dtos;
 using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Core.Interfaces.Items;
 using System.Collections.Generic;
@@ -67,15 +68,22 @@ namespace OpenCombatEngine.Implementation.Open5e
         }
 
         /// <summary>
-        /// Fetches and maps every spell in the Open5e SRD spell list, following
-        /// pagination until Open5e reports no further page. A page that fails to
-        /// fetch, or a spell that fails to map, is skipped rather than aborting the
-        /// whole fetch — callers populating a long-lived repository from this should
-        /// prefer a partial result over none at all.
+        /// Fetches and maps every spell in the Open5e SRD spell list to
+        /// <see cref="SpellDto"/> (not yet the final <c>ISpell</c> —
+        /// <see cref="GetAllSpellsAsync"/> does that last step), following
+        /// pagination until Open5e reports no further page. A page that
+        /// fails to fetch, or a spell that fails to map, is skipped
+        /// rather than aborting the whole fetch — callers populating a
+        /// long-lived repository from this should prefer a partial
+        /// result over none at all. Split out from
+        /// <see cref="GetAllSpellsAsync"/> so a caller (e.g.
+        /// <c>Open5eSpellCache</c>) can persist the DTOs themselves —
+        /// <c>ISpell</c>/<c>Spell</c> isn't a plain serializable data
+        /// type, <c>SpellDto</c> already is.
         /// </summary>
-        public async Task<IEnumerable<ISpell>> GetAllSpellsAsync()
+        public async Task<List<SpellDto>> GetAllSpellDtosAsync()
         {
-            var result = new List<ISpell>();
+            var result = new List<SpellDto>();
             int page = 1;
             while (true)
             {
@@ -86,8 +94,7 @@ namespace OpenCombatEngine.Implementation.Open5e
                 {
                     try
                     {
-                        var dto = Open5eAdapter.ToStandard(open5eSpell);
-                        result.Add(SpellMapper.Map(dto, _diceRoller));
+                        result.Add(Open5eAdapter.ToStandard(open5eSpell));
                     }
 #pragma warning disable CA1031
                     catch (Exception)
@@ -103,6 +110,19 @@ namespace OpenCombatEngine.Implementation.Open5e
                 page++;
             }
             return result;
+        }
+
+        /// <summary>
+        /// Fetches and maps every spell in the Open5e SRD spell list, all
+        /// the way to real <c>ISpell</c> instances — see
+        /// <see cref="GetAllSpellDtosAsync"/> for the fetch/pagination
+        /// behavior itself, which this simply maps through
+        /// <c>SpellMapper</c>.
+        /// </summary>
+        public async Task<IEnumerable<ISpell>> GetAllSpellsAsync()
+        {
+            var dtos = await GetAllSpellDtosAsync().ConfigureAwait(false);
+            return dtos.Select(dto => SpellMapper.Map(dto, _diceRoller));
         }
 
         public async Task<IEnumerable<IWeapon>> GetAllWeaponsAsync()
