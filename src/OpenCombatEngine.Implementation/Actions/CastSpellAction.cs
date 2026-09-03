@@ -65,7 +65,12 @@ namespace OpenCombatEngine.Implementation.Actions
         {
             if (context == null) return Result<ActionResult>.Failure("Context cannot be null.");
             var source = context.Source;
-            
+
+            if (IncapacitationCheck.BlockingCondition(source) is { } blockingCondition)
+            {
+                return Result<ActionResult>.Failure($"{source.Name} is {blockingCondition} and cannot act.");
+            }
+
             // For now, assume single target spell.
             // If spell supports position, we need to handle that.
             // But ISpell.Cast currently takes ICreature target.
@@ -246,7 +251,19 @@ namespace OpenCombatEngine.Implementation.Actions
             }
         }
 
-        private static int? ParseRangeInFeet(string range)
+        /// <summary>
+        /// Parses an SRD spell range string ("60 feet", "Touch", "Self")
+        /// into feet, or <see langword="null"/> when it isn't a
+        /// parseable numeric/Touch/Self range (e.g. "Sight",
+        /// "Unlimited"). "Self" is 0 feet, "Touch" is 5 feet (this
+        /// engine's grid convention — same 5-ft-square SRD assumption
+        /// <c>StandardGridManager.GetDistance</c> already uses). Public
+        /// so callers outside this class (e.g. the gRPC sidecar's
+        /// <c>GetAvailableActions</c> handler) can determine whether a
+        /// prepared spell would be in range of a candidate target
+        /// without duplicating this parsing.
+        /// </summary>
+        public static int? ParseRangeInFeet(string range)
         {
             if (string.IsNullOrWhiteSpace(range)) return null;
             if (range.Equals("Self", StringComparison.OrdinalIgnoreCase)) return 0;

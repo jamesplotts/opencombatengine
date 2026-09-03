@@ -129,6 +129,23 @@ service SystemEngine {
   // like every other mutating call in this contract: the full updated
   // attacker/target come back for Master to persist.
   rpc Attack(AttackRequest) returns (AttackResponse);
+
+  // GetAvailableActions computes the full concrete list of mechanically
+  // legal actions actor could take right now, against each of
+  // candidate_targets — every equipped-weapon attack option (including
+  // an off-hand/secondary weapon, per SRD Two-Weapon Fighting), every
+  // Grapple/Shove option, and every currently-castable prepared/known
+  // spell — rather than leaving Master or the DM model to guess (docs/
+  // design.md §8, §9: "gates over prompting"). The engine — not
+  // Master, which owns no rules logic, and not the DM's own narrative
+  // judgment — is the only thing that actually has the real equipment/
+  // spellcasting/condition/action-economy state needed to answer this.
+  // Every fact returned is already independently enforced by Attack/
+  // CastSpell/a future Grapple-Shove RPC when actually called — this
+  // is a menu, not a new source of authority. Stateless like every
+  // other RPC here: the engine holds no combat-participant list of its
+  // own, so Master supplies candidate_targets explicitly.
+  rpc GetAvailableActions(GetAvailableActionsRequest) returns (GetAvailableActionsResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -477,4 +494,96 @@ message AttackResponse {
   // state based on this and the campaign's PvP policy, rather than
   // needing to know in advance whether an attack will deal damage.
   bool target_damaged = 7;
+}
+
+// ActionEconomyCategory mirrors OpenCombatEngine's ActionType enum
+// (Action/BonusAction/Reaction) across the gRPC boundary.
+// ACTION_ECONOMY_CATEGORY_UNSPECIFIED is the required proto3 zero
+// value, not a real category — same "never let an unset value
+// silently mean something valid" reasoning as CharacterStatus.
+enum ActionEconomyCategory {
+  ACTION_ECONOMY_CATEGORY_UNSPECIFIED = 0;
+  ACTION_ECONOMY_CATEGORY_ACTION = 1;
+  ACTION_ECONOMY_CATEGORY_BONUS_ACTION = 2;
+  ACTION_ECONOMY_CATEGORY_REACTION = 3;
+}
+
+// AvailableActionKind is the closed set of concrete action shapes
+// GetAvailableActions can report. Movement is deliberately not one of
+// these — it's a continuous quantity (feet remaining, already visible
+// in character_data), not a discrete pick-one choice the way every
+// kind here is.
+enum AvailableActionKind {
+  AVAILABLE_ACTION_KIND_UNSPECIFIED = 0;
+  AVAILABLE_ACTION_KIND_MELEE_ATTACK = 1;
+  AVAILABLE_ACTION_KIND_RANGED_ATTACK = 2;
+  AVAILABLE_ACTION_KIND_OFFHAND_ATTACK = 3;
+  AVAILABLE_ACTION_KIND_CAST_SPELL = 4;
+  AVAILABLE_ACTION_KIND_GRAPPLE = 5;
+  AVAILABLE_ACTION_KIND_SHOVE_PRONE = 6;
+  AVAILABLE_ACTION_KIND_SHOVE_PUSH = 7;
+}
+
+message TargetGridPosition {
+  string actor_id = 1;
+  GridPosition position = 2;
+}
+
+// MultiTargetGridContext is GridContext's multi-target sibling —
+// GetAvailableActions narrows its menu against several candidate
+// targets in one call, which the single-target caster/target shape of
+// GridContext (CastSpell/Attack) can't express. Omitted entirely means
+// every option is reported without a range/line-of-sight check, the
+// same "no grid_context, skip the check" rule every other RPC in this
+// contract already follows.
+message MultiTargetGridContext {
+  GridPosition actor_position = 1;
+  repeated TargetGridPosition target_positions = 2;
+  repeated GridPosition obstacles = 3;
+}
+
+message GetAvailableActionsRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // Stateless across the RPC boundary, same reasoning as every other
+  // Actor-carrying request.
+  Actor actor = 3;
+  // Other creatures currently relevant (Master's own turn-order
+  // participants) — the engine has no persistent combat-manager
+  // session of its own to query this from (every RPC here is
+  // stateless per call), so Master supplies it explicitly, the same
+  // way it already supplies a target Actor to CastSpell/Attack.
+  repeated Actor candidate_targets = 4;
+  MultiTargetGridContext grid_context = 5;
+}
+
+message AvailableAction {
+  AvailableActionKind kind = 1;
+  // Human-readable, engine-composed from real data — e.g. "Attack the
+  // Goblin with your Longsword" — not left for Master or the DM model
+  // to phrase from raw fields.
+  string label = 2;
+  // The weapon/spell name behind this option, e.g. "Longsword",
+  // "Magic Missile" — empty for Grapple/Shove.
+  string source_name = 3;
+  // Empty for a targetless action (e.g. a self-only spell).
+  string target_character_id = 4;
+  ActionEconomyCategory action_economy_category = 5;
+}
+
+message GetAvailableActionsResponse {
+  bool success = 1;
+  string error = 2;
+  // False when actor is incapacitated (Paralyzed/Stunned/Petrified/
+  // Incapacitated) and cannot act at all this turn — see
+  // cannot_act_reason. Deliberately independent of the HP-based
+  // Unconscious/Dying/Dead status (CharacterStatus/GetCharacterStatus):
+  // a downed character still gets a turn to roll a death saving throw,
+  // which this field does not report on.
+  bool can_act = 3;
+  string cannot_act_reason = 4; // set when can_act = false, e.g. "Paralyzed"
+  bool has_action = 5;
+  bool has_bonus_action = 6;
+  bool has_reaction = 7;
+  repeated AvailableAction actions = 8;
 }

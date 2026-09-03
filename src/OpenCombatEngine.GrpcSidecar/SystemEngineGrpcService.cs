@@ -395,7 +395,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     /// </summary>
     public override Task<AttackResponse> Attack(AttackRequest request, ServerCallContext context)
     {
-        if (request.Kind == AttackKind.Unspecified)
+        if (request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Unspecified)
             return Task.FromResult(new AttackResponse { Success = false, Error = "kind must be ATTACK_KIND_MELEE or ATTACK_KIND_RANGED." });
 
         var attackerResult = ActorMapping.ToCreature(request.Attacker, _spellRepository, _itemLibrary);
@@ -415,34 +415,12 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             return Task.FromResult(new AttackResponse { Success = false, Error = "No weapon equipped — melee_attack/ranged_attack requires a real weapon in the attacker's main hand." });
 
         // The real gate: a weapon's own SRD properties, not the DM's own
-        // judgment, decide whether it can be used this way. A weapon with
-        // Ammunition and no Thrown (a bow, a crossbow) is ranged-only and
-        // cannot melee; a weapon with neither Thrown nor Ammunition (a
-        // longsword) is melee-only and cannot be thrown/fired.
-        bool isThrown = weapon.Properties.Contains(WeaponProperty.Thrown);
-        bool isAmmunition = weapon.Properties.Contains(WeaponProperty.Ammunition);
-
-        if (request.Kind == AttackKind.Melee && isAmmunition && !isThrown)
-            return Task.FromResult(new AttackResponse { Success = false, Error = $"{weapon.Name} cannot be used for a melee attack — it's a ranged-only weapon (Ammunition, no Thrown)." });
-        if (request.Kind == AttackKind.Ranged && !isThrown && !isAmmunition)
-            return Task.FromResult(new AttackResponse { Success = false, Error = $"{weapon.Name} cannot be used for a ranged attack — it has neither Thrown nor Ammunition." });
-
-        // SRD ability-modifier selection: a true ranged weapon (Ammunition,
-        // not also Thrown — a bow/crossbow) always uses Dexterity. Every
-        // other case (melee, or a thrown weapon used at range) uses
-        // Strength, unless the weapon has Finesse, in which case the
-        // better of Strength/Dexterity applies — same rule either way it's
-        // used, per SRD.
-        int strengthModifier = attacker.AbilityScores.GetModifier(Ability.Strength);
-        int dexterityModifier = attacker.AbilityScores.GetModifier(Ability.Dexterity);
-        bool trueRangedWeapon = request.Kind == AttackKind.Ranged && isAmmunition && !isThrown;
-        bool finesse = weapon.Properties.Contains(WeaponProperty.Finesse);
-        int abilityModifier = trueRangedWeapon
-            ? dexterityModifier
-            : finesse ? System.Math.Max(strengthModifier, dexterityModifier) : strengthModifier;
-
-        int attackBonus = attacker.ProficiencyBonus + abilityModifier;
-        int damageBonus = abilityModifier;
+        // judgment, decide whether it can be used this way — see
+        // WeaponAttackRules (shared with GetAvailableActions and
+        // off-hand-attack construction so they can't drift apart).
+        var domainKind = request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Melee ? OpenCombatEngine.Core.Enums.AttackKind.Melee : OpenCombatEngine.Core.Enums.AttackKind.Ranged;
+        if (!WeaponAttackRules.IsLegalFor(weapon, domainKind, out var illegalReason))
+            return Task.FromResult(new AttackResponse { Success = false, Error = illegalReason });
 
         // Real range/line-of-sight gating, same reasoning and shape as
         // CastSpell's own grid_context handling — set only when Master
@@ -467,8 +445,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             }
         }
 
-        string actionName = request.Kind == AttackKind.Melee ? "Melee Attack" : "Ranged Attack";
-        var action = new AttackAction(actionName, $"Attack with {weapon.Name}", attackBonus, weapon.DamageDice, weapon.DamageType, damageBonus, _diceRoller, ActionType.Action, weapon.Range);
+        var action = WeaponAttackRules.BuildAttackAction(attacker, weapon, domainKind, _diceRoller);
         var actionContext = new StandardActionContext(attacker, new CreatureTarget(target), grid);
 
         // Captured before Execute (which mutates target.HitPoints in place
@@ -490,6 +467,242 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             Target = ActorMapping.ToActor(target),
             TargetDamaged = target.HitPoints.Current < targetHpBefore,
         });
+    }
+
+    /// <summary>
+    /// Computes the full concrete list of mechanically legal actions
+    /// actor could take right now, against each of candidate_targets —
+    /// see the proto's own doc comment for why this exists (real
+    /// engine-computed data instead of the DM model guessing). Every
+    /// fact reported here is independently re-enforced by Attack/
+    /// CastSpell when actually called — this is a menu, not a new
+    /// source of authority, so a race between this call and a
+    /// subsequent state change (another creature's turn happens first)
+    /// is not a real gate weakness, only a stale suggestion.
+    /// </summary>
+    public override Task<GetAvailableActionsResponse> GetAvailableActions(GetAvailableActionsRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new GetAvailableActionsResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var response = new GetAvailableActionsResponse
+        {
+            Success = true,
+            HasAction = actor.ActionEconomy?.HasAction ?? true,
+            HasBonusAction = actor.ActionEconomy?.HasBonusAction ?? true,
+            HasReaction = actor.ActionEconomy?.HasReaction ?? true,
+        };
+
+        // The real gate this whole RPC exists to surface without a
+        // wasted round trip: an Incapacitated/Paralyzed/Stunned/
+        // Petrified actor has no legal actions at all — see
+        // IncapacitationCheck's own remarks for why this is deliberately
+        // independent of the HP-based Unconscious/Dying/Dead status.
+        if (IncapacitationCheck.BlockingCondition(actor) is { } blockingCondition)
+        {
+            response.CanAct = false;
+            response.CannotActReason = blockingCondition;
+            return Task.FromResult(response);
+        }
+        response.CanAct = true;
+
+        // Resolve every candidate target actor could plausibly act
+        // against — unresolvable entries are skipped rather than
+        // failing the whole call (a stale/malformed candidate shouldn't
+        // hide every other real option).
+        var targets = new System.Collections.Generic.List<(string ActorId, StandardCreature Creature)>();
+        foreach (var candidateActor in request.CandidateTargets)
+        {
+            var candidateResult = ActorMapping.ToCreature(candidateActor, _spellRepository, _itemLibrary);
+            if (candidateResult.IsSuccess)
+            {
+                targets.Add((candidateActor.ActorId, candidateResult.Value));
+            }
+        }
+
+        // Real range/line-of-sight narrowing, same reasoning and shape
+        // as CastSpell/Attack's own grid_context handling — set only
+        // when Master actually has a combat map with actor and (some
+        // or all) candidate_targets placed; absent this, grid stays
+        // null and every option below is reported unfiltered.
+        IGridManager? grid = null;
+        if (request.GridContext is not null)
+        {
+            var gc = request.GridContext;
+            var candidateGrid = new StandardGridManager();
+            var actorPlaced = candidateGrid.PlaceCreature(actor, new Position(gc.ActorPosition.X, gc.ActorPosition.Y));
+            bool allPlaced = actorPlaced.IsSuccess;
+            foreach (var targetPosition in gc.TargetPositions)
+            {
+                var matchingTarget = targets.Find(t => t.ActorId == targetPosition.ActorId);
+                if (matchingTarget.Creature is null) continue;
+                var placed = candidateGrid.PlaceCreature(matchingTarget.Creature, new Position(targetPosition.Position.X, targetPosition.Position.Y));
+                if (!placed.IsSuccess) allPlaced = false;
+            }
+            if (allPlaced)
+            {
+                foreach (var obstacle in gc.Obstacles)
+                {
+                    candidateGrid.AddObstacle(new Position(obstacle.X, obstacle.Y));
+                }
+                grid = candidateGrid;
+            }
+        }
+
+        // A target with no known position (no grid_context at all, or
+        // this specific candidate wasn't placed) is reported unfiltered
+        // — same "no grid, no range check" default every other RPC in
+        // this contract already applies, not an exclusion.
+        bool InRange(StandardCreature target, int rangeFeet)
+        {
+            if (grid is null) return true;
+            var sourcePos = grid.GetPosition(actor);
+            var targetPos = grid.GetPosition(target);
+            if (sourcePos is null || targetPos is null) return true;
+            return grid.GetDistance(sourcePos.Value, targetPos.Value) <= rangeFeet && grid.HasLineOfSight(sourcePos.Value, targetPos.Value);
+        }
+
+        var mainHand = actor.Equipment?.MainHand;
+        var offHand = actor.Equipment?.OffHand;
+
+        foreach (var (targetId, targetCreature) in targets)
+        {
+            if (mainHand is not null)
+            {
+                if (WeaponAttackRules.IsLegalFor(mainHand, OpenCombatEngine.Core.Enums.AttackKind.Melee, out _) && InRange(targetCreature, mainHand.Range))
+                {
+                    response.Actions.Add(new AvailableAction
+                    {
+                        Kind = AvailableActionKind.MeleeAttack,
+                        Label = $"Attack {targetCreature.Name} with your {mainHand.Name}",
+                        SourceName = mainHand.Name,
+                        TargetCharacterId = targetId,
+                        ActionEconomyCategory = ActionEconomyCategory.Action,
+                    });
+                }
+                if (WeaponAttackRules.IsLegalFor(mainHand, OpenCombatEngine.Core.Enums.AttackKind.Ranged, out _) && InRange(targetCreature, mainHand.Range))
+                {
+                    response.Actions.Add(new AvailableAction
+                    {
+                        Kind = AvailableActionKind.RangedAttack,
+                        Label = $"Attack {targetCreature.Name} with your {mainHand.Name}",
+                        SourceName = mainHand.Name,
+                        TargetCharacterId = targetId,
+                        ActionEconomyCategory = ActionEconomyCategory.Action,
+                    });
+                }
+            }
+
+            // Off-hand/secondary-weapon attack (SRD Two-Weapon Fighting):
+            // both weapons must be Light. Bonus action, per SRD's core
+            // rule (no ability-modifier feature exception modeled — see
+            // this session's own scope decision).
+            if (mainHand is not null && offHand is not null
+                && mainHand.Properties.Contains(WeaponProperty.Light)
+                && offHand.Properties.Contains(WeaponProperty.Light)
+                && InRange(targetCreature, offHand.Range))
+            {
+                response.Actions.Add(new AvailableAction
+                {
+                    Kind = AvailableActionKind.OffhandAttack,
+                    Label = $"Attack {targetCreature.Name} with your off-hand {offHand.Name}",
+                    SourceName = offHand.Name,
+                    TargetCharacterId = targetId,
+                    ActionEconomyCategory = ActionEconomyCategory.BonusAction,
+                });
+            }
+
+            // Grapple: needs a free hand — same approximation
+            // GrappleAction itself uses (no Shield/OffHand equipped, and
+            // MainHand isn't TwoHanded).
+            bool offHandOccupied = offHand is not null || actor.Equipment?.Shield is not null;
+            bool mainHandTwoHanded = mainHand?.Properties.Contains(WeaponProperty.TwoHanded) ?? false;
+            if (!offHandOccupied && !mainHandTwoHanded && InRange(targetCreature, 5))
+            {
+                response.Actions.Add(new AvailableAction
+                {
+                    Kind = AvailableActionKind.Grapple,
+                    Label = $"Grapple {targetCreature.Name}",
+                    TargetCharacterId = targetId,
+                    ActionEconomyCategory = ActionEconomyCategory.Action,
+                });
+            }
+
+            // Shove: no free-hand requirement, either effect always
+            // offered when in reach.
+            if (InRange(targetCreature, 5))
+            {
+                response.Actions.Add(new AvailableAction
+                {
+                    Kind = AvailableActionKind.ShoveProne,
+                    Label = $"Shove {targetCreature.Name} prone",
+                    TargetCharacterId = targetId,
+                    ActionEconomyCategory = ActionEconomyCategory.Action,
+                });
+                response.Actions.Add(new AvailableAction
+                {
+                    Kind = AvailableActionKind.ShovePush,
+                    Label = $"Shove {targetCreature.Name} back",
+                    TargetCharacterId = targetId,
+                    ActionEconomyCategory = ActionEconomyCategory.Action,
+                });
+            }
+
+            // Single-target prepared/known spells (PreparedSpells already
+            // falls back to KnownSpells for a non-prepared caster — no
+            // extra branching needed) with an available slot — the
+            // cantrip (level 0) exception matches CastSpellAction's own
+            // ApplySpellEffects level-0 handling: cantrips need no slot.
+            if (actor.Spellcasting is not null)
+            {
+                foreach (var spell in actor.Spellcasting.PreparedSpells)
+                {
+                    bool needsTarget = spell.AreaOfEffect is null && !spell.Range.Equals("Self", System.StringComparison.OrdinalIgnoreCase);
+                    if (!needsTarget) continue; // self/AOE spells get one targetless entry below, not per-target
+
+                    bool hasSlot = spell.Level == 0 || actor.Spellcasting.HasSlot(spell.Level);
+                    if (!hasSlot) continue;
+
+                    var rangeFeet = CastSpellAction.ParseRangeInFeet(spell.Range);
+                    if (rangeFeet.HasValue && !InRange(targetCreature, rangeFeet.Value)) continue;
+
+                    response.Actions.Add(new AvailableAction
+                    {
+                        Kind = AvailableActionKind.CastSpell,
+                        Label = $"Cast {spell.Name} at {targetCreature.Name}",
+                        SourceName = spell.Name,
+                        TargetCharacterId = targetId,
+                        ActionEconomyCategory = ActionEconomyCategory.Action,
+                    });
+                }
+            }
+        }
+
+        // Self-only and AOE spells — reported once, not per candidate
+        // target (there is no single creature to name in the label).
+        if (actor.Spellcasting is not null)
+        {
+            foreach (var spell in actor.Spellcasting.PreparedSpells)
+            {
+                bool needsTarget = spell.AreaOfEffect is null && !spell.Range.Equals("Self", System.StringComparison.OrdinalIgnoreCase);
+                if (needsTarget) continue;
+
+                bool hasSlot = spell.Level == 0 || actor.Spellcasting.HasSlot(spell.Level);
+                if (!hasSlot) continue;
+
+                response.Actions.Add(new AvailableAction
+                {
+                    Kind = AvailableActionKind.CastSpell,
+                    Label = $"Cast {spell.Name}",
+                    SourceName = spell.Name,
+                    ActionEconomyCategory = ActionEconomyCategory.Action,
+                });
+            }
+        }
+
+        return Task.FromResult(response);
     }
 
     public override Task StreamEvents(

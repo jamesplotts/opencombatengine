@@ -125,5 +125,65 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             action.Execute(context);
             _diceRoller.Received(1).RollWithAdvantage(Arg.Any<string>());
         }
+
+        // Regression coverage for the new source-side incapacitation
+        // gate (IncapacitationCheck) — before this, nothing checked
+        // whether the ATTACKER itself was Paralyzed/Stunned/Petrified/
+        // Incapacitated; only the target's conditions were ever checked
+        // (for advantage, above). The gate must short-circuit before any
+        // dice are rolled at all, not just impose disadvantage.
+
+        [Fact]
+        public void Paralyzed_Attacker_Cannot_Act()
+        {
+            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Paralyzed)!);
+
+            var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
+
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("Paralyzed");
+            _diceRoller.DidNotReceive().Roll(Arg.Any<string>());
+            _diceRoller.DidNotReceive().RollWithAdvantage(Arg.Any<string>());
+            _diceRoller.DidNotReceive().RollWithDisadvantage(Arg.Any<string>());
+        }
+
+        [Fact]
+        public void Stunned_Attacker_Cannot_Act()
+        {
+            _attacker.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Stunned)!);
+
+            var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
+
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("Stunned");
+        }
+
+        [Fact]
+        public void Stunned_Target_Does_Not_Block_Attacker_Own_Turn()
+        {
+            // Regression guard: the new source-side gate must only ever
+            // check the ATTACKER's own conditions — a Stunned TARGET
+            // already correctly grants advantage (existing behavior,
+            // untouched) and must not be misread as blocking the
+            // attacker instead.
+            _target.Conditions.AddCondition(ConditionFactory.Create(ConditionType.Stunned)!);
+
+            var action = new AttackAction("Test Attack", "Desc", 0, "1d6", DamageType.Slashing, 0, _diceRoller);
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(_attacker, new CreatureTarget(_target), null);
+
+            _diceRoller.RollWithAdvantage(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20", new List<int> { 10 }, 0, RollType.Advantage)));
+            _diceRoller.Roll(Arg.Any<string>()).Returns(Result<DiceRollResult>.Success(new DiceRollResult(4, "1d6", new List<int> { 4 }, 0, RollType.Normal)));
+
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeTrue();
+            _diceRoller.Received(1).RollWithAdvantage(Arg.Any<string>());
+        }
     }
 }

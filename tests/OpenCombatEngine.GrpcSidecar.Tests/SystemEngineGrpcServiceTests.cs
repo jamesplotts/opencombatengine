@@ -59,6 +59,19 @@ public class SystemEngineGrpcServiceTests
                 ItemRarity.Common, "1d6", DamageType.Piercing, new[] { WeaponProperty.Ammunition, WeaponProperty.TwoHanded }, range: 80),
             ["Dagger"] = new StandardWeapon(Guid.NewGuid(), "Dagger", "A dagger.", 1, 2,
                 ItemRarity.Common, "1d4", DamageType.Piercing, new[] { WeaponProperty.Finesse, WeaponProperty.Light, WeaponProperty.Thrown }, range: 20),
+            ["Greatsword"] = new StandardWeapon(Guid.NewGuid(), "Greatsword", "A greatsword.", 6, 50,
+                ItemRarity.Common, "2d6", DamageType.Slashing, new[] { WeaponProperty.TwoHanded }, range: 5),
+            // Distinct from Dagger deliberately: StandardEquipmentManager.Equip
+            // unequips an item from any OTHER slot before equipping it into a
+            // new one (ReferenceEquals check) — since this library hands out
+            // one shared instance per name, equipping the SAME named weapon
+            // into both MainHand and OffHand (e.g. twin daggers) silently
+            // steals it back out of the first slot. A real, pre-existing
+            // engine limitation, out of scope for this session; using two
+            // different Light weapons here sidesteps it rather than
+            // masking it.
+            ["Shortsword"] = new StandardWeapon(Guid.NewGuid(), "Shortsword", "A shortsword.", 2, 10,
+                ItemRarity.Common, "1d6", DamageType.Piercing, new[] { WeaponProperty.Finesse, WeaponProperty.Light }, range: 5),
         };
 
         public IItem? GetItem(string slug) => _items.TryGetValue(slug, out var item) ? item : null;
@@ -93,6 +106,16 @@ public class SystemEngineGrpcServiceTests
             Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
         }));
 
+    // A second distinct-Id target, for GetAvailableActions_* tests that
+    // need two real candidate targets at once (MakeState's own fixed Id
+    // and MakeGridTargetActor's Id are both already taken).
+    private static Actor MakeSecondGridTargetActor(int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeState(currentHp, maxHp) with
+        {
+            Id = Guid.Parse("55555555-5555-5555-5555-555555555555"),
+            Name = "SecondTarget",
+        }));
+
     // weaponName must be a key FakeItemLibrary resolves (Longsword,
     // Shortbow, Dagger) — StandardCreature.ResolveItem looks the
     // inventory item up by this same Name against _itemLibrary, so an
@@ -109,6 +132,17 @@ public class SystemEngineGrpcServiceTests
 
     private Actor MakeActorWithWeapon(string weaponName, int currentHp = 24, int maxHp = 30) =>
         ActorMapping.ToActor(new StandardCreature(MakeStateWithWeapon(weaponName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    private static CreatureState MakeStateWithWeapons(string mainHandName, string offHandName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(mainHandName), new(offHandName) }),
+        Equipment = new EquipmentState(
+            new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0), new(EquipmentSlot.OffHand, 1) },
+            new Collection<int>()),
+    };
+
+    private Actor MakeActorWithWeapons(string mainHandName, string offHandName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithWeapons(mainHandName, offHandName, currentHp, maxHp), _spellRepository, _itemLibrary));
 
     [Fact]
     public async Task GetCharacterSchema_ReturnsCharacterSchemaJson()
@@ -751,7 +785,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
 
         response.Success.Should().BeTrue();
@@ -768,7 +802,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Ranged,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Ranged,
         }, null!);
 
         response.Success.Should().BeTrue();
@@ -785,7 +819,7 @@ public class SystemEngineGrpcServiceTests
         var meleeTarget = MakeActor(currentHp: 10, maxHp: 10);
         var meleeResponse = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = meleeAttacker, Target = meleeTarget, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = meleeAttacker, Target = meleeTarget, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
         meleeResponse.Success.Should().BeTrue();
 
@@ -793,7 +827,7 @@ public class SystemEngineGrpcServiceTests
         var rangedTarget = MakeActor(currentHp: 10, maxHp: 10);
         var rangedResponse = await _service.Attack(new AttackRequest
         {
-            RequestId = "r2", CampaignId = "c1", Attacker = rangedAttacker, Target = rangedTarget, Kind = AttackKind.Ranged,
+            RequestId = "r2", CampaignId = "c1", Attacker = rangedAttacker, Target = rangedTarget, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Ranged,
         }, null!);
         rangedResponse.Success.Should().BeTrue();
     }
@@ -806,7 +840,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
 
         response.Success.Should().BeFalse();
@@ -821,7 +855,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Ranged,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Ranged,
         }, null!);
 
         response.Success.Should().BeFalse();
@@ -836,7 +870,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
 
         response.Success.Should().BeFalse();
@@ -866,7 +900,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
 
         response.Success.Should().BeFalse();
@@ -881,7 +915,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
             GridContext = new GridContext
             {
                 CasterPosition = new GridPosition { X = 0, Y = 0 },
@@ -901,7 +935,7 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
             GridContext = new GridContext
             {
                 CasterPosition = new GridPosition { X = 0, Y = 0 },
@@ -921,10 +955,184 @@ public class SystemEngineGrpcServiceTests
 
         var response = await _service.Attack(new AttackRequest
         {
-            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Melee,
         }, null!);
 
         response.Success.Should().BeTrue();
         response.Error.Should().BeEmpty();
+    }
+
+    // Regression coverage for design doc §8/§9's "gates over prompting":
+    // GetAvailableActions is the real engine-computed action menu — the
+    // DM previously had to guess at weapon legality, spell slot
+    // availability, and free-hand/incapacitation state (this session's
+    // own live verification found the DM model narrating around a real
+    // gate rather than calling a tool that would have surfaced it).
+
+    [Fact]
+    public async Task GetAvailableActions_ShortswordAndDagger_ReturnsFullMenuPerTarget()
+    {
+        // Both weapons are Light (SRD Two-Weapon Fighting) — Shortsword
+        // main hand, Dagger off hand. Dagger is also Thrown, but the
+        // ranged option only applies to the equipped MAIN hand weapon in
+        // this pass (off-hand ranged use is a further real gap, not
+        // built here — see the plan's own scope notes).
+        var actor = MakeActorWithWeapons("Shortsword", "Dagger");
+        var target1 = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+        var target2 = MakeSecondGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target1, target2 },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.CanAct.Should().BeTrue();
+
+        foreach (var targetId in new[] { "44444444-4444-4444-4444-444444444444", "55555555-5555-5555-5555-555555555555" })
+        {
+            response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.MeleeAttack && a.TargetCharacterId == targetId && a.SourceName == "Shortsword");
+            response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.OffhandAttack && a.TargetCharacterId == targetId && a.SourceName == "Dagger");
+            response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.ShoveProne && a.TargetCharacterId == targetId);
+            response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.ShovePush && a.TargetCharacterId == targetId);
+            // Both hands hold a weapon — correctly no free hand to grapple.
+            response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.Grapple && a.TargetCharacterId == targetId);
+        }
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_TwoHandedWeapon_NoGrappleOption()
+    {
+        var actor = MakeActorWithWeapon("Greatsword");
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.MeleeAttack);
+        response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.Grapple);
+        // Greatsword has neither Thrown nor Ammunition — no ranged option either.
+        response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.RangedAttack);
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_PreparedSpellWithSlot_IsCastable()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var actor = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.CastSpell && a.SourceName == "Magic Missile");
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_PreparedSpellNoSlot_NotCastable()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var actor = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 0));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.CastSpell);
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_Cantrip_AlwaysCastableRegardlessOfSlots()
+    {
+        var cantrip = new Spell(
+            name: "Fire Bolt", level: 0, school: SpellSchool.Evocation, castingTime: "1 action",
+            range: "120 feet", components: "V, S", duration: "Instantaneous", description: "A mote of fire.",
+            diceRoller: new StandardDiceRoller());
+        _spellRepository.AddSpell(cantrip);
+        var state = MakeState(currentHp: 20, maxHp: 20) with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Intelligence, IsPreparedCaster: true,
+                KnownSpellNames: new Collection<string> { "Fire Bolt" },
+                PreparedSpellNames: new Collection<string> { "Fire Bolt" },
+                Slots: new Collection<SpellSlotState>(), // deliberately no slots at all
+                PactSlotsMax: 0, PactSlotsCurrent: 0, PactSlotLevel: 0),
+        };
+        var actor = ActorMapping.ToActor(new StandardCreature(state, _spellRepository));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.CastSpell && a.SourceName == "Fire Bolt");
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_GridContextTargetOutOfWeaponRange_ExcludesAttackOptions()
+    {
+        var actor = MakeActorWithWeapon("Longsword"); // range 5
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+            GridContext = new MultiTargetGridContext
+            {
+                ActorPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPositions = { new TargetGridPosition { ActorId = target.ActorId, Position = new GridPosition { X = 4, Y = 0 } } }, // 20 feet
+            },
+        }, null!);
+
+        response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.MeleeAttack);
+        response.Actions.Should().NotContain(a => a.Kind == AvailableActionKind.Grapple);
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_NoGridContext_ReportsOptionsRegardlessOfDistance()
+    {
+        var actor = MakeActorWithWeapon("Longsword"); // range 5
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.MeleeAttack);
+        // A single one-handed weapon (Longsword, no off-hand item) leaves
+        // a real free hand to grapple with.
+        response.Actions.Should().Contain(a => a.Kind == AvailableActionKind.Grapple);
+    }
+
+    [Fact]
+    public async Task GetAvailableActions_ParalyzedActor_CanActFalseAndNoActionsReported()
+    {
+        var state = MakeStateWithWeapon("Longsword") with
+        {
+            Conditions = new ConditionManagerState(new Collection<ConditionState>
+            {
+                new("Paralyzed", "Paralyzed.", -1, ConditionType.Paralyzed),
+            }),
+        };
+        var actor = ActorMapping.ToActor(new StandardCreature(state, _spellRepository, _itemLibrary));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.GetAvailableActions(new GetAvailableActionsRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, CandidateTargets = { target },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.CanAct.Should().BeFalse();
+        response.CannotActReason.Should().Contain("Paralyzed");
+        response.Actions.Should().BeEmpty();
     }
 }

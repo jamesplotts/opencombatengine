@@ -42,7 +42,12 @@ namespace OpenCombatEngine.Implementation.Actions
         {
             ArgumentNullException.ThrowIfNull(context);
             var source = context.Source;
-            
+
+            if (IncapacitationCheck.BlockingCondition(source) is { } blockingCondition)
+            {
+                return Result<ActionResult>.Failure($"{source.Name} is {blockingCondition} and cannot act.");
+            }
+
             if (context.Target is not OpenCombatEngine.Core.Models.Actions.CreatureTarget creatureTarget)
             {
                 return Result<ActionResult>.Failure("Target must be a creature for an attack.");

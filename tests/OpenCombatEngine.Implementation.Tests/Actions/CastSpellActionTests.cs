@@ -34,6 +34,31 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
         }
 
         [Fact]
+        public void Execute_Should_Fail_If_Source_Is_Paralyzed()
+        {
+            // Regression coverage for the new source-side incapacitation
+            // gate — before this, nothing checked whether the CASTER
+            // itself was Paralyzed/Stunned/Petrified/Incapacitated.
+            var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
+            var action = new CastSpellAction(spell);
+
+            var conditions = Substitute.For<OpenCombatEngine.Core.Interfaces.Conditions.IConditionManager>();
+            conditions.HasCondition(ConditionType.Paralyzed).Returns(true);
+
+            var creature = Substitute.For<ICreature>();
+            creature.Conditions.Returns(conditions);
+
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                creature,
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(Substitute.For<ICreature>())
+            );
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("Paralyzed");
+        }
+
+        [Fact]
         public void Execute_Should_Fail_If_No_Slots()
         {
             var spell = new Spell("Test", 1, SpellSchool.Abjuration, "", "", "", "", "", _diceRoller);
