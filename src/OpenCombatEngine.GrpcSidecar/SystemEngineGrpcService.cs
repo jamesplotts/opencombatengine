@@ -9,6 +9,7 @@ using Layforge.Protocol.SystemEngine.V1;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Conditions;
@@ -38,6 +39,19 @@ namespace OpenCombatEngine.GrpcSidecar;
 /// </remarks>
 public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 {
+    private readonly ISpellRepository _spellRepository;
+
+    /// <summary>
+    /// Constructs the service. <paramref name="spellRepository"/> is resolved by
+    /// ASP.NET Core's DI container (gRPC service instances are DI-constructed) —
+    /// see <c>Program.cs</c> for where the singleton instance is populated from
+    /// Open5e at startup and registered.
+    /// </summary>
+    public SystemEngineGrpcService(ISpellRepository spellRepository)
+    {
+        _spellRepository = spellRepository ?? throw new System.ArgumentNullException(nameof(spellRepository));
+    }
+
     public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
         GetCharacterSchemaRequest request, ServerCallContext context)
     {
@@ -50,7 +64,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ToJsonResponse> ToJson(ToJsonRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
         if (creatureResult.IsFailure)
             throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
 
@@ -72,14 +86,14 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             return Task.FromResult(response);
         }
 
-        response.Actor = ActorMapping.ToActor(new StandardCreature(stateResult.Value));
+        response.Actor = ActorMapping.ToActor(new StandardCreature(stateResult.Value, _spellRepository));
         return Task.FromResult(response);
     }
 
     public override Task<GetCharacterStatusResponse> GetCharacterStatus(
         GetCharacterStatusRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
         if (creatureResult.IsFailure)
             throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
 
@@ -91,7 +105,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<StartTurnResponse> StartTurn(StartTurnRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
         if (creatureResult.IsFailure)
             return Task.FromResult(new StartTurnResponse { Success = false, Error = creatureResult.Error });
 
@@ -156,7 +170,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ApplyEffectResponse> ApplyEffect(ApplyEffectRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
         if (creatureResult.IsFailure)
             return Task.FromResult(new ApplyEffectResponse { Success = false, Error = creatureResult.Error });
 
@@ -212,7 +226,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ResolveCheckResponse> ResolveCheck(ResolveCheckRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
         if (creatureResult.IsFailure)
             return Task.FromResult(new ResolveCheckResponse { Success = false, Error = creatureResult.Error });
 

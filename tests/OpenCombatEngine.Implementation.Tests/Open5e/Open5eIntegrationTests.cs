@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -28,6 +29,24 @@ namespace OpenCombatEngine.Implementation.Tests.Open5e
             spell.Name.Should().Be("Fireball");
             spell.Level.Should().Be(3);
             spell.Range.Should().Contain("150");
+        }
+
+        [Fact]
+        public async Task Can_Fetch_All_Spells_From_Real_Api()
+        {
+            var http = new HttpClient();
+            var client = new Open5eClient(http);
+            var dice = new StandardDiceRoller();
+            var source = new Open5eContentSource(client, dice);
+
+            // This is the exact call OpenCombatEngine.GrpcSidecar's Program.cs
+            // makes at startup to populate the real spell repository — a real
+            // live check that the whole path (pagination, mapping) actually
+            // works against the live API, not just a mocked one.
+            var spells = (await source.GetAllSpellsAsync()).ToList();
+
+            spells.Should().NotBeEmpty();
+            spells.Should().Contain(s => s.Name == "Fireball");
         }
 
         [Fact]

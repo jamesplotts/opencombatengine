@@ -66,6 +66,45 @@ namespace OpenCombatEngine.Implementation.Open5e
 #pragma warning restore CA1031
         }
 
+        /// <summary>
+        /// Fetches and maps every spell in the Open5e SRD spell list, following
+        /// pagination until Open5e reports no further page. A page that fails to
+        /// fetch, or a spell that fails to map, is skipped rather than aborting the
+        /// whole fetch — callers populating a long-lived repository from this should
+        /// prefer a partial result over none at all.
+        /// </summary>
+        public async Task<IEnumerable<ISpell>> GetAllSpellsAsync()
+        {
+            var result = new List<ISpell>();
+            int page = 1;
+            while (true)
+            {
+                var response = await _client.GetSpellsAsync(page).ConfigureAwait(false);
+                if (response == null || response.Results.Count == 0) break;
+
+                foreach (var open5eSpell in response.Results)
+                {
+                    try
+                    {
+                        var dto = Open5eAdapter.ToStandard(open5eSpell);
+                        result.Add(SpellMapper.Map(dto, _diceRoller));
+                    }
+#pragma warning disable CA1031
+                    catch (Exception)
+                    {
+                        // A single malformed spell entry shouldn't cost the rest of
+                        // the SRD list — same "degrade gracefully" reasoning as a
+                        // failed page fetch below.
+                    }
+#pragma warning restore CA1031
+                }
+
+                if (string.IsNullOrEmpty(response.Next)) break;
+                page++;
+            }
+            return result;
+        }
+
         public async Task<IEnumerable<IWeapon>> GetAllWeaponsAsync()
         {
             var result = new List<IWeapon>();

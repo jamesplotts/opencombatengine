@@ -4,6 +4,7 @@
 // See LEGAL.md for full disclaimers
 
 using Layforge.Protocol.SystemEngine.V1;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
 
@@ -51,6 +52,16 @@ public static class ActorMapping
     /// Reconstructs a live creature from an Actor's character_data.
     /// </summary>
     /// <param name="actor">The actor to convert.</param>
+    /// <param name="spellRepository">
+    /// Resolves the spell names in actor's character_data (known/prepared
+    /// spells, and any spell currently being concentrated on) back into live
+    /// <see cref="ISpell"/> instances. Without one, <see cref="StandardCreature"/>'s
+    /// state-restoring constructor cannot rebuild spellcasting state at all —
+    /// see that constructor's own remarks — so every caller of this method
+    /// must supply a real, populated repository (see
+    /// <c>Program.cs</c>'s startup wiring) for spellcasting to survive this
+    /// round trip.
+    /// </param>
     /// <returns>
     /// A success Result carrying the reconstructed creature, or a failure
     /// Result carrying a human-readable error — never throws, since callers
@@ -58,9 +69,10 @@ public static class ActorMapping
     /// a response's own error field rather than an unhandled exception
     /// crossing the RPC boundary.
     /// </returns>
-    public static Result<StandardCreature> ToCreature(Actor actor)
+    public static Result<StandardCreature> ToCreature(Actor actor, ISpellRepository spellRepository)
     {
         ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(spellRepository);
 
         if (actor.CharacterData is null)
             return Result<StandardCreature>.Failure("Missing required field 'character_data'.");
@@ -81,7 +93,7 @@ public static class ActorMapping
 
         try
         {
-            return Result<StandardCreature>.Success(new StandardCreature(stateResult.Value));
+            return Result<StandardCreature>.Success(new StandardCreature(stateResult.Value, spellRepository));
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {

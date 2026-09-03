@@ -61,6 +61,18 @@ namespace OpenCombatEngine.Implementation.Open5e
                 return null;
             }
         }
+        /// <summary>
+        /// Fetches one page of the Open5e SRD spell list.
+        /// </summary>
+        /// <param name="page">1-based page number, matching Open5e's own pagination.</param>
+        /// <returns>The page's results, or <see langword="null"/> if the request fails
+        /// (network error, non-success status, or malformed JSON) — callers should treat
+        /// that the same as "no more results," not throw.</returns>
+        public virtual async Task<Open5eListResult<Open5eSpell>?> GetSpellsAsync(int page = 1)
+        {
+            return await GetListAsync<Open5eSpell>("spells", page).ConfigureAwait(false);
+        }
+
         public virtual async Task<Open5eListResult<Open5eWeapon>?> GetWeaponsAsync(int page = 1)
         {
             return await GetListAsync<Open5eWeapon>("weapons", page).ConfigureAwait(false);

@@ -3,14 +3,19 @@
 // Game mechanics under OGL 1.0a
 // See LEGAL.md for full disclaimers
 
+using System.Collections.ObjectModel;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Layforge.Protocol.SystemEngine.V1;
+using NSubstitute;
+using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Spells;
 using ProtoValue = Google.Protobuf.WellKnownTypes.Value;
 
 namespace OpenCombatEngine.GrpcSidecar.Tests;
@@ -24,7 +29,13 @@ namespace OpenCombatEngine.GrpcSidecar.Tests;
 /// </summary>
 public class SystemEngineGrpcServiceTests
 {
-    private readonly SystemEngineGrpcService _service = new();
+    private readonly ISpellRepository _spellRepository = new InMemorySpellRepository();
+    private readonly SystemEngineGrpcService _service;
+
+    public SystemEngineGrpcServiceTests()
+    {
+        _service = new SystemEngineGrpcService(_spellRepository);
+    }
 
     private static CreatureState MakeState(int currentHp = 24, int maxHp = 30) => new(
         Id: Guid.Parse("33333333-3333-3333-3333-333333333333"),
@@ -74,6 +85,41 @@ public class SystemEngineGrpcServiceTests
         var response = await _service.FromJson(new FromJsonRequest { Json = "{not valid" }, null!);
 
         response.Warnings.Should().ContainSingle(w => w.Severity == "error");
+    }
+
+    // Regression coverage for a real bug found via live testing: spellcasting
+    // state came back null after every gRPC round trip because FromJson (and
+    // every other handler reconstructing a StandardCreature) never had a real
+    // ISpellRepository to resolve spell names against. This is the test that
+    // would have caught it.
+    [Fact]
+    public async Task FromJson_CharacterWithKnownSpell_SpellcastingSurvivesRoundTrip()
+    {
+        var magicMissile = Substitute.For<ISpell>();
+        magicMissile.Name.Returns("Magic Missile");
+        _spellRepository.AddSpell(magicMissile);
+
+        var state = MakeState() with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Intelligence,
+                IsPreparedCaster: true,
+                KnownSpellNames: new Collection<string> { "Magic Missile" },
+                PreparedSpellNames: new Collection<string> { "Magic Missile" },
+                Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 3, Current: 3) },
+                PactSlotsMax: 0,
+                PactSlotsCurrent: 0,
+                PactSlotLevel: 0),
+        };
+        var json = CreatureStateJson.Serialize(state);
+
+        var response = await _service.FromJson(new FromJsonRequest { Json = json }, null!);
+
+        response.Warnings.Should().BeEmpty();
+        response.Actor.CharacterData.Fields["spellcasting"].StructValue
+            .Fields["preparedSpellNames"].ListValue.Values
+            .Select(v => v.StringValue)
+            .Should().Contain("Magic Missile");
     }
 
     [Fact]
