@@ -314,6 +314,38 @@ message CastSpellRequest {
   // minimum (SRD upcasting). 0 (the default) means "use the spell's own
   // base level."
   int32 slot_level = 6;
+  // Optional: real positions/blocking-cell data from Master's own combat
+  // map (Layforge internal/combatmap — this engine has no notion of a
+  // generated map or persisted grid state of its own). Set only when
+  // Master has a combat map for this campaign with both caster and
+  // target placed on it; omitted entirely otherwise, in which case
+  // CastSpellAction's existing range/line-of-sight checks are skipped
+  // exactly as they always have been (no behavior change for a request
+  // that doesn't set this).
+  GridContext grid_context = 7;
+}
+
+// GridPosition is a bare grid cell coordinate, 5-foot-square SRD
+// convention (matching StandardGridManager.GetDistance's own
+// Chebyshev-distance-times-5 formula) — the same coordinate space
+// Layforge's own internal/combatmap already uses, so no unit conversion
+// happens on either side of this boundary.
+message GridPosition {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+// GridContext carries the real positions/blocking-cells a combat map has
+// for a spell's caster and target. obstacles lists only line-of-sight-
+// blocking cells (Master's combatmap.Cell.BlocksLOS), not a full grid
+// dump — see CastSpellRequest.grid_context's own doc comment for when
+// this is set at all, and CastSpellAction.Execute's range/line-of-sight
+// check (src/OpenCombatEngine.Implementation/Actions/CastSpellAction.cs)
+// for how these values are actually used once received.
+message GridContext {
+  GridPosition caster_position = 1;
+  GridPosition target_position = 2;
+  repeated GridPosition obstacles = 3;
 }
 
 message CastSpellResponse {

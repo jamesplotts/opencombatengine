@@ -50,6 +50,20 @@ public class SystemEngineGrpcServiceTests
     private static Actor MakeActor(int currentHp = 24, int maxHp = 30) =>
         ActorMapping.ToActor(new StandardCreature(MakeState(currentHp, maxHp)));
 
+    // MakeState always uses the same fixed Id — fine for every existing
+    // test, which never places more than one creature on a grid at once,
+    // but StandardGridManager.PlaceCreature keys by creature Id and
+    // rejects placing a second creature under one already in use. The
+    // CastSpell grid-context tests place both caster and target on the
+    // same grid, so the target there needs a real, distinct Id — this
+    // exists instead of changing MakeState's own fixed Id, which every
+    // other test in this file relies on staying exactly what it is.
+    private static Actor MakeGridTargetActor(int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeState(currentHp, maxHp) with
+        {
+            Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+        }));
+
     [Fact]
     public async Task GetCharacterSchema_ReturnsCharacterSchemaJson()
     {
@@ -510,6 +524,152 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeTrue();
         response.Error.Should().BeEmpty();
+    }
+
+    // Regression coverage for wiring Master's own combat map
+    // (internal/combatmap) into real range/line-of-sight gating —
+    // CastSpellAction.Execute already checks both (src/
+    // OpenCombatEngine.Implementation/Actions/CastSpellAction.cs), but
+    // only when context.Grid is non-null and both creatures are actually
+    // placed on it; before this, CastSpell never constructed one at all.
+    // Magic Missile's own range ("120 feet", MakeMagicMissile) is real
+    // SRD data, not a fabricated test-only value.
+
+    [Fact]
+    public async Task CastSpell_GridContextWithTargetInRangeAndClearSight_Succeeds()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(new CastSpellRequest
+        {
+            RequestId = "r1",
+            CampaignId = "c1",
+            Caster = caster,
+            Target = target,
+            SpellName = "Magic Missile",
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 4, Y = 0 }, // 20 feet — well within 120
+            },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CastSpell_GridContextTargetOutOfRange_ReturnsFailure()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(new CastSpellRequest
+        {
+            RequestId = "r1",
+            CampaignId = "c1",
+            Caster = caster,
+            Target = target,
+            SpellName = "Magic Missile",
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 30, Y = 0 }, // 150 feet — beyond Magic Missile's 120
+            },
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("out of range");
+    }
+
+    [Fact]
+    public async Task CastSpell_GridContextObstacleBlocksLineOfSight_ReturnsFailure()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(new CastSpellRequest
+        {
+            RequestId = "r1",
+            CampaignId = "c1",
+            Caster = caster,
+            Target = target,
+            SpellName = "Magic Missile",
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 4, Y = 0 }, // within range, but...
+                Obstacles = { new GridPosition { X = 2, Y = 0 } }, // ...directly between them
+            },
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("line of sight");
+    }
+
+    [Fact]
+    public async Task CastSpell_NoGridContext_SkipsRangeCheck_SucceedsRegardlessOfSpellRange()
+    {
+        // Explicit regression proof: omitting grid_context entirely must
+        // behave exactly like every other CastSpell_* test above that
+        // never sets it — a target that would be wildly out of range on
+        // any real map still succeeds, because there's no grid to check
+        // range against at all (context.Grid stays null).
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Magic Missile" }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CastSpell_GridContextButNoTarget_SelfCast_SkipsGridEntirely()
+    {
+        var selfSpell = new Spell(
+            name: "Mage Armor", level: 1, school: SpellSchool.Abjuration, castingTime: "1 action",
+            range: "Self", components: "V, S, M", duration: "8 hours", description: "AC boost.",
+            diceRoller: new StandardDiceRoller());
+        _spellRepository.AddSpell(selfSpell);
+        var state = MakeState() with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Intelligence, IsPreparedCaster: true,
+                KnownSpellNames: new Collection<string> { "Mage Armor" },
+                PreparedSpellNames: new Collection<string> { "Mage Armor" },
+                Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 2, Current: 2) },
+                PactSlotsMax: 0, PactSlotsCurrent: 0, PactSlotLevel: 0),
+        };
+        var caster = ActorMapping.ToActor(new StandardCreature(state, _spellRepository));
+
+        // A grid_context with no Target set at all is a malformed request
+        // in practice (Master never sends one for a self-cast), but the
+        // point of this test is that hasTarget — not GridContext's mere
+        // presence — gates whether a grid is built at all; this must not
+        // throw a null-reference trying to read a TargetPosition that
+        // doesn't matter for a self-cast.
+        var response = await _service.CastSpell(new CastSpellRequest
+        {
+            RequestId = "r1",
+            CampaignId = "c1",
+            Caster = caster,
+            SpellName = "Mage Armor",
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 0, Y = 0 },
+            },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Target.Should().BeNull("a self-cast's target is identical to the caster, already returned as Caster");
     }
 
     [Fact]

@@ -11,12 +11,15 @@ using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Actions;
+using OpenCombatEngine.Core.Interfaces.Spatial;
+using OpenCombatEngine.Core.Models.Spatial;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Actions.Contexts;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Spatial;
 
 namespace OpenCombatEngine.GrpcSidecar;
 
@@ -308,18 +311,49 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         // No target given means a self-cast — CastSpellAction requires a
         // CreatureTarget even for a self-only spell like Mage Armor
         // (there is no dedicated "self" target type in this engine).
+        bool hasTarget = request.Target is not null;
         StandardCreature target = caster;
-        if (request.Target is not null)
+        if (request.Target is { } targetActor)
         {
-            var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository);
+            var targetResult = ActorMapping.ToCreature(targetActor, _spellRepository);
             if (targetResult.IsFailure)
                 return Task.FromResult(new CastSpellResponse { Success = false, Error = targetResult.Error });
             target = targetResult.Value;
         }
 
+        // Real range/line-of-sight gating, using positions from Master's
+        // own combat map (protocol/system_engine.proto's grid_context doc
+        // comment) — set only when Master actually has one for this
+        // campaign with both combatants placed; a self-cast never needs
+        // it (range/LOS against yourself is meaningless). Absent this,
+        // context.Grid stays null below and CastSpellAction's own
+        // range/LOS check (already written, already tested) simply
+        // skips itself exactly as it always has.
+        IGridManager? grid = null;
+        if (hasTarget && request.GridContext is not null)
+        {
+            var gc = request.GridContext;
+            var candidateGrid = new StandardGridManager();
+            var casterPlaced = candidateGrid.PlaceCreature(caster, new Position(gc.CasterPosition.X, gc.CasterPosition.Y));
+            var targetPlaced = candidateGrid.PlaceCreature(target, new Position(gc.TargetPosition.X, gc.TargetPosition.Y));
+            if (casterPlaced.IsSuccess && targetPlaced.IsSuccess)
+            {
+                foreach (var obstacle in gc.Obstacles)
+                {
+                    candidateGrid.AddObstacle(new Position(obstacle.X, obstacle.Y));
+                }
+                grid = candidateGrid;
+            }
+            // If either placement failed (e.g. caster and target resolved
+            // to the same cell — a Master-side bookkeeping inconsistency,
+            // not this cast's fault), proceed without a grid rather than
+            // rejecting an otherwise-valid cast over it — grid stays null,
+            // same as when no grid_context is sent at all.
+        }
+
         int? slotLevel = request.SlotLevel != 0 ? request.SlotLevel : null;
         var action = new CastSpellAction(spell, slotLevel, _diceRoller);
-        var actionContext = new StandardActionContext(caster, new CreatureTarget(target));
+        var actionContext = new StandardActionContext(caster, new CreatureTarget(target), grid);
 
         // Captured before Execute (which mutates target.HitPoints in
         // place via CastSpellAction's own ApplySpellEffects) so Master's
