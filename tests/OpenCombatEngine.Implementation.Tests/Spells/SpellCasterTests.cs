@@ -42,6 +42,8 @@ namespace OpenCombatEngine.Implementation.Tests.Spells
             public IReadOnlyList<DamageFormula> DamageRolls { get; } = new List<DamageFormula>();
             public string? HealingDice { get; } = null;
             public IReadOnlyList<SpellConditionDefinition> AppliedConditions { get; } = new List<SpellConditionDefinition>();
+            public int InstanceCount { get; } = 1;
+            public int InstanceCountPerUpcastLevel { get; } = 0;
 
             public FakeSpell(string name, int level)
             {

@@ -26,6 +26,41 @@ namespace OpenCombatEngine.Implementation.Open5e
             @"(?<ability>strength|dexterity|constitution|intelligence|wisdom|charisma)\s+saving throw",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        private static readonly Regex HealingEqualToRegex = new(
+            @"hit points?\s+equal to\s+(?<dice>\d+d\d+(?:\s*[+-]\s*\d+)?)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex HealingFlatRegex = new(
+            @"(?:regains?|restores?)\s+(?<dice>\d+d\d+(?:\s*[+-]\s*\d+)?|\d+)\s+hit points?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex AttackRollRegex = new(
+            @"make an? (?:melee|ranged) spell attack",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex ProjectileCountRegex = new(
+            @"\b(?:you create|creates?)\s+(?<count>a|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:\w+\s+){0,2}(?:darts?|rays?|bolts?|beams?|missiles?|shards?)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex InstanceScalingRegex = new(
+            @"one (?:more|additional)\s+(?:\w+\s+){0,2}(?:darts?|rays?|bolts?|beams?|missiles?|shards?)\s+for each (?:slot level|spell slot level) above",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Dictionary<string, int> NumberWords = new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["a"] = 1,
+            ["one"] = 1,
+            ["two"] = 2,
+            ["three"] = 3,
+            ["four"] = 4,
+            ["five"] = 5,
+            ["six"] = 6,
+            ["seven"] = 7,
+            ["eight"] = 8,
+            ["nine"] = 9,
+            ["ten"] = 10,
+        };
+
         /// <summary>
         /// Extracts every "XdY [+/-Z] &lt;type&gt; damage" phrase in text,
         /// in the order they appear, as (dice notation, uppercase damage
@@ -86,6 +121,84 @@ namespace OpenCombatEngine.Implementation.Open5e
                 "CHARISMA" => "CHA",
                 _ => null,
             };
+        }
+
+        /// <summary>
+        /// Extracts a healing spell's dice notation from "regain[s]/
+        /// restore[s] ... hit points [equal to XdY]" phrasing (e.g. Cure
+        /// Wounds' "regains a number of hit points equal to 1d8 + your
+        /// spellcasting ability modifier", Goodberry's "restores 1 hit
+        /// point"). Any "+ your spellcasting ability modifier" suffix is
+        /// dropped — <see cref="OpenCombatEngine.Core.Interfaces.Spells.ISpell.HealingDice"/>
+        /// is a fixed dice string with no caster-dependent bonus, the same
+        /// simplification <c>ExtractDamageRolls</c> already accepts for
+        /// damage. Returns null if the description names no healing.
+        /// </summary>
+        public static string? ExtractHealingDice(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            var equalToMatch = HealingEqualToRegex.Match(text);
+            if (equalToMatch.Success)
+            {
+                return Regex.Replace(equalToMatch.Groups["dice"].Value, @"\s+", "");
+            }
+
+            var flatMatch = HealingFlatRegex.Match(text);
+            return flatMatch.Success
+                ? Regex.Replace(flatMatch.Groups["dice"].Value, @"\s+", "")
+                : null;
+        }
+
+        /// <summary>
+        /// Detects the SRD's own "Make a melee/ranged spell attack ..."
+        /// phrasing (e.g. Ray of Frost, Scorching Ray, Inflict Wounds) —
+        /// the same signal <c>SpellDto.SpellAttack</c> being non-empty
+        /// already conveys for a 5etools-format spell.
+        /// </summary>
+        public static bool ExtractRequiresAttackRoll(string? text)
+        {
+            return !string.IsNullOrWhiteSpace(text) && AttackRollRegex.IsMatch(text);
+        }
+
+        /// <summary>
+        /// Extracts how many times a spell's effect repeats per cast at
+        /// its base level, from "you create &lt;count&gt; ... darts/rays/
+        /// bolts/beams/missiles/shards" phrasing (Magic Missile's three
+        /// darts, Scorching Ray's three rays). Returns 1 — the SRD default
+        /// for a spell that only ever affects a target once — when no such
+        /// phrasing is found.
+        /// </summary>
+        public static int ExtractInstanceCount(string? desc)
+        {
+            if (string.IsNullOrWhiteSpace(desc))
+            {
+                return 1;
+            }
+
+            var match = ProjectileCountRegex.Match(desc);
+            if (!match.Success)
+            {
+                return 1;
+            }
+
+            return NumberWords.TryGetValue(match.Groups["count"].Value, out var count) ? count : 1;
+        }
+
+        /// <summary>
+        /// Detects the SRD's own "one more/additional &lt;projectile&gt;
+        /// for each slot level above &lt;Nth&gt;" upcast phrasing (Magic
+        /// Missile, Scorching Ray) in a spell's higher_level text. Every
+        /// sampled SRD spell using this phrasing scales by exactly one
+        /// instance per extra level, so this returns 1 when found, 0
+        /// otherwise — not a general count extractor.
+        /// </summary>
+        public static int ExtractInstanceCountPerUpcastLevel(string? higherLevelText)
+        {
+            return !string.IsNullOrWhiteSpace(higherLevelText) && InstanceScalingRegex.IsMatch(higherLevelText) ? 1 : 0;
         }
     }
 #pragma warning restore CA1002

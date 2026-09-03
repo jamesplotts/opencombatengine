@@ -30,7 +30,6 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
             var saveEffect = MapSaveEffect(dto.SavingThrow, description);
             
             var damageRolls = MapDamageRolls(dto.Damage, dto.DamageInflict);
-            var healingDice = MapHealingDice(dto.Entries);
 
             return new Spell(
                 dto.Name ?? "Unknown",
@@ -47,7 +46,9 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
                 saveAbility,
                 saveEffect,
                 damageRolls,
-                healingDice
+                dto.HealingDice,
+                instanceCount: dto.InstanceCount,
+                instanceCountPerUpcastLevel: dto.InstanceCountPerUpcastLevel
             );
         }
 
@@ -85,11 +86,6 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
             }
             
             return list;
-        }
-
-        private static string? MapHealingDice(List<object>? entries)
-        {
-            return null; 
         }
 
         private static bool MapConcentration(List<DurationDto>? duration)

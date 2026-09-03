@@ -41,6 +41,16 @@ namespace OpenCombatEngine.Implementation.Open5e
                 dto.SavingThrow = new List<string> { savingThrowAbility };
             }
 
+            dto.HealingDice = Open5eSpellTextParser.ExtractHealingDice(source.Desc);
+
+            if (Open5eSpellTextParser.ExtractRequiresAttackRoll(source.Desc))
+            {
+                dto.SpellAttack = new List<string> { "attack" };
+            }
+
+            dto.InstanceCount = Open5eSpellTextParser.ExtractInstanceCount(source.Desc);
+            dto.InstanceCountPerUpcastLevel = Open5eSpellTextParser.ExtractInstanceCountPerUpcastLevel(source.HigherLevel);
+
             dto.School = source.School?.ToUpperInvariant() switch
             {
                 "ABJURATION" => "A",

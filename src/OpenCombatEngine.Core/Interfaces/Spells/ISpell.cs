@@ -27,6 +27,23 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula> DamageRolls { get; }
         string? HealingDice { get; }
         System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition> AppliedConditions { get; }
+
+        /// <summary>
+        /// How many times DamageRolls is independently rolled and applied
+        /// per cast at this spell's own base Level (e.g. 3 for Magic
+        /// Missile's three darts, each separately rolled — SRD "you create
+        /// three ... darts"). 1 for the overwhelming majority of spells,
+        /// which only ever affect a target once.
+        /// </summary>
+        int InstanceCount { get; }
+
+        /// <summary>
+        /// Additional InstanceCount gained per spell slot level this spell
+        /// is cast above its own base Level (SRD "one more dart/ray for
+        /// each slot level above Nth" upcast text). 0 for a spell whose
+        /// InstanceCount doesn't scale with upcasting.
+        /// </summary>
+        int InstanceCountPerUpcastLevel { get; }
         
         OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 

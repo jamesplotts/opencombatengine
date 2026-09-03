@@ -52,6 +52,22 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
         // Usually strings.
         [JsonPropertyName("damage")]
         public List<List<string>>? Damage { get; set; }
+
+        // Not part of the 5etools format this DTO otherwise mirrors — an
+        // Open5e-specific addition (Open5eAdapter populates this from
+        // prose via Open5eSpellTextParser.ExtractHealingDice, since
+        // Open5e's REST API has no structured healing field either).
+        [JsonPropertyName("healingDice")]
+        public string? HealingDice { get; set; }
+
+        // Also Open5e-specific additions, populated the same way — see
+        // Open5eSpellTextParser.ExtractInstanceCount/
+        // ExtractInstanceCountPerUpcastLevel's doc comments.
+        [JsonPropertyName("instanceCount")]
+        public int InstanceCount { get; set; } = 1;
+
+        [JsonPropertyName("instanceCountPerUpcastLevel")]
+        public int InstanceCountPerUpcastLevel { get; set; }
     }
 #pragma warning restore CA2227
 #pragma warning restore CA1002

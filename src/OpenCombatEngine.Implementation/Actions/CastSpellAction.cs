@@ -258,6 +258,43 @@ namespace OpenCombatEngine.Implementation.Actions
                 : null;
         }
 
+        /// <summary>
+        /// Rolls a single spell attack (1d20 + proficiency + casting
+        /// ability modifier, same formula ApplySpellEffects already uses
+        /// for save DC) against target's own armor class, appends a
+        /// human-readable line to messages, and returns whether it hit.
+        /// A natural 20 always hits and a natural 1 always misses, same as
+        /// any other d20 attack roll; this doesn't model a critical hit's
+        /// extra damage dice, a further known simplification. If the
+        /// attack roll itself fails to resolve, treats it as a hit rather
+        /// than silently losing the cast's already-committed resources.
+        /// </summary>
+        private bool RollSpellAttack(ICreature source, ICreature target, System.Collections.Generic.List<string> messages)
+        {
+            int attackBonus = 0;
+            if (source.Spellcasting is OpenCombatEngine.Implementation.Spells.StandardSpellCaster ssc)
+            {
+                int prof = source.ProficiencyBonus;
+                int mod = source.AbilityScores.GetModifier(ssc.CastingAbility);
+                attackBonus = prof + mod;
+            }
+
+            var attackRoll = _diceRoller.Roll("1d20");
+            if (!attackRoll.IsSuccess)
+            {
+                return true;
+            }
+
+            int natural = attackRoll.Value.Total;
+            int targetAc = target.CombatStats.ArmorClass;
+            bool hit = natural == 20 || (natural != 1 && natural + attackBonus >= targetAc);
+
+            messages.Add(hit
+                ? $"Attack roll {natural}+{attackBonus} hits AC {targetAc}."
+                : $"Attack roll {natural}+{attackBonus} misses AC {targetAc}.");
+            return hit;
+        }
+
         private void ApplySpellEffects(ICreature source, ICreature target, System.Collections.Generic.List<string> messages)
         {
             // 1. Saving Throw
@@ -299,8 +336,14 @@ namespace OpenCombatEngine.Implementation.Actions
                 else
                 {
                     int totalDamage = 0;
-                    
-                    // Cantrip Scaling
+
+                    // Cantrip Scaling (character level) or fixed
+                    // multi-instance scaling (e.g. Magic Missile's three
+                    // darts, Scorching Ray's three rays, each independently
+                    // rolled — SRD "you create three ... darts/rays"). A
+                    // spell uses at most one of these two mechanisms in
+                    // practice: cantrip scaling only applies at Level 0,
+                    // where InstanceCount is always the SRD default of 1.
                     int multiplier = 1;
                     if (_spell.Level == 0 && source.LevelManager != null)
                     {
@@ -309,11 +352,28 @@ namespace OpenCombatEngine.Implementation.Actions
                         else if (level >= 11) multiplier = 3;
                         else if (level >= 5) multiplier = 2;
                     }
-
-                    foreach (var rollDef in _spell.DamageRolls)
+                    else if (_spell.InstanceCount > 1 || _spell.InstanceCountPerUpcastLevel > 0)
                     {
-                        // Roll 'multiplier' times
-                        for (int i = 0; i < multiplier; i++)
+                        int extraLevels = System.Math.Max(0, _slotLevel - _spell.Level);
+                        multiplier = _spell.InstanceCount + (_spell.InstanceCountPerUpcastLevel * extraLevels);
+                    }
+
+                    for (int i = 0; i < multiplier; i++)
+                    {
+                        // Each instance (dart/ray/...) rolls its own
+                        // attack, if the spell requires one — a miss deals
+                        // no damage for that instance specifically, not
+                        // the whole cast (SRD: Scorching Ray's rays each
+                        // roll their own attack). A save-based spell rolls
+                        // its single save once, above, outside this loop —
+                        // SRD spells use an attack roll or a save, never
+                        // both.
+                        if (_spell.RequiresAttackRoll && !_spell.SaveAbility.HasValue && !RollSpellAttack(source, target, messages))
+                        {
+                            continue;
+                        }
+
+                        foreach (var rollDef in _spell.DamageRolls)
                         {
                             var roll = _diceRoller.Roll(rollDef.Dice);
                             if (roll.IsSuccess)
@@ -323,7 +383,7 @@ namespace OpenCombatEngine.Implementation.Actions
                                 {
                                     amount /= 2;
                                 }
-                                
+
                                 target.HitPoints.TakeDamage(amount, rollDef.Type);
                                 totalDamage += amount;
                             }

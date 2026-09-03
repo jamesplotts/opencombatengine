@@ -24,8 +24,11 @@ namespace OpenCombatEngine.Implementation.Spells
         
         public System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula> DamageRolls { get; }
         public string? HealingDice { get; }
-        
+
         public System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition> AppliedConditions { get; }
+
+        public int InstanceCount { get; }
+        public int InstanceCountPerUpcastLevel { get; }
         
         public OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
@@ -49,12 +52,16 @@ namespace OpenCombatEngine.Implementation.Spells
             System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.DamageFormula>? damageRolls = null,
             string? healingDice = null,
             System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition>? appliedConditions = null,
-            OpenCombatEngine.Core.Interfaces.Spatial.IShape? areaOfEffect = null)
+            OpenCombatEngine.Core.Interfaces.Spatial.IShape? areaOfEffect = null,
+            int instanceCount = 1,
+            int instanceCountPerUpcastLevel = 0)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             if (level < 0 || level > 9) throw new ArgumentOutOfRangeException(nameof(level), "Level must be between 0 and 9");
+            if (instanceCount < 1) throw new ArgumentOutOfRangeException(nameof(instanceCount), "InstanceCount must be at least 1.");
+            if (instanceCountPerUpcastLevel < 0) throw new ArgumentOutOfRangeException(nameof(instanceCountPerUpcastLevel), "InstanceCountPerUpcastLevel cannot be negative.");
             ArgumentNullException.ThrowIfNull(diceRoller);
-            
+
             Name = name;
             Level = level;
             School = school;
@@ -72,6 +79,8 @@ namespace OpenCombatEngine.Implementation.Spells
             HealingDice = healingDice;
             AppliedConditions = appliedConditions ?? new System.Collections.Generic.List<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition>();
             AreaOfEffect = areaOfEffect;
+            InstanceCount = instanceCount;
+            InstanceCountPerUpcastLevel = instanceCountPerUpcastLevel;
         }
 
         public Result<OpenCombatEngine.Core.Models.Spells.SpellResolution> Cast(ICreature caster, object? target = null)

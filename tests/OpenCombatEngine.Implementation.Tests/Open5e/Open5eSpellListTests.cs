@@ -195,5 +195,130 @@ namespace OpenCombatEngine.Implementation.Tests.Open5e
             spell.DamageRolls.Should().BeEmpty();
             spell.SaveAbility.Should().BeNull();
         }
+
+        // The tests below cover the three follow-up fixes made after the
+        // damage-mapping fix above: healing dice (SpellMapper.
+        // MapHealingDice was a permanent stub, unrelated to Open5e but
+        // fixed alongside it since it's the same class of bug), attack
+        // rolls (SpellAttack was never populated, so RequiresAttackRoll
+        // was moot), and multi-instance spells like Magic Missile's three
+        // darts (InstanceCount/InstanceCountPerUpcastLevel, new ISpell
+        // members).
+        [Fact]
+        public async Task GetAllSpellsAsync_HealingSpell_MappedSpellHasHealingDice()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Cure Wounds",
+                LevelInt = 1,
+                School = "evocation",
+                Range = "Touch",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier. This spell has no effect on undead or constructs.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Cure Wounds").Subject;
+            spell.HealingDice.Should().Be("1d8");
+            spell.DamageRolls.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_AttackRollSpell_MappedSpellRequiresAttackRoll()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Ray of Frost",
+                LevelInt = 0,
+                School = "evocation",
+                Range = "60 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "A frigid beam of blue-white light streaks toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 1d8 cold damage, and its speed is reduced by 10 feet until the start of your next turn.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Ray of Frost").Subject;
+            spell.RequiresAttackRoll.Should().BeTrue();
+            spell.SaveAbility.Should().BeNull();
+            spell.DamageRolls.Should().ContainSingle();
+            spell.DamageRolls[0].Dice.Should().Be("1d8");
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_SaveBasedSpell_MappedSpellDoesNotRequireAttackRoll()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Fireball",
+                LevelInt = 3,
+                School = "evocation",
+                Range = "150 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Fireball").Subject;
+            spell.RequiresAttackRoll.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_MagicMissile_MappedSpellHasThreeInstancesScalingByOnePerUpcastLevel()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Magic Missile",
+                LevelInt = 1,
+                School = "evocation",
+                Range = "120 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+                HigherLevel = "When you cast this spell using a spell slot of 2nd level or higher, the spell creates one more dart for each slot level above 1st.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Magic Missile").Subject;
+            spell.InstanceCount.Should().Be(3);
+            spell.InstanceCountPerUpcastLevel.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_SingleTargetSpell_MappedSpellHasDefaultInstanceCountOfOne()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Inflict Wounds",
+                LevelInt = 1,
+                School = "necromancy",
+                Range = "Touch",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "Make a melee spell attack against a creature you can reach. On a hit, the target takes 3d10 necrotic damage.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Inflict Wounds").Subject;
+            spell.InstanceCount.Should().Be(1);
+            spell.InstanceCountPerUpcastLevel.Should().Be(0);
+        }
     }
 }
