@@ -396,7 +396,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     public override Task<AttackResponse> Attack(AttackRequest request, ServerCallContext context)
     {
         if (request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Unspecified)
-            return Task.FromResult(new AttackResponse { Success = false, Error = "kind must be ATTACK_KIND_MELEE or ATTACK_KIND_RANGED." });
+            return Task.FromResult(new AttackResponse { Success = false, Error = "kind must be ATTACK_KIND_MELEE, ATTACK_KIND_RANGED, or ATTACK_KIND_OFFHAND." });
 
         var attackerResult = ActorMapping.ToCreature(request.Attacker, _spellRepository, _itemLibrary);
         if (attackerResult.IsFailure)
@@ -410,17 +410,33 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             return Task.FromResult(new AttackResponse { Success = false, Error = targetResult.Error });
         var target = targetResult.Value;
 
-        var weapon = attacker.Equipment?.MainHand;
-        if (weapon is null)
-            return Task.FromResult(new AttackResponse { Success = false, Error = "No weapon equipped — melee_attack/ranged_attack requires a real weapon in the attacker's main hand." });
+        AttackAction action;
+        if (request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Offhand)
+        {
+            var mainHand = attacker.Equipment?.MainHand;
+            var offHand = attacker.Equipment?.OffHand;
+            if (mainHand is null || offHand is null)
+                return Task.FromResult(new AttackResponse { Success = false, Error = "An off-hand attack requires a weapon equipped in both hands." });
+            if (!WeaponAttackRules.IsOffhandLegal(mainHand, offHand, out var offhandReason))
+                return Task.FromResult(new AttackResponse { Success = false, Error = offhandReason });
+            action = WeaponAttackRules.BuildOffhandAttackAction(attacker, offHand, _diceRoller);
+        }
+        else
+        {
+            var weapon = attacker.Equipment?.MainHand;
+            if (weapon is null)
+                return Task.FromResult(new AttackResponse { Success = false, Error = "No weapon equipped — melee_attack/ranged_attack requires a real weapon in the attacker's main hand." });
 
-        // The real gate: a weapon's own SRD properties, not the DM's own
-        // judgment, decide whether it can be used this way — see
-        // WeaponAttackRules (shared with GetAvailableActions and
-        // off-hand-attack construction so they can't drift apart).
-        var domainKind = request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Melee ? OpenCombatEngine.Core.Enums.AttackKind.Melee : OpenCombatEngine.Core.Enums.AttackKind.Ranged;
-        if (!WeaponAttackRules.IsLegalFor(weapon, domainKind, out var illegalReason))
-            return Task.FromResult(new AttackResponse { Success = false, Error = illegalReason });
+            // The real gate: a weapon's own SRD properties, not the DM's
+            // own judgment, decide whether it can be used this way — see
+            // WeaponAttackRules (shared with GetAvailableActions and
+            // off-hand-attack construction so they can't drift apart).
+            var domainKind = request.Kind == Layforge.Protocol.SystemEngine.V1.AttackKind.Melee ? OpenCombatEngine.Core.Enums.AttackKind.Melee : OpenCombatEngine.Core.Enums.AttackKind.Ranged;
+            if (!WeaponAttackRules.IsLegalFor(weapon, domainKind, out var illegalReason))
+                return Task.FromResult(new AttackResponse { Success = false, Error = illegalReason });
+
+            action = WeaponAttackRules.BuildAttackAction(attacker, weapon, domainKind, _diceRoller);
+        }
 
         // Real range/line-of-sight gating, same reasoning and shape as
         // CastSpell's own grid_context handling — set only when Master
@@ -445,7 +461,6 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             }
         }
 
-        var action = WeaponAttackRules.BuildAttackAction(attacker, weapon, domainKind, _diceRoller);
         var actionContext = new StandardActionContext(attacker, new CreatureTarget(target), grid);
 
         // Captured before Execute (which mutates target.HitPoints in place
@@ -467,6 +482,111 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             Target = ActorMapping.ToActor(target),
             TargetDamaged = target.HitPoints.Current < targetHpBefore,
         });
+    }
+
+    /// <summary>
+    /// Resolves a real SRD grapple attempt — see the proto's own Grapple
+    /// doc comment. Stateless per-call and grid-context-handled the same
+    /// way as Attack/CastSpell.
+    /// </summary>
+    public override Task<GrappleResponse> Grapple(GrappleRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new GrappleResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        if (request.Target is null)
+            return Task.FromResult(new GrappleResponse { Success = false, Error = "target is required for a grapple attempt." });
+        var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository, _itemLibrary);
+        if (targetResult.IsFailure)
+            return Task.FromResult(new GrappleResponse { Success = false, Error = targetResult.Error });
+        var target = targetResult.Value;
+
+        IGridManager? grid = BuildGridFromContext(request.GridContext, actor, target);
+
+        var action = new GrappleAction(_diceRoller);
+        var actionContext = new StandardActionContext(actor, new CreatureTarget(target), grid);
+
+        var executeResult = action.Execute(actionContext);
+        if (executeResult.IsFailure)
+            return Task.FromResult(new GrappleResponse { Success = false, Error = executeResult.Error });
+
+        return Task.FromResult(new GrappleResponse
+        {
+            Success = true,
+            Grappled = executeResult.Value.Success,
+            ResultMessage = executeResult.Value.Message,
+            Actor = ActorMapping.ToActor(actor),
+            Target = ActorMapping.ToActor(target),
+        });
+    }
+
+    /// <summary>
+    /// Resolves a real SRD shove attempt (prone or push, per
+    /// request.effect) — see the proto's own Shove doc comment.
+    /// Stateless per-call and grid-context-handled the same way as
+    /// Attack/CastSpell.
+    /// </summary>
+    public override Task<ShoveResponse> Shove(ShoveRequest request, ServerCallContext context)
+    {
+        if (request.Effect == Layforge.Protocol.SystemEngine.V1.ShoveEffect.Unspecified)
+            return Task.FromResult(new ShoveResponse { Success = false, Error = "effect must be SHOVE_EFFECT_PRONE or SHOVE_EFFECT_PUSH." });
+
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new ShoveResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        if (request.Target is null)
+            return Task.FromResult(new ShoveResponse { Success = false, Error = "target is required for a shove attempt." });
+        var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository, _itemLibrary);
+        if (targetResult.IsFailure)
+            return Task.FromResult(new ShoveResponse { Success = false, Error = targetResult.Error });
+        var target = targetResult.Value;
+
+        IGridManager? grid = BuildGridFromContext(request.GridContext, actor, target);
+
+        var domainEffect = request.Effect == Layforge.Protocol.SystemEngine.V1.ShoveEffect.Prone
+            ? OpenCombatEngine.Core.Enums.ShoveEffect.Prone
+            : OpenCombatEngine.Core.Enums.ShoveEffect.Push;
+        var action = new ShoveAction(_diceRoller, domainEffect);
+        var actionContext = new StandardActionContext(actor, new CreatureTarget(target), grid);
+
+        var executeResult = action.Execute(actionContext);
+        if (executeResult.IsFailure)
+            return Task.FromResult(new ShoveResponse { Success = false, Error = executeResult.Error });
+
+        return Task.FromResult(new ShoveResponse
+        {
+            Success = true,
+            Shoved = executeResult.Value.Success,
+            ResultMessage = executeResult.Value.Message,
+            Actor = ActorMapping.ToActor(actor),
+            Target = ActorMapping.ToActor(target),
+        });
+    }
+
+    /// <summary>
+    /// Builds a throwaway <see cref="StandardGridManager"/> from a
+    /// single-target <see cref="GridContext"/> the same way Attack/
+    /// CastSpell each already do inline — shared here since Grapple and
+    /// Shove need the identical construction. Returns null (skip the
+    /// range/LOS check) when gridContext is omitted or either placement
+    /// fails.
+    /// </summary>
+    private static IGridManager? BuildGridFromContext(GridContext? gridContext, StandardCreature actor, StandardCreature target)
+    {
+        if (gridContext is null) return null;
+        var candidateGrid = new StandardGridManager();
+        var actorPlaced = candidateGrid.PlaceCreature(actor, new Position(gridContext.CasterPosition.X, gridContext.CasterPosition.Y));
+        var targetPlaced = candidateGrid.PlaceCreature(target, new Position(gridContext.TargetPosition.X, gridContext.TargetPosition.Y));
+        if (!actorPlaced.IsSuccess || !targetPlaced.IsSuccess) return null;
+        foreach (var obstacle in gridContext.Obstacles)
+        {
+            candidateGrid.AddObstacle(new Position(obstacle.X, obstacle.Y));
+        }
+        return candidateGrid;
     }
 
     /// <summary>

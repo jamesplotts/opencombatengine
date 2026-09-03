@@ -146,6 +146,21 @@ service SystemEngine {
   // other RPC here: the engine holds no combat-participant list of its
   // own, so Master supplies candidate_targets explicitly.
   rpc GetAvailableActions(GetAvailableActionsRequest) returns (GetAvailableActionsResponse);
+
+  // Grapple resolves a real SRD grapple attempt — an opposed check
+  // (actor's Strength (Athletics) against target's better of
+  // Athletics/Acrobatics) that, on success, applies the Grappled
+  // condition. Requires a free hand (actor's own equipped weapons
+  // permitting), the same real precondition GrappleAction itself
+  // enforces — a rejection here means the attempt was never rolled at
+  // all (no free hand, out of reach, incapacitated), not a miss.
+  rpc Grapple(GrappleRequest) returns (GrappleResponse);
+
+  // Shove resolves a real SRD shove attempt — the same opposed check as
+  // Grapple, no free-hand requirement, that on success either knocks
+  // target prone or pushes it 5 feet away from actor, per
+  // ShoveRequest.effect.
+  rpc Shove(ShoveRequest) returns (ShoveResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -440,6 +455,13 @@ enum AttackKind {
   ATTACK_KIND_UNSPECIFIED = 0;
   ATTACK_KIND_MELEE = 1;
   ATTACK_KIND_RANGED = 2;
+  // A bonus-action attack with the equipped off-hand weapon (SRD
+  // Two-Weapon Fighting) — requires both the main-hand and off-hand
+  // weapons to have the Light property, and never adds the ability
+  // modifier to damage (the core SRD rule, no fighting-style feature
+  // exception modeled). Resolves against Equipment.OffHand, not
+  // MainHand.
+  ATTACK_KIND_OFFHAND = 3;
 }
 
 message AttackRequest {
@@ -447,18 +469,20 @@ message AttackRequest {
   string campaign_id = 2;
   // Stateless across the RPC boundary, same reasoning as every other
   // Actor-carrying request. attacker.character_data must already carry
-  // an equipped main-hand weapon — Attack does not accept an explicit
-  // weapon choice; it always resolves against whatever's equipped
-  // (docs/design.md §8's "already-equipped, don't re-litigate
-  // inventory" reasoning, same as CastSpell not taking a "which
-  // spellbook" argument).
+  // an equipped weapon in the hand kind requires (main hand for
+  // ATTACK_KIND_MELEE/RANGED, both hands for ATTACK_KIND_OFFHAND) —
+  // Attack does not accept an explicit weapon choice; it always
+  // resolves against whatever's equipped (docs/design.md §8's
+  // "already-equipped, don't re-litigate inventory" reasoning, same as
+  // CastSpell not taking a "which spellbook" argument).
   Actor attacker = 3;
   Actor target = 4;
   // Which SRD attack type this is. A weapon that doesn't actually
   // support the requested kind (e.g. ATTACK_KIND_MELEE against a bow,
   // ATTACK_KIND_RANGED against a longsword with no Thrown/Ammunition
-  // property) is a real rejection (see AttackResponse.error), not a
-  // guess at what the DM meant.
+  // property, ATTACK_KIND_OFFHAND when either hand's weapon isn't
+  // Light) is a real rejection (see AttackResponse.error), not a guess
+  // at what the DM meant.
   AttackKind kind = 5;
   // Optional: real positions/blocking-cell data from Master's own
   // combat map, same shape and same "omitted means skip the
@@ -586,4 +610,59 @@ message GetAvailableActionsResponse {
   bool has_bonus_action = 6;
   bool has_reaction = 7;
   repeated AvailableAction actions = 8;
+}
+
+message GrappleRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  Actor target = 4;
+  // Optional: same shape and "omitted skips the range/LOS check" rule
+  // as Attack/CastSpell's own grid_context.
+  GridContext grid_context = 5;
+}
+
+message GrappleResponse {
+  bool success = 1;
+  // Set when success = false: no free hand, out of reach, no line of
+  // sight, incapacitated, no action available — the attempt was never
+  // rolled at all, not a failed roll.
+  string error = 2;
+  Actor actor = 3;
+  Actor target = 4;
+  string result_message = 5;
+  // True when the opposed check succeeded and Grappled was applied —
+  // distinct from success the same way AttackResponse.hit is distinct
+  // from AttackResponse.success: a real, legally-rolled attempt that
+  // simply loses the contest is still success = true, grappled = false.
+  bool grappled = 6;
+}
+
+// ShoveEffect selects which of the two SRD Shove outcomes actor is
+// attempting. SHOVE_EFFECT_UNSPECIFIED is the required proto3 zero
+// value, not a real choice — the engine rejects a request carrying it.
+enum ShoveEffect {
+  SHOVE_EFFECT_UNSPECIFIED = 0;
+  SHOVE_EFFECT_PRONE = 1;
+  SHOVE_EFFECT_PUSH = 2;
+}
+
+message ShoveRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  Actor target = 4;
+  ShoveEffect effect = 5;
+  GridContext grid_context = 6;
+}
+
+message ShoveResponse {
+  bool success = 1;
+  string error = 2;
+  Actor actor = 3;
+  Actor target = 4;
+  string result_message = 5;
+  // True when the opposed check succeeded and the effect was applied —
+  // same success/shoved distinction as Attack's hit field.
+  bool shoved = 6;
 }

@@ -89,8 +89,57 @@ namespace OpenCombatEngine.Implementation.Actions
         {
             int abilityModifier = AbilityModifier(attacker, weapon, kind);
             int attackBonus = attacker.ProficiencyBonus + abilityModifier;
-            string actionName = kind == AttackKind.Melee ? "Melee Attack" : "Ranged Attack";
+            string actionName = kind switch
+            {
+                AttackKind.Melee => "Melee Attack",
+                AttackKind.Ranged => "Ranged Attack",
+                _ => "Attack",
+            };
             return new AttackAction(actionName, $"Attack with {weapon.Name}", attackBonus, weapon.DamageDice, weapon.DamageType, abilityModifier, diceRoller, actionType, weapon.Range);
+        }
+
+        /// <summary>
+        /// Whether an off-hand/secondary-weapon attack (SRD Two-Weapon
+        /// Fighting) is legal for this attacker's current main-hand and
+        /// off-hand weapons — both must have the
+        /// <see cref="WeaponProperty.Light"/> property, the core SRD
+        /// requirement (no fighting-style feature exception modeled).
+        /// </summary>
+        public static bool IsOffhandLegal(IWeapon mainHand, IWeapon offHand, out string? reason)
+        {
+            ArgumentNullException.ThrowIfNull(mainHand);
+            ArgumentNullException.ThrowIfNull(offHand);
+            if (!mainHand.Properties.Contains(WeaponProperty.Light) || !offHand.Properties.Contains(WeaponProperty.Light))
+            {
+                reason = $"An off-hand attack with {offHand.Name} requires both {mainHand.Name} and {offHand.Name} to have the Light property.";
+                return false;
+            }
+            reason = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the real <see cref="AttackAction"/> for an off-hand
+        /// attack with offHand — always <see cref="ActionType.BonusAction"/>,
+        /// and deliberately does NOT add the ability modifier to damage
+        /// (SRD Two-Weapon Fighting's core rule: "you don't add your
+        /// ability modifier to the damage of the bonus-action attack,
+        /// unless that modifier is negative" — the negative-modifier
+        /// exception is not modeled, a documented simplification). The
+        /// attack roll itself still gets the normal ability modifier —
+        /// only damage omits it. Off-hand attacks are always melee-shaped
+        /// for ability-modifier selection (Strength, or the better of
+        /// Strength/Dexterity if Finesse) since <see cref="IsOffhandLegal"/>
+        /// already requires Light, and a true ranged weapon can never be
+        /// Light-paired the way SRD Two-Weapon Fighting intends.
+        /// </summary>
+        public static AttackAction BuildOffhandAttackAction(ICreature attacker, IWeapon offHand, IDiceRoller diceRoller)
+        {
+            ArgumentNullException.ThrowIfNull(attacker);
+            ArgumentNullException.ThrowIfNull(offHand);
+            int abilityModifier = AbilityModifier(attacker, offHand, AttackKind.Melee);
+            int attackBonus = attacker.ProficiencyBonus + abilityModifier;
+            return new AttackAction("Off-Hand Attack", $"Attack with your off-hand {offHand.Name}", attackBonus, offHand.DamageDice, offHand.DamageType, 0, diceRoller, ActionType.BonusAction, offHand.Range);
         }
     }
 }

@@ -9,6 +9,13 @@ namespace OpenCombatEngine.Core.Enums
     public enum AttackKind
     {
         Melee,
-        Ranged
+        Ranged,
+        /// <summary>
+        /// A bonus-action attack with the equipped off-hand weapon (SRD
+        /// Two-Weapon Fighting) — resolves against
+        /// <see cref="OpenCombatEngine.Core.Interfaces.Items.IEquipmentManager.OffHand"/>,
+        /// not <c>MainHand</c>.
+        /// </summary>
+        Offhand
     }
 }

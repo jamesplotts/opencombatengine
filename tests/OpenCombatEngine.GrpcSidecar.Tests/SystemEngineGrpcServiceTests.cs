@@ -1135,4 +1135,139 @@ public class SystemEngineGrpcServiceTests
         response.CannotActReason.Should().Contain("Paralyzed");
         response.Actions.Should().BeEmpty();
     }
+
+    // Regression coverage for the execution layer GetAvailableActions'
+    // menu previously only advertised: ATTACK_KIND_OFFHAND on the real
+    // Attack RPC, and the new Grapple/Shove RPCs. A real d20 roll via
+    // _diceRoller (StandardDiceRoller) can't be pinned to win or lose the
+    // opposed check, so these assert Success (the attempt was legally
+    // resolved) rather than Grappled/Shoved/Hit, same reasoning as the
+    // existing Attack_* tests above.
+
+    [Fact]
+    public async Task Attack_OffhandKind_BothWeaponsLight_Succeeds()
+    {
+        var attacker = MakeActorWithWeapons("Shortsword", "Dagger");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target,
+            Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Offhand,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Attack_OffhandKind_MainHandNotLight_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapons("Longsword", "Dagger"); // Longsword is Versatile, not Light
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target,
+            Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Offhand,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("Light");
+    }
+
+    [Fact]
+    public async Task Attack_OffhandKind_NoOffHandEquipped_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Longsword"); // main hand only
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target,
+            Kind = Layforge.Protocol.SystemEngine.V1.AttackKind.Offhand,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("both hands");
+    }
+
+    [Fact]
+    public async Task Grapple_WithFreeHand_ResolvesLegally()
+    {
+        var actor = MakeActorWithWeapon("Longsword"); // one-handed, off hand free
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Grapple(new GrappleRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Target = target,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Actor.Should().NotBeNull();
+        response.Target.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Grapple_NoFreeHand_ReturnsFailure()
+    {
+        var actor = MakeActorWithWeapon("Greatsword"); // TwoHanded — no free hand
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Grapple(new GrappleRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Target = target,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("no hand free");
+    }
+
+    [Fact]
+    public async Task Shove_Prone_ResolvesLegally()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Shove(new ShoveRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Target = target,
+            Effect = Layforge.Protocol.SystemEngine.V1.ShoveEffect.Prone,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Shove_Push_ResolvesLegally()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Shove(new ShoveRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Target = target,
+            Effect = Layforge.Protocol.SystemEngine.V1.ShoveEffect.Push,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Shove_UnspecifiedEffect_ReturnsFailure()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Shove(new ShoveRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Target = target,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("effect");
+    }
 }
