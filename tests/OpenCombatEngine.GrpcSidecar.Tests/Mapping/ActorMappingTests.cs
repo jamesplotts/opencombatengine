@@ -183,7 +183,7 @@ public class ActorMappingTests
         {
             Inventory = new InventoryState(new Collection<ItemInstanceState> { new("Longsword") }),
             Equipment = new EquipmentState(
-                new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+                new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0) },
                 new Collection<int>()),
         };
         var json = CreatureStateJson.Serialize(state);
@@ -215,7 +215,7 @@ public class ActorMappingTests
         {
             Inventory = new InventoryState(new Collection<ItemInstanceState> { new("Longsword") }),
             Equipment = new EquipmentState(
-                new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+                new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0) },
                 new Collection<int>()),
         };
         var json = CreatureStateJson.Serialize(state);

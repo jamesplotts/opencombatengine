@@ -161,6 +161,40 @@ service SystemEngine {
   // target prone or pushes it 5 feet away from actor, per
   // ShoveRequest.effect.
   rpc Shove(ShoveRequest) returns (ShoveResponse);
+
+  // EquipItem moves an item already in actor's inventory into an
+  // equipment slot — the real mechanical gate against equipping
+  // something not actually carried (docs/design.md §8, §9: "gates
+  // over prompting"), and the first way anything can change a
+  // character's equipment after character.upload's own one-time
+  // initial setup. Rejects outright when item_name isn't a real
+  // member of actor's inventory.
+  rpc EquipItem(EquipItemRequest) returns (EquipItemResponse);
+
+  // UnequipItem clears one equipment slot. The item stays in actor's
+  // inventory — this only changes what's readied, not what's carried.
+  rpc UnequipItem(UnequipItemRequest) returns (UnequipItemResponse);
+
+  // AddItemToInventory resolves item_name against the sidecar's real
+  // Open5e-backed item library and adds it to actor's inventory — the
+  // real mechanical gate against inventing an item that doesn't exist
+  // in SRD content (docs/design.md §8, §9). An unrecognized name is a
+  // real rejection, not a guess.
+  rpc AddItemToInventory(AddItemToInventoryRequest) returns (AddItemToInventoryResponse);
+
+  // RemoveItemFromInventory removes a real member of actor's inventory
+  // permanently (discarded — not placed anywhere retrievable; this
+  // contract has no "item on the ground" concept). Auto-unequips first
+  // if the item was equipped (StandardInventory's own existing
+  // behavior — see that class's RemoveItem doc comment).
+  rpc RemoveItemFromInventory(RemoveItemFromInventoryRequest) returns (RemoveItemFromInventoryResponse);
+
+  // TransferItem moves a real member of source's inventory into
+  // target's inventory in one call — auto-unequips (and, if attuned,
+  // unattunes) on the source side first. Stateless like every other
+  // mutating call in this contract: both updated actors come back for
+  // Master to persist.
+  rpc TransferItem(TransferItemRequest) returns (TransferItemResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -665,4 +699,106 @@ message ShoveResponse {
   // True when the opposed check succeeded and the effect was applied —
   // same success/shoved distinction as Attack's hit field.
   bool shoved = 6;
+}
+
+// EquipmentSlot mirrors OpenCombatEngine's own EquipmentSlot enum.
+// EQUIPMENT_SLOT_UNSPECIFIED is the required proto3 zero value, not a
+// real slot — the engine rejects a request carrying it.
+enum EquipmentSlot {
+  EQUIPMENT_SLOT_UNSPECIFIED = 0;
+  EQUIPMENT_SLOT_MAIN_HAND = 1;
+  EQUIPMENT_SLOT_OFF_HAND = 2;
+  EQUIPMENT_SLOT_ARMOR = 3;
+  EQUIPMENT_SLOT_SHIELD = 4;
+  EQUIPMENT_SLOT_HEAD = 5;
+  EQUIPMENT_SLOT_NECK = 6;
+  EQUIPMENT_SLOT_SHOULDERS = 7;
+  EQUIPMENT_SLOT_HANDS = 8;
+  EQUIPMENT_SLOT_WAIST = 9;
+  EQUIPMENT_SLOT_FEET = 10;
+  EQUIPMENT_SLOT_RING_1 = 11;
+  EQUIPMENT_SLOT_RING_2 = 12;
+}
+
+message EquipItemRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  // Must already be a real member of actor's inventory — this call
+  // does not accept an invented item.
+  string item_name = 4;
+  EquipmentSlot slot = 5;
+}
+
+message EquipItemResponse {
+  bool success = 1;
+  // Set when success = false: item_name isn't in actor's inventory,
+  // slot is unspecified, or the item can't occupy that slot (e.g. a
+  // weapon into the Armor slot) — a real mechanical rejection.
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message UnequipItemRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  EquipmentSlot slot = 4;
+}
+
+message UnequipItemResponse {
+  bool success = 1;
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message AddItemToInventoryRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  // Resolved against the sidecar's real Open5e-backed item library —
+  // an unrecognized name is a real rejection, not a guess. No
+  // quantity field: one item per call (see RELEASE_NOTES/README for
+  // why — this engine has no item-stacking concept).
+  string item_name = 4;
+}
+
+message AddItemToInventoryResponse {
+  bool success = 1;
+  string error = 2; // set when item_name isn't a real SRD item
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message RemoveItemFromInventoryRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  string item_name = 4;
+}
+
+message RemoveItemFromInventoryResponse {
+  bool success = 1;
+  string error = 2; // set when item_name isn't in actor's inventory
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message TransferItemRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor source = 3;
+  Actor target = 4;
+  // Must already be a real member of source's inventory.
+  string item_name = 5;
+}
+
+message TransferItemResponse {
+  bool success = 1;
+  string error = 2; // set when item_name isn't in source's inventory
+  Actor source = 3;
+  Actor target = 4;
+  string result_message = 5;
 }

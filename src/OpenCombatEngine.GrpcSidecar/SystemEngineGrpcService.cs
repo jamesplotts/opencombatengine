@@ -590,6 +590,208 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     }
 
     /// <summary>
+    /// Maps the proto EquipmentSlot to OpenCombatEngine's own domain
+    /// enum — false for ATTACK_KIND_UNSPECIFIED-style Unspecified (a
+    /// real rejection, never guessed at). EQUIPMENT_SLOT_SHIELD maps to
+    /// the same domain OffHand slot as EQUIPMENT_SLOT_OFF_HAND: the
+    /// domain model has no separate Shield slot — Equipment.Shield vs.
+    /// Equipment.OffHand is decided internally by
+    /// StandardEquipmentManager.EquipOffHandInternal based on whether
+    /// the item passed in is a shield or a weapon. The proto keeps
+    /// Shield as its own value purely for a clearer DM-facing tool
+    /// argument ("shield" reads better than "off_hand" for donning one).
+    /// </summary>
+    private static bool TryMapEquipmentSlot(Layforge.Protocol.SystemEngine.V1.EquipmentSlot protoSlot, out OpenCombatEngine.Core.Enums.EquipmentSlot domainSlot)
+    {
+        switch (protoSlot)
+        {
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.OffHand: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Armor: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Armor; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Shield: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Head: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Head; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Neck: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Neck; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Shoulders: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Hands: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Hands; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Waist: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Waist; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Feet: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Feet; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring1: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring2: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2; return true;
+            default:
+                domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.None;
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Moves an item already in actor's inventory into an equipment
+    /// slot — see the proto's own EquipItem doc comment. Notably,
+    /// <c>StandardEquipmentManager.Equip</c> itself does not verify the
+    /// item is actually carried (a documented loose-coupling choice,
+    /// ADR 0016), so this handler does that check itself before ever
+    /// calling it — the real gate this RPC exists to provide.
+    /// </summary>
+    public override Task<EquipItemResponse> EquipItem(EquipItemRequest request, ServerCallContext context)
+    {
+        if (!TryMapEquipmentSlot(request.Slot, out var domainSlot))
+            return Task.FromResult(new EquipItemResponse { Success = false, Error = "slot must be a real equipment slot." });
+
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new EquipItemResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var item = actor.Inventory.GetItem(request.ItemName);
+        if (item is null)
+            return Task.FromResult(new EquipItemResponse { Success = false, Error = $"{request.ItemName} is not in {actor.Name}'s inventory." });
+
+        var equipResult = actor.Equipment.Equip(item, domainSlot);
+        if (equipResult.IsFailure)
+            return Task.FromResult(new EquipItemResponse { Success = false, Error = equipResult.Error });
+
+        return Task.FromResult(new EquipItemResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} equips {item.Name}.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Clears one equipment slot — the item stays in actor's inventory
+    /// (this only changes what's readied, not what's carried).
+    /// </summary>
+    public override Task<UnequipItemResponse> UnequipItem(UnequipItemRequest request, ServerCallContext context)
+    {
+        if (!TryMapEquipmentSlot(request.Slot, out var domainSlot))
+            return Task.FromResult(new UnequipItemResponse { Success = false, Error = "slot must be a real equipment slot." });
+
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new UnequipItemResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var unequipResult = actor.Equipment.Unequip(domainSlot);
+        if (unequipResult.IsFailure)
+            return Task.FromResult(new UnequipItemResponse { Success = false, Error = unequipResult.Error });
+
+        return Task.FromResult(new UnequipItemResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} unequips {domainSlot}.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Resolves item_name against the sidecar's real Open5e-backed
+    /// item library and adds it to actor's inventory — see the proto's
+    /// own AddItemToInventory doc comment for the real gate this
+    /// enforces (an unrecognized name is a rejection, never invented).
+    /// </summary>
+    public override Task<AddItemToInventoryResponse> AddItemToInventory(AddItemToInventoryRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new AddItemToInventoryResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var item = _itemLibrary.GetItem(request.ItemName);
+        if (item is null)
+            return Task.FromResult(new AddItemToInventoryResponse { Success = false, Error = $"'{request.ItemName}' is not a recognized item." });
+
+        var addResult = actor.Inventory.AddItem(item);
+        if (addResult.IsFailure)
+            return Task.FromResult(new AddItemToInventoryResponse { Success = false, Error = addResult.Error });
+
+        return Task.FromResult(new AddItemToInventoryResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} receives {item.Name}.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Removes a real member of actor's inventory permanently
+    /// (discarded — this contract has no "item on the ground" concept
+    /// yet). Auto-unequips first if the item was equipped —
+    /// <see cref="OpenCombatEngine.Implementation.Items.StandardInventory.RemoveItem"/>'s
+    /// own existing behavior, not duplicated here.
+    /// </summary>
+    public override Task<RemoveItemFromInventoryResponse> RemoveItemFromInventory(RemoveItemFromInventoryRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new RemoveItemFromInventoryResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var item = actor.Inventory.GetItem(request.ItemName);
+        if (item is null)
+            return Task.FromResult(new RemoveItemFromInventoryResponse { Success = false, Error = $"{request.ItemName} is not in {actor.Name}'s inventory." });
+
+        var removeResult = actor.Inventory.RemoveItem(item);
+        if (removeResult.IsFailure)
+            return Task.FromResult(new RemoveItemFromInventoryResponse { Success = false, Error = removeResult.Error });
+
+        return Task.FromResult(new RemoveItemFromInventoryResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} discards {item.Name}.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Moves a real member of source's inventory into target's
+    /// inventory — see the proto's own TransferItem doc comment.
+    /// Explicitly ends attunement first if the item is currently
+    /// attuned (SRD: giving away an attuned item ends attunement) —
+    /// <c>StandardInventory.RemoveItem</c>'s own auto-unequip does not
+    /// also do this, so it's handled here rather than left silently
+    /// inconsistent.
+    /// </summary>
+    public override Task<TransferItemResponse> TransferItem(TransferItemRequest request, ServerCallContext context)
+    {
+        var sourceResult = ActorMapping.ToCreature(request.Source, _spellRepository, _itemLibrary);
+        if (sourceResult.IsFailure)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = sourceResult.Error });
+        var source = sourceResult.Value;
+
+        if (request.Target is null)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = "target is required for a transfer." });
+        var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository, _itemLibrary);
+        if (targetResult.IsFailure)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = targetResult.Error });
+        var target = targetResult.Value;
+
+        var item = source.Inventory.GetItem(request.ItemName);
+        if (item is null)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = $"{request.ItemName} is not in {source.Name}'s inventory." });
+
+        if (item is IMagicItem magicItem && source.Equipment.AttunedItems.Contains(magicItem))
+        {
+            source.Equipment.UnattuneItem(magicItem);
+        }
+
+        var removeResult = source.Inventory.RemoveItem(item);
+        if (removeResult.IsFailure)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = removeResult.Error });
+
+        var addResult = target.Inventory.AddItem(item);
+        if (addResult.IsFailure)
+            return Task.FromResult(new TransferItemResponse { Success = false, Error = addResult.Error });
+
+        return Task.FromResult(new TransferItemResponse
+        {
+            Success = true,
+            ResultMessage = $"{source.Name} gives {item.Name} to {target.Name}.",
+            Source = ActorMapping.ToActor(source),
+            Target = ActorMapping.ToActor(target),
+        });
+    }
+
+    /// <summary>
     /// Computes the full concrete list of mechanically legal actions
     /// actor could take right now, against each of candidate_targets —
     /// see the proto's own doc comment for why this exists (real

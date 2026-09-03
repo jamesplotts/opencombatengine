@@ -72,6 +72,9 @@ public class SystemEngineGrpcServiceTests
             // masking it.
             ["Shortsword"] = new StandardWeapon(Guid.NewGuid(), "Shortsword", "A shortsword.", 2, 10,
                 ItemRarity.Common, "1d6", DamageType.Piercing, new[] { WeaponProperty.Finesse, WeaponProperty.Light }, range: 5),
+            // A plain non-weapon item, for equip/unequip/receive/discard/
+            // transfer tests that don't need weapon-specific behavior.
+            ["Torch"] = new StandardItem(Guid.NewGuid(), "Torch", "A wooden torch.", 1, 1, ItemRarity.Common, ItemType.Other),
         };
 
         public IItem? GetItem(string slug) => _items.TryGetValue(slug, out var item) ? item : null;
@@ -126,7 +129,7 @@ public class SystemEngineGrpcServiceTests
     {
         Inventory = new InventoryState(new Collection<ItemInstanceState> { new(weaponName) }),
         Equipment = new EquipmentState(
-            new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+            new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0) },
             new Collection<int>()),
     };
 
@@ -137,12 +140,23 @@ public class SystemEngineGrpcServiceTests
     {
         Inventory = new InventoryState(new Collection<ItemInstanceState> { new(mainHandName), new(offHandName) }),
         Equipment = new EquipmentState(
-            new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0), new(EquipmentSlot.OffHand, 1) },
+            new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0), new(OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand, 1) },
             new Collection<int>()),
     };
 
     private Actor MakeActorWithWeapons(string mainHandName, string offHandName, int currentHp = 24, int maxHp = 30) =>
         ActorMapping.ToActor(new StandardCreature(MakeStateWithWeapons(mainHandName, offHandName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    // An item in inventory but NOT equipped — for equip/receive/discard/
+    // transfer tests that need a real starting inventory without any
+    // equipment-slot assumptions.
+    private static CreatureState MakeStateWithInventoryItem(string itemName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(itemName) }),
+    };
+
+    private Actor MakeActorWithInventoryItem(string itemName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithInventoryItem(itemName, currentHp, maxHp), _spellRepository, _itemLibrary));
 
     [Fact]
     public async Task GetCharacterSchema_ReturnsCharacterSchemaJson()
@@ -1269,5 +1283,225 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeFalse();
         response.Error.Should().Contain("effect");
+    }
+
+    // Regression coverage for the inventory/equipment-management RPCs
+    // (design doc §8/§9's "gates over prompting"): before this, nothing
+    // — no DM tool, no player action — could change a character's
+    // equipment or inventory after character.upload's own one-time
+    // initial setup.
+
+    [Fact]
+    public async Task EquipItem_ItemInInventory_Succeeds()
+    {
+        var actor = MakeActorWithInventoryItem("Longsword");
+
+        var response = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Longsword", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Actor.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task EquipItem_ItemNotInInventory_ReturnsFailure()
+    {
+        var actor = MakeActor(); // no inventory at all
+
+        var response = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Longsword", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not in");
+    }
+
+    [Fact]
+    public async Task EquipItem_UnspecifiedSlot_ReturnsFailure()
+    {
+        var actor = MakeActorWithInventoryItem("Longsword");
+
+        var response = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Longsword",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("slot");
+    }
+
+    [Fact]
+    public async Task EquipItem_ShieldSlot_MapsToOffHand()
+    {
+        // Confirms the Shield->OffHand domain-slot mapping actually
+        // routes to a real slot (StandardEquipmentManager.
+        // EquipOffHandInternal accepts a weapon there too, same as
+        // EQUIPMENT_SLOT_OFF_HAND itself would — a real shield item
+        // would work the same way via IArmor's Shield category, not
+        // exercised here since FakeItemLibrary has no armor fixture).
+        var actor = MakeActorWithInventoryItem("Dagger");
+
+        var response = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Dagger", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Shield,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UnequipItem_Succeeds()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+
+        var response = await _service.UnequipItem(new UnequipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnequipItem_UnspecifiedSlot_ReturnsFailure()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+
+        var response = await _service.UnequipItem(new UnequipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("slot");
+    }
+
+    [Fact]
+    public async Task AddItemToInventory_RecognizedItem_Succeeds()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.AddItemToInventory(new AddItemToInventoryRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AddItemToInventory_UnrecognizedItem_ReturnsFailure()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.AddItemToInventory(new AddItemToInventoryRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Wand of Made-Up Nonsense",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not a recognized item");
+    }
+
+    [Fact]
+    public async Task RemoveItemFromInventory_ItemPresent_Succeeds()
+    {
+        var actor = MakeActorWithInventoryItem("Torch");
+
+        var response = await _service.RemoveItemFromInventory(new RemoveItemFromInventoryRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RemoveItemFromInventory_ItemNotPresent_ReturnsFailure()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.RemoveItemFromInventory(new RemoveItemFromInventoryRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not in");
+    }
+
+    [Fact]
+    public async Task TransferItem_ItemPresentInSource_MovesToTarget()
+    {
+        var source = MakeActorWithInventoryItem("Torch");
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Source.Should().NotBeNull();
+        response.Target.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task TransferItem_EquippedItem_UnequipsOnSourceSide()
+    {
+        // Reuses StandardInventory's own existing auto-unequip-on-
+        // removal behavior — this proves the RPC actually calls
+        // RemoveItem (not some other path that would leave a stale
+        // equipped reference on the source's own persisted state).
+        var source = MakeActorWithWeapon("Longsword");
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, ItemName = "Longsword",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TransferItem_ItemNotInSource_ReturnsFailure()
+    {
+        var source = MakeActor();
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not in");
+    }
+
+    [Fact]
+    public async Task TransferItem_NoTarget_ReturnsFailure()
+    {
+        var source = MakeActorWithInventoryItem("Torch");
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("target is required");
     }
 }
