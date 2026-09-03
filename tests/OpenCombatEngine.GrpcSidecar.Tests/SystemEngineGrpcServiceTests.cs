@@ -11,12 +11,14 @@ using Layforge.Protocol.SystemEngine.V1;
 using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Creatures;
 using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Spells;
 using ProtoValue = Google.Protobuf.WellKnownTypes.Value;
 
@@ -33,11 +35,38 @@ public class SystemEngineGrpcServiceTests
 {
     private readonly ISpellRepository _spellRepository = new InMemorySpellRepository();
     private readonly IDiceRoller _diceRoller = new StandardDiceRoller();
+    private readonly IItemLibrary _itemLibrary = new FakeItemLibrary();
     private readonly SystemEngineGrpcService _service;
 
     public SystemEngineGrpcServiceTests()
     {
-        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller);
+        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller, _itemLibrary);
+    }
+
+    // Minimal IItemLibrary test double — StandardCreature.ResolveItem
+    // (src/OpenCombatEngine.Implementation/Creatures/StandardCreature.cs)
+    // looks items up by name on restore, so this only needs to support
+    // GetItem("&lt;Name&gt;") for the small set of real weapons the Attack_*
+    // tests below equip. Real Open5e property strings/ranges (see
+    // Open5eItemMapperTests.cs), not fabricated numbers.
+    private sealed class FakeItemLibrary : IItemLibrary
+    {
+        private readonly Dictionary<string, IItem> _items = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Longsword"] = new StandardWeapon(Guid.NewGuid(), "Longsword", "A longsword.", 3, 15,
+                ItemRarity.Common, "1d8", DamageType.Slashing, new[] { WeaponProperty.Versatile }, range: 5),
+            ["Shortbow"] = new StandardWeapon(Guid.NewGuid(), "Shortbow", "A shortbow.", 2, 25,
+                ItemRarity.Common, "1d6", DamageType.Piercing, new[] { WeaponProperty.Ammunition, WeaponProperty.TwoHanded }, range: 80),
+            ["Dagger"] = new StandardWeapon(Guid.NewGuid(), "Dagger", "A dagger.", 1, 2,
+                ItemRarity.Common, "1d4", DamageType.Piercing, new[] { WeaponProperty.Finesse, WeaponProperty.Light, WeaponProperty.Thrown }, range: 20),
+        };
+
+        public IItem? GetItem(string slug) => _items.TryGetValue(slug, out var item) ? item : null;
+        public IWeapon? GetWeapon(string slug) => GetItem(slug) as IWeapon;
+        public IArmor? GetArmor(string slug) => GetItem(slug) as IArmor;
+        public IEnumerable<IItem> GetAllItems() => _items.Values;
+        public IEnumerable<IItem> GetItemsByRarity(ItemRarity rarity) => _items.Values.Where(i => i.Rarity == rarity);
+        public IItem? GetRandomItem(ItemRarity? rarity = null, ItemType? type = null) => _items.Values.FirstOrDefault();
     }
 
     private static CreatureState MakeState(int currentHp = 24, int maxHp = 30) => new(
@@ -63,6 +92,23 @@ public class SystemEngineGrpcServiceTests
         {
             Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
         }));
+
+    // weaponName must be a key FakeItemLibrary resolves (Longsword,
+    // Shortbow, Dagger) — StandardCreature.ResolveItem looks the
+    // inventory item up by this same Name against _itemLibrary, so an
+    // unregistered name would silently restore as a bare non-weapon
+    // StandardItem instead (same fallback ActorMapping.ToCreature's own
+    // remarks describe for a null/absent library).
+    private static CreatureState MakeStateWithWeapon(string weaponName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(weaponName) }),
+        Equipment = new EquipmentState(
+            new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+            new Collection<int>()),
+    };
+
+    private Actor MakeActorWithWeapon(string weaponName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithWeapon(weaponName, currentHp, maxHp), _spellRepository, _itemLibrary));
 
     [Fact]
     public async Task GetCharacterSchema_ReturnsCharacterSchemaJson()
@@ -682,5 +728,203 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeFalse();
         response.Error.Should().NotBeNullOrEmpty();
+    }
+
+    // Regression coverage for design doc §8/§9's "gates over prompting":
+    // Attack (melee_attack/ranged_attack, Master's dm_tools.go) is the real
+    // mechanical gate against a martial character's attack that previously
+    // had no RPC at all — apply_effect has no range/weapon-legality concept.
+    // These prove the NEW gating this RPC adds (weapon-kind legality,
+    // no-weapon-equipped, range/LOS via grid_context); AttackAction's own
+    // hit/miss/damage/advantage logic is already covered deterministically
+    // by AttackActionTests.cs and is not re-proven here — a real d20 roll
+    // via _diceRoller (StandardDiceRoller) can't be pinned to hit or miss,
+    // so these assert Success (the attack was legally resolved) rather
+    // than Hit (whether it happened to connect), same reasoning
+    // RELEASE_NOTES.md documents for CastSpell's own attack-roll gating.
+
+    [Fact]
+    public async Task Attack_MeleeWithLongswordNoGridContext_Succeeds()
+    {
+        var attacker = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Attacker.Should().NotBeNull();
+        response.Target.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Attack_RangedWithShortbow_Succeeds()
+    {
+        var attacker = MakeActorWithWeapon("Shortbow");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Ranged,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Attack_ThrownDagger_SucceedsForBothMeleeAndRanged()
+    {
+        // A Thrown+Finesse weapon (Dagger) is legal both ways per SRD —
+        // the real gate is the weapon's own properties, not a hardcoded
+        // per-kind allowlist.
+        var meleeAttacker = MakeActorWithWeapon("Dagger");
+        var meleeTarget = MakeActor(currentHp: 10, maxHp: 10);
+        var meleeResponse = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = meleeAttacker, Target = meleeTarget, Kind = AttackKind.Melee,
+        }, null!);
+        meleeResponse.Success.Should().BeTrue();
+
+        var rangedAttacker = MakeActorWithWeapon("Dagger");
+        var rangedTarget = MakeActor(currentHp: 10, maxHp: 10);
+        var rangedResponse = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r2", CampaignId = "c1", Attacker = rangedAttacker, Target = rangedTarget, Kind = AttackKind.Ranged,
+        }, null!);
+        rangedResponse.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Attack_MeleeAttackWithBowEquipped_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Shortbow");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("melee attack");
+    }
+
+    [Fact]
+    public async Task Attack_RangedAttackWithLongswordEquipped_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Ranged,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("ranged attack");
+    }
+
+    [Fact]
+    public async Task Attack_NoWeaponEquipped_ReturnsFailure()
+    {
+        var attacker = MakeActor();
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("No weapon equipped");
+    }
+
+    [Fact]
+    public async Task Attack_UnspecifiedKind_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Longsword");
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target,
+            // Kind deliberately omitted — proto3 default is ATTACK_KIND_UNSPECIFIED.
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("kind");
+    }
+
+    [Fact]
+    public async Task Attack_NoTargetGiven_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Longsword");
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Kind = AttackKind.Melee,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("target is required");
+    }
+
+    [Fact]
+    public async Task Attack_GridContextWithTargetInRangeAndClearSight_Succeeds()
+    {
+        var attacker = MakeActorWithWeapon("Longsword"); // range 5
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 1, Y = 0 }, // 5 feet — exactly in range
+            },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Attack_GridContextTargetOutOfRange_ReturnsFailure()
+    {
+        var attacker = MakeActorWithWeapon("Longsword"); // range 5
+        var target = MakeGridTargetActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+            GridContext = new GridContext
+            {
+                CasterPosition = new GridPosition { X = 0, Y = 0 },
+                TargetPosition = new GridPosition { X = 4, Y = 0 }, // 20 feet — beyond a 5-foot melee range
+            },
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("out of range");
+    }
+
+    [Fact]
+    public async Task Attack_NoGridContext_SkipsRangeCheck_SucceedsRegardlessOfDistance()
+    {
+        var attacker = MakeActorWithWeapon("Longsword"); // range 5
+        var target = MakeActor(currentHp: 10, maxHp: 10); // no grid position at all
+
+        var response = await _service.Attack(new AttackRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Attacker = attacker, Target = target, Kind = AttackKind.Melee,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
     }
 }

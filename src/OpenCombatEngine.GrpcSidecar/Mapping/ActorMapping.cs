@@ -4,6 +4,7 @@
 // See LEGAL.md for full disclaimers
 
 using Layforge.Protocol.SystemEngine.V1;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
@@ -62,6 +63,20 @@ public static class ActorMapping
     /// <c>Program.cs</c>'s startup wiring) for spellcasting to survive this
     /// round trip.
     /// </param>
+    /// <param name="itemLibrary">
+    /// Resolves the item names in actor's character_data (inventory,
+    /// equipped slots) back into live <see cref="IItem"/>/<see cref="IWeapon"/>/
+    /// <see cref="IArmor"/> instances carrying their real stats. Without one
+    /// (the default, <c>null</c>), <see cref="StandardCreature"/>'s
+    /// state-restoring constructor falls back to a bare placeholder
+    /// <c>StandardItem</c> for every inventory/equipped item — which is not
+    /// an <see cref="IWeapon"/>, so equipping it silently fails and
+    /// <c>Equipment.MainHand</c> comes back <c>null</c> regardless of what
+    /// was actually equipped before serialization. A caller resolving an
+    /// Attacker for the <c>Attack</c> RPC must supply a real, populated
+    /// library (see <c>Program.cs</c>'s startup wiring) for equipped-weapon
+    /// data to survive this round trip at all.
+    /// </param>
     /// <returns>
     /// A success Result carrying the reconstructed creature, or a failure
     /// Result carrying a human-readable error — never throws, since callers
@@ -69,7 +84,7 @@ public static class ActorMapping
     /// a response's own error field rather than an unhandled exception
     /// crossing the RPC boundary.
     /// </returns>
-    public static Result<StandardCreature> ToCreature(Actor actor, ISpellRepository spellRepository)
+    public static Result<StandardCreature> ToCreature(Actor actor, ISpellRepository spellRepository, IItemLibrary? itemLibrary = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spellRepository);
@@ -93,7 +108,7 @@ public static class ActorMapping
 
         try
         {
-            return Result<StandardCreature>.Success(new StandardCreature(stateResult.Value, spellRepository));
+            return Result<StandardCreature>.Success(new StandardCreature(stateResult.Value, spellRepository, itemLibrary));
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {

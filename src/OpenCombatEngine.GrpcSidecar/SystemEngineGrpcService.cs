@@ -9,6 +9,7 @@ using Layforge.Protocol.SystemEngine.V1;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Interfaces.Spatial;
@@ -20,6 +21,7 @@ using OpenCombatEngine.Implementation.Actions.Contexts;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
 using OpenCombatEngine.Implementation.Spatial;
+using System.Linq;
 
 namespace OpenCombatEngine.GrpcSidecar;
 
@@ -47,18 +49,21 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 {
     private readonly ISpellRepository _spellRepository;
     private readonly IDiceRoller _diceRoller;
+    private readonly IItemLibrary _itemLibrary;
 
     /// <summary>
-    /// Constructs the service. <paramref name="spellRepository"/> and
-    /// <paramref name="diceRoller"/> are resolved by ASP.NET Core's DI
-    /// container (gRPC service instances are DI-constructed) — see
-    /// <c>Program.cs</c> for where the singleton spell repository instance
-    /// is populated from Open5e at startup and registered.
+    /// Constructs the service. <paramref name="spellRepository"/>,
+    /// <paramref name="diceRoller"/>, and <paramref name="itemLibrary"/> are
+    /// resolved by ASP.NET Core's DI container (gRPC service instances are
+    /// DI-constructed) — see <c>Program.cs</c> for where the singleton
+    /// spell repository and item library instances are populated from
+    /// Open5e at startup and registered.
     /// </summary>
-    public SystemEngineGrpcService(ISpellRepository spellRepository, IDiceRoller diceRoller)
+    public SystemEngineGrpcService(ISpellRepository spellRepository, IDiceRoller diceRoller, IItemLibrary itemLibrary)
     {
         _spellRepository = spellRepository ?? throw new System.ArgumentNullException(nameof(spellRepository));
         _diceRoller = diceRoller ?? throw new System.ArgumentNullException(nameof(diceRoller));
+        _itemLibrary = itemLibrary ?? throw new System.ArgumentNullException(nameof(itemLibrary));
     }
 
     public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
@@ -73,7 +78,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ToJsonResponse> ToJson(ToJsonRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
         if (creatureResult.IsFailure)
             throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
 
@@ -95,14 +100,14 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             return Task.FromResult(response);
         }
 
-        response.Actor = ActorMapping.ToActor(new StandardCreature(stateResult.Value, _spellRepository));
+        response.Actor = ActorMapping.ToActor(new StandardCreature(stateResult.Value, _spellRepository, _itemLibrary));
         return Task.FromResult(response);
     }
 
     public override Task<GetCharacterStatusResponse> GetCharacterStatus(
         GetCharacterStatusRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
         if (creatureResult.IsFailure)
             throw new RpcException(new Status(StatusCode.InvalidArgument, creatureResult.Error));
 
@@ -114,7 +119,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<StartTurnResponse> StartTurn(StartTurnRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
         if (creatureResult.IsFailure)
             return Task.FromResult(new StartTurnResponse { Success = false, Error = creatureResult.Error });
 
@@ -179,7 +184,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ApplyEffectResponse> ApplyEffect(ApplyEffectRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
         if (creatureResult.IsFailure)
             return Task.FromResult(new ApplyEffectResponse { Success = false, Error = creatureResult.Error });
 
@@ -235,7 +240,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<ResolveCheckResponse> ResolveCheck(ResolveCheckRequest request, ServerCallContext context)
     {
-        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository);
+        var creatureResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
         if (creatureResult.IsFailure)
             return Task.FromResult(new ResolveCheckResponse { Success = false, Error = creatureResult.Error });
 
@@ -298,7 +303,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
     public override Task<CastSpellResponse> CastSpell(CastSpellRequest request, ServerCallContext context)
     {
-        var casterResult = ActorMapping.ToCreature(request.Caster, _spellRepository);
+        var casterResult = ActorMapping.ToCreature(request.Caster, _spellRepository, _itemLibrary);
         if (casterResult.IsFailure)
             return Task.FromResult(new CastSpellResponse { Success = false, Error = casterResult.Error });
         var caster = casterResult.Value;
@@ -315,7 +320,7 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         StandardCreature target = caster;
         if (request.Target is { } targetActor)
         {
-            var targetResult = ActorMapping.ToCreature(targetActor, _spellRepository);
+            var targetResult = ActorMapping.ToCreature(targetActor, _spellRepository, _itemLibrary);
             if (targetResult.IsFailure)
                 return Task.FromResult(new CastSpellResponse { Success = false, Error = targetResult.Error });
             target = targetResult.Value;
@@ -378,6 +383,113 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             response.Target = ActorMapping.ToActor(target);
         }
         return Task.FromResult(response);
+    }
+
+    /// <summary>
+    /// Resolves a weapon attack (melee or ranged) with attacker's
+    /// currently-equipped main-hand weapon — see the proto's own Attack
+    /// doc comment for the real weapon-kind gate this enforces before
+    /// AttackAction ever rolls. Modeled closely on <see cref="CastSpell"/>:
+    /// stateless per-call, same grid-context handling, same
+    /// before/after-HP TargetDamaged computation for Master's PvP gate.
+    /// </summary>
+    public override Task<AttackResponse> Attack(AttackRequest request, ServerCallContext context)
+    {
+        if (request.Kind == AttackKind.Unspecified)
+            return Task.FromResult(new AttackResponse { Success = false, Error = "kind must be ATTACK_KIND_MELEE or ATTACK_KIND_RANGED." });
+
+        var attackerResult = ActorMapping.ToCreature(request.Attacker, _spellRepository, _itemLibrary);
+        if (attackerResult.IsFailure)
+            return Task.FromResult(new AttackResponse { Success = false, Error = attackerResult.Error });
+        var attacker = attackerResult.Value;
+
+        if (request.Target is null)
+            return Task.FromResult(new AttackResponse { Success = false, Error = "target is required for an attack." });
+        var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository, _itemLibrary);
+        if (targetResult.IsFailure)
+            return Task.FromResult(new AttackResponse { Success = false, Error = targetResult.Error });
+        var target = targetResult.Value;
+
+        var weapon = attacker.Equipment?.MainHand;
+        if (weapon is null)
+            return Task.FromResult(new AttackResponse { Success = false, Error = "No weapon equipped — melee_attack/ranged_attack requires a real weapon in the attacker's main hand." });
+
+        // The real gate: a weapon's own SRD properties, not the DM's own
+        // judgment, decide whether it can be used this way. A weapon with
+        // Ammunition and no Thrown (a bow, a crossbow) is ranged-only and
+        // cannot melee; a weapon with neither Thrown nor Ammunition (a
+        // longsword) is melee-only and cannot be thrown/fired.
+        bool isThrown = weapon.Properties.Contains(WeaponProperty.Thrown);
+        bool isAmmunition = weapon.Properties.Contains(WeaponProperty.Ammunition);
+
+        if (request.Kind == AttackKind.Melee && isAmmunition && !isThrown)
+            return Task.FromResult(new AttackResponse { Success = false, Error = $"{weapon.Name} cannot be used for a melee attack — it's a ranged-only weapon (Ammunition, no Thrown)." });
+        if (request.Kind == AttackKind.Ranged && !isThrown && !isAmmunition)
+            return Task.FromResult(new AttackResponse { Success = false, Error = $"{weapon.Name} cannot be used for a ranged attack — it has neither Thrown nor Ammunition." });
+
+        // SRD ability-modifier selection: a true ranged weapon (Ammunition,
+        // not also Thrown — a bow/crossbow) always uses Dexterity. Every
+        // other case (melee, or a thrown weapon used at range) uses
+        // Strength, unless the weapon has Finesse, in which case the
+        // better of Strength/Dexterity applies — same rule either way it's
+        // used, per SRD.
+        int strengthModifier = attacker.AbilityScores.GetModifier(Ability.Strength);
+        int dexterityModifier = attacker.AbilityScores.GetModifier(Ability.Dexterity);
+        bool trueRangedWeapon = request.Kind == AttackKind.Ranged && isAmmunition && !isThrown;
+        bool finesse = weapon.Properties.Contains(WeaponProperty.Finesse);
+        int abilityModifier = trueRangedWeapon
+            ? dexterityModifier
+            : finesse ? System.Math.Max(strengthModifier, dexterityModifier) : strengthModifier;
+
+        int attackBonus = attacker.ProficiencyBonus + abilityModifier;
+        int damageBonus = abilityModifier;
+
+        // Real range/line-of-sight gating, same reasoning and shape as
+        // CastSpell's own grid_context handling — set only when Master
+        // actually has a combat map for this campaign with both
+        // combatants placed; absent this, context.Grid stays null and
+        // AttackAction's own range/LOS check (already written, already
+        // tested) simply skips itself.
+        IGridManager? grid = null;
+        if (request.GridContext is not null)
+        {
+            var gc = request.GridContext;
+            var candidateGrid = new StandardGridManager();
+            var attackerPlaced = candidateGrid.PlaceCreature(attacker, new Position(gc.CasterPosition.X, gc.CasterPosition.Y));
+            var targetPlaced = candidateGrid.PlaceCreature(target, new Position(gc.TargetPosition.X, gc.TargetPosition.Y));
+            if (attackerPlaced.IsSuccess && targetPlaced.IsSuccess)
+            {
+                foreach (var obstacle in gc.Obstacles)
+                {
+                    candidateGrid.AddObstacle(new Position(obstacle.X, obstacle.Y));
+                }
+                grid = candidateGrid;
+            }
+        }
+
+        string actionName = request.Kind == AttackKind.Melee ? "Melee Attack" : "Ranged Attack";
+        var action = new AttackAction(actionName, $"Attack with {weapon.Name}", attackBonus, weapon.DamageDice, weapon.DamageType, damageBonus, _diceRoller, ActionType.Action, weapon.Range);
+        var actionContext = new StandardActionContext(attacker, new CreatureTarget(target), grid);
+
+        // Captured before Execute (which mutates target.HitPoints in place
+        // via StandardCreature.ResolveAttack) so Master's PvP gate (design
+        // doc §9.1) has a real signal — same reasoning as CastSpell's own
+        // targetHpBefore capture.
+        var targetHpBefore = target.HitPoints.Current;
+
+        var executeResult = action.Execute(actionContext);
+        if (executeResult.IsFailure)
+            return Task.FromResult(new AttackResponse { Success = false, Error = executeResult.Error });
+
+        return Task.FromResult(new AttackResponse
+        {
+            Success = true,
+            Hit = executeResult.Value.Success,
+            ResultMessage = executeResult.Value.Message,
+            Attacker = ActorMapping.ToActor(attacker),
+            Target = ActorMapping.ToActor(target),
+            TargetDamaged = target.HitPoints.Current < targetHpBefore,
+        });
     }
 
     public override Task StreamEvents(

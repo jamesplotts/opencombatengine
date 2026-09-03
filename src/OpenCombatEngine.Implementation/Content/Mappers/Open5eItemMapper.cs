@@ -15,6 +15,7 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
         {
             ArgumentNullException.ThrowIfNull(source);
 
+            var properties = ParseWeaponProperties(source.Properties);
             var weapon = new StandardWeapon(
                 Guid.NewGuid(),
                 source.Name,
@@ -24,7 +25,8 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
                 ItemRarity.Common, // Standard weapons are common
                 source.DamageDice,
                 ParseDamageType(source.DamageType),
-                ParseWeaponProperties(source.Properties)
+                properties,
+                ParseWeaponRange(source.Properties, properties)
             );
             return weapon;
         }
@@ -182,6 +184,40 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
                 }
             }
             return result;
+        }
+
+        // "thrown (range 20/60)", "ammunition (range 80/320)" — Open5e embeds a
+        // weapon's normal/long range as the first/second numbers in a
+        // parenthetical suffix on the Thrown/Ammunition property string
+        // itself. ParseWeaponProperties above already strips this suffix
+        // (it only keeps the leading word to match a WeaponProperty enum
+        // name), silently discarding the range — this recovers it instead
+        // of leaving IWeapon.Range at a guessed default whenever real data
+        // is actually present, the same "parse it for real" principle
+        // Open5eSpellTextParser already applies to spell damage/saves. Only
+        // the first ("normal") range number is used; the "long" range
+        // (disadvantage-beyond-normal) is not modeled.
+        private static readonly Regex WeaponRangeRegex = new(
+            @"\(range\s+(\d+)(?:\s*/\s*\d+)?\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static int ParseWeaponRange(System.Collections.Generic.IList<string>? rawProps, System.Collections.Generic.List<WeaponProperty> parsedProps)
+        {
+            if (rawProps != null)
+            {
+                foreach (var p in rawProps)
+                {
+                    var match = WeaponRangeRegex.Match(p);
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedRange))
+                    {
+                        return parsedRange;
+                    }
+                }
+            }
+
+            // No parseable "(range X/Y)" text — fall back to a real SRD
+            // default rather than a hardcoded per-weapon table: 10 feet for
+            // a Reach weapon, 5 feet otherwise.
+            return parsedProps.Contains(WeaponProperty.Reach) ? 10 : 5;
         }
 
         private static ArmorCategory ParseArmorCategory(string input)

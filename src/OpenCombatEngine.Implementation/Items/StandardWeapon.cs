@@ -11,6 +11,7 @@ namespace OpenCombatEngine.Implementation.Items
         public string DamageDice { get; }
         public DamageType DamageType { get; }
         public IEnumerable<WeaponProperty> Properties { get; }
+        public int Range { get; }
 
         public StandardWeapon(
             Guid id,
@@ -21,12 +22,14 @@ namespace OpenCombatEngine.Implementation.Items
             ItemRarity rarity,
             string damageDice,
             DamageType damageType,
-            IEnumerable<WeaponProperty>? properties = null)
+            IEnumerable<WeaponProperty>? properties = null,
+            int range = 5)
             : base(id, name, description, weight, value, rarity, ItemType.Weapon)
         {
             DamageDice = damageDice ?? string.Empty;
             DamageType = damageType;
             Properties = (properties ?? Enumerable.Empty<WeaponProperty>()).ToList();
+            Range = range;
         }
     }
 }

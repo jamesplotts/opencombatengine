@@ -8,10 +8,12 @@ using FluentAssertions;
 using Layforge.Protocol.SystemEngine.V1;
 using NSubstitute;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Spells;
 
 namespace OpenCombatEngine.GrpcSidecar.Tests.Mapping;
@@ -154,5 +156,79 @@ public class ActorMappingTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Spellcasting.Should().NotBeNull();
         result.Value.Spellcasting!.KnownSpells.Should().BeEmpty();
+    }
+
+    // The two tests below are the regression coverage for the second half
+    // of that same bug class, found while wiring the Attack RPC: an
+    // equipped weapon also silently came back unequipped after every gRPC
+    // round trip, because ToCreature never had a real IItemLibrary to
+    // resolve item names against either — StandardCreature.ResolveItem
+    // falls back to a bare non-weapon StandardItem placeholder without
+    // one, so StandardEquipmentManager.EquipMainHandInternal's own
+    // `item is IWeapon` check silently fails and Equipment.MainHand comes
+    // back null regardless of what was actually equipped before
+    // serialization. See ActorMapping.ToCreature's itemLibrary parameter
+    // doc comment and Program.cs's startup wiring for where a real,
+    // Open5e-populated library comes from outside tests.
+
+    [Fact]
+    public void ToCreature_WithItemLibrary_MainHandWeaponSurvivesRoundTrip()
+    {
+        var library = Substitute.For<IItemLibrary>();
+        var longsword = new StandardWeapon(Guid.NewGuid(), "Longsword", "A longsword.", 3, 15,
+            ItemRarity.Common, "1d8", DamageType.Slashing, new[] { WeaponProperty.Versatile }, range: 5);
+        library.GetItem("Longsword").Returns(longsword);
+
+        var state = MakeState() with
+        {
+            Inventory = new InventoryState(new Collection<ItemInstanceState> { new("Longsword") }),
+            Equipment = new EquipmentState(
+                new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+                new Collection<int>()),
+        };
+        var json = CreatureStateJson.Serialize(state);
+        var actor = new Actor
+        {
+            ActorId = state.Id.ToString(),
+            SchemaVersion = ActorMapping.SchemaVersion,
+            CharacterData = StructJson.FromJson(json),
+        };
+
+        var result = ActorMapping.ToCreature(actor, EmptySpellRepository, library);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Equipment.MainHand.Should().NotBeNull("a real IItemLibrary was supplied, so the equipped item should resolve as a real IWeapon");
+        result.Value.Equipment.MainHand!.Name.Should().Be("Longsword");
+        result.Value.Equipment.MainHand.Range.Should().Be(5);
+    }
+
+    [Fact]
+    public void ToCreature_WithoutItemLibrary_MainHandWeaponComesBackNull()
+    {
+        // Explicit regression proof of the bug itself, not just its fix:
+        // omitting itemLibrary (the default, and every call site's
+        // behavior before this parameter existed) must still reproduce
+        // the original silent-drop behavior exactly — same reasoning as
+        // CastSpell_NoGridContext_SkipsRangeCheck's own "prove the
+        // omitted-parameter path is unchanged" tests.
+        var state = MakeState() with
+        {
+            Inventory = new InventoryState(new Collection<ItemInstanceState> { new("Longsword") }),
+            Equipment = new EquipmentState(
+                new Collection<EquippedSlotState> { new(EquipmentSlot.MainHand, 0) },
+                new Collection<int>()),
+        };
+        var json = CreatureStateJson.Serialize(state);
+        var actor = new Actor
+        {
+            ActorId = state.Id.ToString(),
+            SchemaVersion = ActorMapping.SchemaVersion,
+            CharacterData = StructJson.FromJson(json),
+        };
+
+        var result = ActorMapping.ToCreature(actor, EmptySpellRepository);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Equipment.MainHand.Should().BeNull();
     }
 }

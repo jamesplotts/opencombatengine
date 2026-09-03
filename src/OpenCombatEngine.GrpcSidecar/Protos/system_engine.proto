@@ -110,6 +110,25 @@ service SystemEngine {
   // boundary, so the engine relays each event across this stream instead
   // of Master polling for state changes.
   rpc StreamEvents(StreamEventsRequest) returns (stream EngineEvent);
+
+  // Attack resolves a weapon attack (melee or ranged) with attacker's
+  // currently-equipped main-hand weapon — the real mechanical gate
+  // against a martial character's attack that a bare-handed narration
+  // or apply_effect call would otherwise leave to the DM model's own
+  // judgment (docs/design.md §8, §9: "gates over prompting"), the same
+  // reasoning CastSpell already applies to spellcasting. The engine
+  // rejects the call outright (success = false) when no weapon is
+  // equipped, or when the equipped weapon's own real properties don't
+  // support the requested kind — a bow (Ammunition, no Melee-usable
+  // property) can't be used for ATTACK_KIND_MELEE, and a pure melee
+  // weapon with none of Range/Thrown/Ammunition can't be used for
+  // ATTACK_KIND_RANGED. Otherwise runs the already-tested AttackAction
+  // (attack roll, advantage/disadvantage from conditions and flanking,
+  // range/line-of-sight via grid_context, crits, damage) exactly as
+  // CastSpell runs CastSpellAction. Stateless across the RPC boundary
+  // like every other mutating call in this contract: the full updated
+  // attacker/target come back for Master to persist.
+  rpc Attack(AttackRequest) returns (AttackResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -393,4 +412,69 @@ message EngineEvent {
   string event_type = 1;
   google.protobuf.Struct payload = 2;
   google.protobuf.Timestamp occurred_at = 3;
+}
+
+// AttackKind selects which weapon-use rule Attack validates the
+// equipped weapon against. ATTACK_KIND_UNSPECIFIED is the required
+// proto3 zero value, not a real kind — the engine rejects a request
+// carrying it, the same "never let an unset value silently mean
+// something valid" reasoning as CharacterStatus.
+enum AttackKind {
+  ATTACK_KIND_UNSPECIFIED = 0;
+  ATTACK_KIND_MELEE = 1;
+  ATTACK_KIND_RANGED = 2;
+}
+
+message AttackRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // Stateless across the RPC boundary, same reasoning as every other
+  // Actor-carrying request. attacker.character_data must already carry
+  // an equipped main-hand weapon — Attack does not accept an explicit
+  // weapon choice; it always resolves against whatever's equipped
+  // (docs/design.md §8's "already-equipped, don't re-litigate
+  // inventory" reasoning, same as CastSpell not taking a "which
+  // spellbook" argument).
+  Actor attacker = 3;
+  Actor target = 4;
+  // Which SRD attack type this is. A weapon that doesn't actually
+  // support the requested kind (e.g. ATTACK_KIND_MELEE against a bow,
+  // ATTACK_KIND_RANGED against a longsword with no Thrown/Ammunition
+  // property) is a real rejection (see AttackResponse.error), not a
+  // guess at what the DM meant.
+  AttackKind kind = 5;
+  // Optional: real positions/blocking-cell data from Master's own
+  // combat map, same shape and same "omitted means skip the
+  // range/line-of-sight check" reasoning as CastSpellRequest.grid_context.
+  GridContext grid_context = 6;
+}
+
+message AttackResponse {
+  bool success = 1;
+  // Set when success = false: no weapon equipped, weapon doesn't
+  // support the requested kind, target out of range/no line of sight,
+  // no action available this turn, etc. — a real mechanical rejection,
+  // never silently ignored.
+  string error = 2;
+  // The attacker's full character_data after the attack (action
+  // economy spent) — same "whole actor, not a diff" reasoning as every
+  // other mutating RPC in this contract.
+  Actor attacker = 3;
+  // The target's full character_data after the attack's effect (if
+  // any) was applied. Unset when the attack failed outright.
+  Actor target = 4;
+  // Human-readable summary of the attack roll and outcome, same
+  // reasoning as CastSpellResponse.result_message.
+  string result_message = 5;
+  // True when the attack roll hit — distinct from success: a clean SRD
+  // miss is success = true, hit = false (the attack resolved legally,
+  // it just didn't connect), whereas success = false means the attack
+  // was never rolled at all (illegal weapon/kind, no weapon, etc.).
+  bool hit = 6;
+  // True when target's hit points went down as a result of this
+  // attack — same PvP-gate purpose as CastSpellResponse.target_damaged:
+  // Master decides whether to persist the returned target's mutated
+  // state based on this and the campaign's PvP policy, rather than
+  // needing to know in advance whether an attack will deal damage.
+  bool target_damaged = 7;
 }

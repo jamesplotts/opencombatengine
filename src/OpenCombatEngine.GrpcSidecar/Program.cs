@@ -5,10 +5,12 @@
 
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Implementation.Dice;
+using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Open5e;
 using OpenCombatEngine.Implementation.Spells;
 
@@ -110,6 +112,40 @@ builder.Services.AddSingleton<ISpellRepository>(spellRepository);
 // stack) — a fresh instance per resolution the same way ResolveCheck's
 // own dice rolling already works, not shared/stateful.
 builder.Services.AddSingleton<IDiceRoller, StandardDiceRoller>();
+
+// Populate a real IItemLibrary the same way the spell repository above is
+// populated — without one, ActorMapping.ToCreature has no way to resolve
+// an inventory/equipped item's real stats back from its stored name (see
+// StandardCreature.ResolveItem's own remarks), so equipped-weapon data
+// (needed for the Attack RPC — melee_attack/ranged_attack) would silently
+// come back null on every round trip regardless of what was actually
+// equipped. Unlike the spell repository, this has no local on-disk cache
+// of its own yet: Open5e's weapon/armor/magic-item endpoints are small
+// (SRD 5.1 has a few dozen weapons/armor pieces; magic items are the
+// largest of the three but still nowhere near the ~1400-spell catalog),
+// so a startup fetch here is a much smaller, much less rate-limit-prone
+// operation than the spell one this cache exists for. If that changes
+// (a much larger third-party item catalog, or the same rate-limiting
+// this environment already hit twice for spells), an Open5eItemCache
+// mirroring Open5eSpellCache would be the same fix applied here.
+var itemLibrary = new StandardItemLibrary(new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }), spellDiceRoller), spellDiceRoller, spellRepository);
+#pragma warning disable CA1031
+try
+{
+    await itemLibrary.InitializeAsync();
+    Console.WriteLine($"Loaded {itemLibrary.GetAllItems().Count()} SRD items (weapons/armor/magic items) from Open5e.");
+}
+catch (Exception ex)
+{
+    // Same "degrade rather than crash" posture as the spell repository
+    // above: an Attack call against a character whose weapon isn't in
+    // (or wasn't loaded into) the library fails with a real, visible
+    // "No weapon equipped"/unresolvable-item error rather than the
+    // sidecar refusing to start at all over an Open5e outage.
+    Console.Error.WriteLine($"Warning: failed to populate item library from Open5e at startup: {ex.Message}. Equipped-weapon data will not resolve until this is fixed.");
+}
+#pragma warning restore CA1031
+builder.Services.AddSingleton<IItemLibrary>(itemLibrary);
 
 // Sidecars talk gRPC in-process/loopback only (docs/design.md §6.1 — no
 // public-facing listener), so this runs cleartext HTTP/2 (h2c) rather than

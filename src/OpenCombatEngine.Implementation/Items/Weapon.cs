@@ -10,14 +10,16 @@ namespace OpenCombatEngine.Implementation.Items
         public string DamageDice { get; }
         public DamageType DamageType { get; }
         public IEnumerable<WeaponProperty> Properties { get; }
+        public int Range { get; }
 
-        public Weapon(string name, string damageDice, DamageType damageType, IEnumerable<WeaponProperty>? properties = null, string description = "", double weight = 0, int value = 0)
+        public Weapon(string name, string damageDice, DamageType damageType, IEnumerable<WeaponProperty>? properties = null, string description = "", double weight = 0, int value = 0, int range = 5)
             : base(name, description, weight, value)
         {
             if (string.IsNullOrWhiteSpace(damageDice)) throw new System.ArgumentException("Damage dice cannot be empty.", nameof(damageDice));
             DamageDice = damageDice;
             DamageType = damageType;
             Properties = (properties ?? Enumerable.Empty<WeaponProperty>()).ToList();
+            Range = range;
         }
     }
 }
