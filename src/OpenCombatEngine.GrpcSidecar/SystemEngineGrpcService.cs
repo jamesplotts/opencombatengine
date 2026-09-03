@@ -10,8 +10,11 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Conditions;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
+using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.GrpcSidecar.Mapping;
+using OpenCombatEngine.Implementation.Actions;
+using OpenCombatEngine.Implementation.Actions.Contexts;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
 
@@ -40,16 +43,19 @@ namespace OpenCombatEngine.GrpcSidecar;
 public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 {
     private readonly ISpellRepository _spellRepository;
+    private readonly IDiceRoller _diceRoller;
 
     /// <summary>
-    /// Constructs the service. <paramref name="spellRepository"/> is resolved by
-    /// ASP.NET Core's DI container (gRPC service instances are DI-constructed) —
-    /// see <c>Program.cs</c> for where the singleton instance is populated from
-    /// Open5e at startup and registered.
+    /// Constructs the service. <paramref name="spellRepository"/> and
+    /// <paramref name="diceRoller"/> are resolved by ASP.NET Core's DI
+    /// container (gRPC service instances are DI-constructed) — see
+    /// <c>Program.cs</c> for where the singleton spell repository instance
+    /// is populated from Open5e at startup and registered.
     /// </summary>
-    public SystemEngineGrpcService(ISpellRepository spellRepository)
+    public SystemEngineGrpcService(ISpellRepository spellRepository, IDiceRoller diceRoller)
     {
         _spellRepository = spellRepository ?? throw new System.ArgumentNullException(nameof(spellRepository));
+        _diceRoller = diceRoller ?? throw new System.ArgumentNullException(nameof(diceRoller));
     }
 
     public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
@@ -285,6 +291,59 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         }
 
         return Task.FromResult(new ResolveCheckResponse { Success = true, Outcome = outcome });
+    }
+
+    public override Task<CastSpellResponse> CastSpell(CastSpellRequest request, ServerCallContext context)
+    {
+        var casterResult = ActorMapping.ToCreature(request.Caster, _spellRepository);
+        if (casterResult.IsFailure)
+            return Task.FromResult(new CastSpellResponse { Success = false, Error = casterResult.Error });
+        var caster = casterResult.Value;
+
+        var spellResult = _spellRepository.GetSpell(request.SpellName);
+        if (spellResult.IsFailure)
+            return Task.FromResult(new CastSpellResponse { Success = false, Error = $"Unknown spell '{request.SpellName}'." });
+        var spell = spellResult.Value;
+
+        // No target given means a self-cast — CastSpellAction requires a
+        // CreatureTarget even for a self-only spell like Mage Armor
+        // (there is no dedicated "self" target type in this engine).
+        StandardCreature target = caster;
+        if (request.Target is not null)
+        {
+            var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository);
+            if (targetResult.IsFailure)
+                return Task.FromResult(new CastSpellResponse { Success = false, Error = targetResult.Error });
+            target = targetResult.Value;
+        }
+
+        int? slotLevel = request.SlotLevel != 0 ? request.SlotLevel : null;
+        var action = new CastSpellAction(spell, slotLevel, _diceRoller);
+        var actionContext = new StandardActionContext(caster, new CreatureTarget(target));
+
+        // Captured before Execute (which mutates target.HitPoints in
+        // place via CastSpellAction's own ApplySpellEffects) so Master's
+        // PvP gate (design doc §9.1) has a real signal — see
+        // CastSpellResponse.target_damaged's doc comment for why this is
+        // computed here rather than parsing the free-text result message.
+        var targetHpBefore = target.HitPoints.Current;
+
+        var executeResult = action.Execute(actionContext);
+        if (executeResult.IsFailure)
+            return Task.FromResult(new CastSpellResponse { Success = false, Error = executeResult.Error });
+
+        var response = new CastSpellResponse
+        {
+            Success = true,
+            ResultMessage = executeResult.Value.Message,
+            Caster = ActorMapping.ToActor(caster),
+            TargetDamaged = target.HitPoints.Current < targetHpBefore,
+        };
+        if (!ReferenceEquals(target, caster))
+        {
+            response.Target = ActorMapping.ToActor(target);
+        }
+        return Task.FromResult(response);
     }
 
     public override Task StreamEvents(

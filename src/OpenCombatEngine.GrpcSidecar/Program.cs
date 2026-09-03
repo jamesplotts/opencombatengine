@@ -4,6 +4,7 @@
 // See LEGAL.md for full disclaimers
 
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.Implementation.Dice;
@@ -50,6 +51,13 @@ catch (Exception ex)
 }
 #pragma warning restore CA1031
 builder.Services.AddSingleton<ISpellRepository>(spellRepository);
+
+// Also needed for constructor injection into SystemEngineGrpcService's
+// CastSpell handler (CastSpellAction rolls real dice for a spell's
+// damage/healing, same as any other mechanical resolution in this
+// stack) — a fresh instance per resolution the same way ResolveCheck's
+// own dice rolling already works, not shared/stateful.
+builder.Services.AddSingleton<IDiceRoller, StandardDiceRoller>();
 
 // Sidecars talk gRPC in-process/loopback only (docs/design.md §6.1 — no
 // public-facing listener), so this runs cleartext HTTP/2 (h2c) rather than

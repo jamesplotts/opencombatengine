@@ -10,11 +10,13 @@ using Grpc.Core;
 using Layforge.Protocol.SystemEngine.V1;
 using NSubstitute;
 using OpenCombatEngine.Core.Enums;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Creatures;
+using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Spells;
 using ProtoValue = Google.Protobuf.WellKnownTypes.Value;
 
@@ -30,11 +32,12 @@ namespace OpenCombatEngine.GrpcSidecar.Tests;
 public class SystemEngineGrpcServiceTests
 {
     private readonly ISpellRepository _spellRepository = new InMemorySpellRepository();
+    private readonly IDiceRoller _diceRoller = new StandardDiceRoller();
     private readonly SystemEngineGrpcService _service;
 
     public SystemEngineGrpcServiceTests()
     {
-        _service = new SystemEngineGrpcService(_spellRepository);
+        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller);
     }
 
     private static CreatureState MakeState(int currentHp = 24, int maxHp = 30) => new(
@@ -315,6 +318,198 @@ public class SystemEngineGrpcServiceTests
         response.DeathSaveOutcome.Rolls.Should().ContainSingle();
         response.DeathSaveOutcome.Rolls[0].Sides.Should().Be(20);
         response.DeathSaveOutcome.Rolls[0].Result.Should().BeInRange(1, 20);
+    }
+
+    // Regression coverage for design doc §8/§9's "gates over prompting":
+    // CastSpell is the real mechanical gate against casting a spell that
+    // isn't prepared/known or that has no available slot — previously
+    // there was no way to reach this at all over gRPC, so nothing but the
+    // DM model's own narrative judgment stood between a player and an
+    // unprepared cast. These tests exercise the actual CastSpellAction
+    // rejection paths through the gRPC surface, not just at the
+    // Core/Implementation unit level (already covered by
+    // CastSpellActionTests.cs).
+
+    private static Spell MakeMagicMissile() => new(
+        name: "Magic Missile",
+        level: 1,
+        school: SpellSchool.Evocation,
+        castingTime: "1 action",
+        range: "120 feet",
+        components: "V, S",
+        duration: "Instantaneous",
+        description: "Three darts of force.",
+        diceRoller: new StandardDiceRoller(),
+        damageRolls: new[] { new OpenCombatEngine.Core.Models.Spells.DamageFormula("3d4+3", DamageType.Force) });
+
+    private static CreatureState MakeWizardState(bool preparedMagicMissile, int slotsAvailable = 1) => MakeState(currentHp: 20, maxHp: 20) with
+    {
+        Spellcasting = new SpellCasterState(
+            CastingAbility: Ability.Intelligence,
+            IsPreparedCaster: true,
+            KnownSpellNames: new Collection<string> { "Magic Missile" },
+            PreparedSpellNames: preparedMagicMissile ? new Collection<string> { "Magic Missile" } : new Collection<string>(),
+            Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 3, Current: slotsAvailable) },
+            PactSlotsMax: 0,
+            PactSlotsCurrent: 0,
+            PactSlotLevel: 0),
+    };
+
+    // Uses this instance's own _spellRepository (not a fresh/isolated
+    // one) deliberately: the wire Actor this produces must be built
+    // against the SAME spell data the test's later CastSpell call will
+    // resolve against, or a spell name that fails to resolve here would
+    // silently drop out of the round-tripped known/prepared lists
+    // entirely (StandardSpellCaster's own documented "drop, don't fail"
+    // behavior) — masking the test's actual premise. Callers must
+    // AddSpell every spell referenced by the state before calling this.
+    private Actor MakeActorFromState(CreatureState state) =>
+        ActorMapping.ToActor(new StandardCreature(state, _spellRepository));
+
+    [Fact]
+    public async Task CastSpell_PreparedSpellWithSlot_SucceedsAndConsumesSlot()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 2));
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Magic Missile" }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Caster.CharacterData.Fields["spellcasting"].StructValue
+            .Fields["slots"].ListValue.Values[0].StructValue.Fields["current"].NumberValue.Should().Be(1);
+        response.Target.Should().NotBeNull();
+        response.ResultMessage.Should().NotBeNullOrWhiteSpace();
+        // Magic Missile always hits (no save/attack roll) and always deals
+        // damage — this is Master's PvP-gate signal (design doc §9.1); see
+        // CastSpellResponse.target_damaged's doc comment.
+        response.TargetDamaged.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CastSpell_NonDamagingSpell_TargetDamagedIsFalse()
+    {
+        var healingSpell = new Spell(
+            name: "Cure Wounds", level: 1, school: SpellSchool.Evocation, castingTime: "1 action",
+            range: "Touch", components: "V, S", duration: "Instantaneous", description: "Heals.",
+            diceRoller: new StandardDiceRoller(), healingDice: "1d8+3");
+        _spellRepository.AddSpell(healingSpell);
+        var caster = MakeActorFromState(MakeState() with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Wisdom, IsPreparedCaster: true,
+                KnownSpellNames: new Collection<string> { "Cure Wounds" },
+                PreparedSpellNames: new Collection<string> { "Cure Wounds" },
+                Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 2, Current: 2) },
+                PactSlotsMax: 0, PactSlotsCurrent: 0, PactSlotLevel: 0),
+        });
+        var target = MakeActor(currentHp: 5, maxHp: 30);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Cure Wounds" }, null!);
+
+        response.Success.Should().BeTrue();
+        response.TargetDamaged.Should().BeFalse("Master's PvP gate must not fire for a purely beneficial spell");
+    }
+
+    [Fact]
+    public async Task CastSpell_UnpreparedSpell_ReturnsFailure()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: false, slotsAvailable: 2));
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Magic Missile" }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not prepared");
+    }
+
+    [Fact]
+    public async Task CastSpell_NoSlotAvailable_ReturnsFailure()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true, slotsAvailable: 0));
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Magic Missile" }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("slot");
+    }
+
+    [Fact]
+    public async Task CastSpell_UnknownSpellName_ReturnsFailure()
+    {
+        var caster = MakeActorFromState(MakeWizardState(preparedMagicMissile: true));
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, SpellName = "Definitely Not A Real Spell" }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("Unknown spell");
+    }
+
+    [Fact]
+    public async Task CastSpell_NoTargetGiven_SelfCastsAndOmitsTargetInResponse()
+    {
+        var selfSpell = new Spell(
+            name: "Mage Armor", level: 1, school: SpellSchool.Abjuration, castingTime: "1 action",
+            range: "Self", components: "V, S, M", duration: "8 hours", description: "AC boost.",
+            diceRoller: new StandardDiceRoller());
+        _spellRepository.AddSpell(selfSpell);
+        var state = MakeState() with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Intelligence, IsPreparedCaster: true,
+                KnownSpellNames: new Collection<string> { "Mage Armor" },
+                PreparedSpellNames: new Collection<string> { "Mage Armor" },
+                Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 2, Current: 2) },
+                PactSlotsMax: 0, PactSlotsCurrent: 0, PactSlotLevel: 0),
+        };
+        var caster = ActorMapping.ToActor(new StandardCreature(state, _spellRepository));
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, SpellName = "Mage Armor" }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Target.Should().BeNull("a self-cast's target is identical to the caster, already returned as Caster");
+    }
+
+    // Regression coverage for this session's own scope-decision #4: a
+    // non-prepared caster (Sorcerer-style — casts from KnownSpells
+    // directly, no separate "prepared" step) with an EMPTY
+    // preparedSpellNames must still be able to cast a spell that's only
+    // in knownSpellNames. StandardSpellCaster.PreparedSpells already
+    // falls back to KnownSpells when IsPreparedCaster is false — this
+    // proves that fallback actually reaches CastSpell's real rejection
+    // path, not just the Core-level property getter in isolation.
+    [Fact]
+    public async Task CastSpell_NonPreparedCasterKnownSpell_Succeeds()
+    {
+        _spellRepository.AddSpell(MakeMagicMissile());
+        var state = MakeState(currentHp: 20, maxHp: 20) with
+        {
+            Spellcasting = new SpellCasterState(
+                CastingAbility: Ability.Charisma,
+                IsPreparedCaster: false,
+                KnownSpellNames: new Collection<string> { "Magic Missile" },
+                PreparedSpellNames: new Collection<string>(), // deliberately empty
+                Slots: new Collection<SpellSlotState> { new(Level: 1, Max: 2, Current: 2) },
+                PactSlotsMax: 0, PactSlotsCurrent: 0, PactSlotLevel: 0),
+        };
+        var caster = ActorMapping.ToActor(new StandardCreature(state, _spellRepository));
+        var target = MakeActor(currentHp: 10, maxHp: 10);
+
+        var response = await _service.CastSpell(
+            new CastSpellRequest { RequestId = "r1", CampaignId = "c1", Caster = caster, Target = target, SpellName = "Magic Missile" }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
     }
 
     [Fact]

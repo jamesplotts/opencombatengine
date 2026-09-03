@@ -89,6 +89,20 @@ service SystemEngine {
   // import path.
   rpc FromJson(FromJsonRequest) returns (FromJsonResponse);
 
+  // CastSpell attempts to cast actor's named spell — the real mechanical
+  // gate against casting a spell that isn't prepared/known or that has
+  // no available slot (docs/design.md §8, §9: "gates over prompting"),
+  // not something Master or the DM's own narrative judgment enforces.
+  // The engine checks preparation, checks and consumes a slot, and
+  // applies the spell's real effect (attack/save roll, damage, healing,
+  // conditions) in one call. Stateless across the RPC boundary like
+  // ApplyEffect: the full updated actor(s) come back for Master to
+  // persist. Single-target (or no target, for a self-only spell) only —
+  // this contract does not yet carry positional/grid data for an
+  // area-of-effect spell to resolve against multiple targets in one
+  // call.
+  rpc CastSpell(CastSpellRequest) returns (CastSpellResponse);
+
   // StreamEvents re-exposes the engine's internal event feed (e.g.
   // OpenCombatEngine's TurnStarted/DamageDealt/CombatEnded C# events,
   // docs/design.md §12) as a server-streaming feed. Master cannot
@@ -276,6 +290,65 @@ message FromJsonRequest {
 message FromJsonResponse {
   Actor actor = 1;
   repeated ValidationWarning warnings = 2;
+}
+
+message CastSpellRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // Stateless across the RPC boundary, same reasoning as every other
+  // Actor-carrying request: the engine holds no creature state of its
+  // own between calls.
+  Actor caster = 3;
+  // Exact spell name, matched against caster's spellcasting data
+  // (knownSpellNames/preparedSpellNames) — never invented; Master
+  // forwards whatever the DM tool call names, and an unrecognized name
+  // is a real rejection (error), not a guess.
+  string spell_name = 4;
+  // The spell's target. Omit entirely for a self-only spell (e.g. Mage
+  // Armor) — the engine treats a cast with no target as targeting the
+  // caster. Set for any spell that needs an external target; a spell
+  // requiring a target that gets none back is a rejection (error), not
+  // a guess at who it should hit.
+  Actor target = 5;
+  // Optional: cast using a higher-level slot than the spell's own
+  // minimum (SRD upcasting). 0 (the default) means "use the spell's own
+  // base level."
+  int32 slot_level = 6;
+}
+
+message CastSpellResponse {
+  bool success = 1;
+  // Set when success = false: unknown spell name, not prepared/known,
+  // no slot available at the required level, no action available this
+  // turn, etc. — a real mechanical rejection for Master (and the DM
+  // model, via the tool result) to act on, never silently ignored.
+  string error = 2;
+  // The caster's full character_data after casting (slot consumed,
+  // concentration set if the spell requires it, action economy spent)
+  // — same "whole actor, not a diff" reasoning as every other mutating
+  // RPC in this contract.
+  Actor caster = 3;
+  // The target's full character_data after the spell's effect was
+  // applied. Unset when the cast was a self-cast (identical to caster)
+  // or when the cast failed.
+  Actor target = 4;
+  // Human-readable summary of what happened (save result, damage dealt,
+  // healing done, condition applied) from the engine's own resolution —
+  // there is deliberately no structured per-die Outcome here yet, unlike
+  // ResolveCheck; see docs/design.md §11 for why this is scoped as a
+  // known follow-up rather than built speculatively now.
+  string result_message = 5;
+  // True when target's hit points went down as a result of this cast
+  // (the sidecar compares target's HP before/after calling the engine's
+  // spell-casting logic, deliberately not parsing result_message).
+  // Master's PvP gate (design doc §9.1) needs this: unlike apply_effect,
+  // whose caller already states effect_type=damage explicitly, Master
+  // cannot know whether a *named spell* is damaging without asking the
+  // engine — this field lets Master apply the identical
+  // damage-against-another-player's-own-character gate apply_effect
+  // already has, by choosing whether to persist the returned target's
+  // mutated state rather than needing to decide before the call.
+  bool target_damaged = 6;
 }
 
 message StreamEventsRequest {
