@@ -91,5 +91,109 @@ namespace OpenCombatEngine.Implementation.Tests.Open5e
 
             spells.Should().ContainSingle(s => s.Name == "Light");
         }
+
+        // The four tests below are the actual regression coverage for the
+        // bug live testing found: every Open5e-sourced spell dealt zero
+        // damage, because Open5eAdapter.ToStandard never populated
+        // SpellDto.Damage/DamageInflict/SavingThrow from the real API's
+        // only source of that information (desc's free text) — see
+        // Open5eSpellTextParserTests for the parsing logic itself; these
+        // confirm it's actually wired into the end-to-end mapping a real
+        // spell repository population goes through.
+        [Fact]
+        public async Task GetAllSpellsAsync_SpellWithDamageInDescription_MappedSpellHasRealDamageRoll()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Magic Missile",
+                LevelInt = 1,
+                School = "evocation",
+                Range = "120 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Magic Missile").Subject;
+            spell.DamageRolls.Should().ContainSingle();
+            spell.DamageRolls[0].Dice.Should().Be("1d4+1");
+            spell.DamageRolls[0].Type.Should().Be(OpenCombatEngine.Core.Enums.DamageType.Force);
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_SaveForHalfSpell_MappedSpellHasSaveAbilityAndHalfDamageEffect()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Fireball",
+                LevelInt = 3,
+                School = "evocation",
+                Range = "150 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Fireball").Subject;
+            spell.SaveAbility.Should().Be(OpenCombatEngine.Core.Enums.Ability.Dexterity);
+            spell.SaveEffect.Should().Be(OpenCombatEngine.Core.Enums.SaveEffect.HalfDamage);
+            spell.DamageRolls.Should().ContainSingle();
+            spell.DamageRolls[0].Dice.Should().Be("8d6");
+            spell.DamageRolls[0].Type.Should().Be(OpenCombatEngine.Core.Enums.DamageType.Fire);
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_NegateOnSaveSpell_MappedSpellHasNegateSaveEffect()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Sacred Flame",
+                LevelInt = 0,
+                School = "evocation",
+                Range = "60 feet",
+                CastingTime = "1 action",
+                Duration = "Instantaneous",
+                Desc = "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Sacred Flame").Subject;
+            spell.SaveAbility.Should().Be(OpenCombatEngine.Core.Enums.Ability.Dexterity);
+            spell.SaveEffect.Should().Be(OpenCombatEngine.Core.Enums.SaveEffect.Negate);
+        }
+
+        [Fact]
+        public async Task GetAllSpellsAsync_SpellWithNoDamageInDescription_MappedSpellHasNoDamageRolls()
+        {
+            var page = new Open5eListResult<Open5eSpell> { Count = 1 };
+            page.Results.Add(new Open5eSpell
+            {
+                Name = "Mage Armor",
+                LevelInt = 1,
+                School = "abjuration",
+                Range = "Touch",
+                CastingTime = "1 action",
+                Duration = "8 hours",
+                Desc = "You touch a willing creature who isn't wearing armor, and a protective magical force surrounds it until the spell ends.",
+            });
+            _mockClient.GetSpellsAsync(1).Returns(Task.FromResult<Open5eListResult<Open5eSpell>?>(page));
+
+            var spells = await _contentSource.GetAllSpellsAsync();
+
+            var spell = spells.Should().ContainSingle(s => s.Name == "Mage Armor").Subject;
+            spell.DamageRolls.Should().BeEmpty();
+            spell.SaveAbility.Should().BeNull();
+        }
     }
 }

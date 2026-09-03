@@ -23,6 +23,24 @@ namespace OpenCombatEngine.Implementation.Open5e
                 Entries = new List<object> { source.Desc, source.HigherLevel }.Where(x => !string.IsNullOrEmpty(x as string)).ToList()
             };
 
+            // Open5e's REST API has no structured damage/save fields for
+            // spells at all (unlike the 5etools JSON format SpellDto
+            // otherwise mirrors) — recovered from the description's prose
+            // instead. See Open5eSpellTextParser's doc comment for why this
+            // is best-effort, not a full SRD-prose parser.
+            var damageRolls = Open5eSpellTextParser.ExtractDamageRolls(source.Desc);
+            if (damageRolls.Count > 0)
+            {
+                dto.Damage = damageRolls.Select(r => new List<string> { r.Dice }).ToList();
+                dto.DamageInflict = damageRolls.Select(r => r.Type).ToList();
+            }
+
+            var savingThrowAbility = Open5eSpellTextParser.ExtractSavingThrowAbility(source.Desc);
+            if (savingThrowAbility != null)
+            {
+                dto.SavingThrow = new List<string> { savingThrowAbility };
+            }
+
             dto.School = source.School?.ToUpperInvariant() switch
             {
                 "ABJURATION" => "A",
