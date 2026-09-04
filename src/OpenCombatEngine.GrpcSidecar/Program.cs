@@ -6,11 +6,13 @@
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Core.Interfaces.Loot;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.GrpcSidecar;
 using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Items;
+using OpenCombatEngine.Implementation.Loot;
 using OpenCombatEngine.Implementation.Open5e;
 using OpenCombatEngine.Implementation.Spells;
 
@@ -146,6 +148,13 @@ catch (Exception ex)
 }
 #pragma warning restore CA1031
 builder.Services.AddSingleton<IItemLibrary>(itemLibrary);
+
+// GenerateLoot's own dependencies: StandardLootGenerator (item rolls draw
+// from the same singleton item library above) and
+// StandardEncounterChallengeCalculator (pure CR/XP math, no external
+// dependency at all).
+builder.Services.AddSingleton<ILootGenerator>(new StandardLootGenerator(itemLibrary, new StandardDiceRoller()));
+builder.Services.AddSingleton<IEncounterChallengeCalculator, StandardEncounterChallengeCalculator>();
 
 // Sidecars talk gRPC in-process/loopback only (docs/design.md §6.1 — no
 // public-facing listener), so this runs cleartext HTTP/2 (h2c) rather than

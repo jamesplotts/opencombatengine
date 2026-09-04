@@ -43,6 +43,10 @@ public static class CharacterSchema
         "id": { "type": "string", "format": "uuid" },
         "name": { "type": "string" },
         "team": { "type": "string" },
+        "challengeRating": {
+          "type": ["number", "null"],
+          "description": "SRD challenge rating (0, 0.125, 0.25, 0.5, or a whole number up to 30). Set this for a monster/NPC created via create_npc, the same way every other stat is authored — it's required before generate_loot can include this character. Omit/null for a player character, which has no CR in 5e."
+        },
         "abilityScores": {
           "type": "object",
           "required": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"],
@@ -125,7 +129,11 @@ public static class CharacterSchema
             "items": {
               "type": "array",
               "items": { "$ref": "#/$defs/itemInstance" }
-            }
+            },
+            "copper": { "type": "integer" },
+            "silver": { "type": "integer" },
+            "gold": { "type": "integer" },
+            "platinum": { "type": "integer" }
           }
         },
         "equipment": {

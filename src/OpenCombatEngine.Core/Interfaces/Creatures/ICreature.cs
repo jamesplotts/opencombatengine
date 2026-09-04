@@ -29,6 +29,14 @@ public interface ICreature
     string Team { get; } // e.g. "Player", "Monster"
 
     /// <summary>
+    /// Gets the creature's SRD challenge rating — meaningful for a
+    /// monster/NPC, null for a player character (which has no CR in 5e)
+    /// or any creature the DM never assigned one. Nullable rather than
+    /// defaulting to 0, since 0 is itself a real, valid CR.
+    /// </summary>
+    double? ChallengeRating { get; }
+
+    /// <summary>
     /// Gets the ability scores for the creature.
     /// </summary>
     IAbilityScores AbilityScores { get; }

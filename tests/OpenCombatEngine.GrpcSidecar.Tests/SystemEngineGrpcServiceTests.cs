@@ -36,11 +36,14 @@ public class SystemEngineGrpcServiceTests
     private readonly ISpellRepository _spellRepository = new InMemorySpellRepository();
     private readonly IDiceRoller _diceRoller = new StandardDiceRoller();
     private readonly IItemLibrary _itemLibrary = new FakeItemLibrary();
+    private readonly OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator _lootGenerator;
+    private readonly OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator _encounterCalculator = new OpenCombatEngine.Implementation.Loot.StandardEncounterChallengeCalculator();
     private readonly SystemEngineGrpcService _service;
 
     public SystemEngineGrpcServiceTests()
     {
-        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller, _itemLibrary);
+        _lootGenerator = new OpenCombatEngine.Implementation.Loot.StandardLootGenerator(_itemLibrary, _diceRoller);
+        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller, _itemLibrary, _lootGenerator, _encounterCalculator);
     }
 
     // Minimal IItemLibrary test double — StandardCreature.ResolveItem
@@ -157,6 +160,32 @@ public class SystemEngineGrpcServiceTests
 
     private Actor MakeActorWithInventoryItem(string itemName, int currentHp = 24, int maxHp = 30) =>
         ActorMapping.ToActor(new StandardCreature(MakeStateWithInventoryItem(itemName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    // A creature with a real challenge_rating recorded (or none, when cr
+    // is null) — for GenerateLoot tests. id lets a test place several
+    // distinct participants (StandardGridManager-style distinct-Id
+    // pattern isn't needed here since GenerateLoot never touches a grid,
+    // but ActorMapping round-trips whatever Id is given either way).
+    private static CreatureState MakeStateWithChallengeRating(double? cr, string id = "33333333-3333-3333-3333-333333333333", string name = "Kestrel") => MakeState() with
+    {
+        Id = Guid.Parse(id),
+        Name = name,
+        ChallengeRating = cr,
+    };
+
+    private Actor MakeActorWithChallengeRating(double? cr, string id = "33333333-3333-3333-3333-333333333333", string name = "Kestrel") =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithChallengeRating(cr, id, name), _spellRepository, _itemLibrary));
+
+    // A creature with real currency already carried — for
+    // TransferCurrency tests.
+    private static CreatureState MakeStateWithCurrency(int copper, int silver, int gold, int platinum, string id = "33333333-3333-3333-3333-333333333333") => MakeState() with
+    {
+        Id = Guid.Parse(id),
+        Inventory = new InventoryState(new Collection<ItemInstanceState>(), copper, silver, gold, platinum),
+    };
+
+    private Actor MakeActorWithCurrency(int copper, int silver, int gold, int platinum, string id = "33333333-3333-3333-3333-333333333333") =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithCurrency(copper, silver, gold, platinum, id), _spellRepository, _itemLibrary));
 
     [Fact]
     public async Task GetCharacterSchema_ReturnsCharacterSchemaJson()
@@ -1499,6 +1528,141 @@ public class SystemEngineGrpcServiceTests
         var response = await _service.TransferItem(new TransferItemRequest
         {
             RequestId = "r1", CampaignId = "c1", Source = source, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("target is required");
+    }
+
+    [Fact]
+    public async Task GenerateLoot_SingleParticipantWithChallengeRating_Succeeds()
+    {
+        var participant = MakeActorWithChallengeRating(4d);
+
+        var response = await _service.GenerateLoot(new GenerateLootRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Participants = { participant },
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.ResultMessage.Should().Contain("effective CR 4");
+    }
+
+    [Fact]
+    public async Task GenerateLoot_MultipleParticipants_ScalesPastAnySingleParticipantsCr()
+    {
+        // Real end-to-end proof of the encounter-CR math (not just the
+        // calculator in isolation): 14 real participants (an 8-CR boss
+        // plus 13 low-CR minions) should report a higher effective CR
+        // than the boss alone would.
+        var boss = MakeActorWithChallengeRating(8d, id: "33333333-3333-3333-3333-333333333333", name: "Boss");
+        var participants = new List<Actor> { boss };
+        for (var i = 0; i < 13; i++)
+        {
+            participants.Add(MakeActorWithChallengeRating(0.25d, id: Guid.NewGuid().ToString(), name: $"Minion{i}"));
+        }
+
+        var soloResponse = await _service.GenerateLoot(new GenerateLootRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Participants = { boss },
+        }, null!);
+        var groupResponse = await _service.GenerateLoot(new GenerateLootRequest
+        {
+            RequestId = "r2", CampaignId = "c1", Participants = { participants },
+        }, null!);
+
+        soloResponse.Success.Should().BeTrue();
+        groupResponse.Success.Should().BeTrue();
+        soloResponse.ResultMessage.Should().Contain("effective CR 8");
+        groupResponse.ResultMessage.Should().NotContain("effective CR 8");
+    }
+
+    [Fact]
+    public async Task GenerateLoot_ParticipantWithNoChallengeRating_ReturnsFailure()
+    {
+        var participant = MakeActorWithChallengeRating(null);
+
+        var response = await _service.GenerateLoot(new GenerateLootRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Participants = { participant },
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("no challenge_rating recorded");
+    }
+
+    [Fact]
+    public async Task GenerateLoot_EmptyParticipantList_ReturnsFailure()
+    {
+        var response = await _service.GenerateLoot(new GenerateLootRequest
+        {
+            RequestId = "r1", CampaignId = "c1",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("at least one participant");
+    }
+
+    [Fact]
+    public async Task AddCurrency_Succeeds_PersistsOnReturnedActor()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.AddCurrency(new AddCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Copper = 5, Silver = 4, Gold = 3, Platinum = 2,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var restored = ActorMapping.ToCreature(response.Actor, _spellRepository, _itemLibrary);
+        restored.IsSuccess.Should().BeTrue();
+        restored.Value.Inventory.Copper.Should().Be(5);
+        restored.Value.Inventory.Silver.Should().Be(4);
+        restored.Value.Inventory.Gold.Should().Be(3);
+        restored.Value.Inventory.Platinum.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task TransferCurrency_Success_MovesCurrencyFromSourceToTarget()
+    {
+        var source = MakeActorWithCurrency(0, 0, 50, 0);
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferCurrency(new TransferCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, Gold = 20,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var restoredSource = ActorMapping.ToCreature(response.Source, _spellRepository, _itemLibrary);
+        var restoredTarget = ActorMapping.ToCreature(response.Target, _spellRepository, _itemLibrary);
+        restoredSource.Value.Inventory.Gold.Should().Be(30);
+        restoredTarget.Value.Inventory.Gold.Should().Be(20);
+    }
+
+    [Fact]
+    public async Task TransferCurrency_InsufficientFunds_ReturnsFailure()
+    {
+        var source = MakeActorWithCurrency(0, 0, 5, 0);
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferCurrency(new TransferCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, Gold = 20,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("Insufficient");
+    }
+
+    [Fact]
+    public async Task TransferCurrency_NoTarget_ReturnsFailure()
+    {
+        var source = MakeActorWithCurrency(0, 0, 50, 0);
+
+        var response = await _service.TransferCurrency(new TransferCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Gold = 20,
         }, null!);
 
         response.Success.Should().BeFalse();

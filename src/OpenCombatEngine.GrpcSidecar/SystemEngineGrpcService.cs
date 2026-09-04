@@ -50,20 +50,31 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     private readonly ISpellRepository _spellRepository;
     private readonly IDiceRoller _diceRoller;
     private readonly IItemLibrary _itemLibrary;
+    private readonly OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator _lootGenerator;
+    private readonly OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator _encounterCalculator;
 
     /// <summary>
     /// Constructs the service. <paramref name="spellRepository"/>,
-    /// <paramref name="diceRoller"/>, and <paramref name="itemLibrary"/> are
-    /// resolved by ASP.NET Core's DI container (gRPC service instances are
-    /// DI-constructed) — see <c>Program.cs</c> for where the singleton
-    /// spell repository and item library instances are populated from
-    /// Open5e at startup and registered.
+    /// <paramref name="diceRoller"/>, <paramref name="itemLibrary"/>,
+    /// <paramref name="lootGenerator"/>, and
+    /// <paramref name="encounterCalculator"/> are resolved by ASP.NET
+    /// Core's DI container (gRPC service instances are DI-constructed) —
+    /// see <c>Program.cs</c> for where the singleton spell repository and
+    /// item library instances are populated from Open5e at startup and
+    /// registered.
     /// </summary>
-    public SystemEngineGrpcService(ISpellRepository spellRepository, IDiceRoller diceRoller, IItemLibrary itemLibrary)
+    public SystemEngineGrpcService(
+        ISpellRepository spellRepository,
+        IDiceRoller diceRoller,
+        IItemLibrary itemLibrary,
+        OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator lootGenerator,
+        OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator encounterCalculator)
     {
         _spellRepository = spellRepository ?? throw new System.ArgumentNullException(nameof(spellRepository));
         _diceRoller = diceRoller ?? throw new System.ArgumentNullException(nameof(diceRoller));
         _itemLibrary = itemLibrary ?? throw new System.ArgumentNullException(nameof(itemLibrary));
+        _lootGenerator = lootGenerator ?? throw new System.ArgumentNullException(nameof(lootGenerator));
+        _encounterCalculator = encounterCalculator ?? throw new System.ArgumentNullException(nameof(encounterCalculator));
     }
 
     public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
@@ -786,6 +797,111 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         {
             Success = true,
             ResultMessage = $"{source.Name} gives {item.Name} to {target.Name}.",
+            Source = ActorMapping.ToActor(source),
+            Target = ActorMapping.ToActor(target),
+        });
+    }
+
+    /// <summary>
+    /// Computes CR-appropriate treasure for a roster of creatures — see
+    /// the proto's own GenerateLoot doc comment for why this runs at
+    /// encounter-prep time rather than as a post-combat reward, and why
+    /// combining multiple participants' CRs is real system-engine math
+    /// rather than something Master computes. Every participant must
+    /// resolve to a real creature with a real challenge_rating recorded;
+    /// an empty list or any missing CR is a real rejection, never an
+    /// invented default (CLAUDE.md's "gates over prompting").
+    /// </summary>
+    public override Task<GenerateLootResponse> GenerateLoot(GenerateLootRequest request, ServerCallContext context)
+    {
+        if (request.Participants.Count == 0)
+            return Task.FromResult(new GenerateLootResponse { Success = false, Error = "at least one participant is required." });
+
+        var challengeRatings = new System.Collections.Generic.List<double>();
+        foreach (var participantActor in request.Participants)
+        {
+            var participantResult = ActorMapping.ToCreature(participantActor, _spellRepository, _itemLibrary);
+            if (participantResult.IsFailure)
+                return Task.FromResult(new GenerateLootResponse { Success = false, Error = participantResult.Error });
+
+            var participant = participantResult.Value;
+            if (participant.ChallengeRating is not double cr || cr < 0)
+                return Task.FromResult(new GenerateLootResponse { Success = false, Error = $"{participant.Name} has no challenge_rating recorded." });
+
+            challengeRatings.Add(cr);
+        }
+
+        var effectiveCr = _encounterCalculator.CalculateEffectiveChallengeRating(challengeRatings);
+        var bundle = _lootGenerator.GenerateLoot((int)effectiveCr);
+
+        return Task.FromResult(new GenerateLootResponse
+        {
+            Success = true,
+            Copper = bundle.Copper,
+            Silver = bundle.Silver,
+            Gold = bundle.Gold,
+            Platinum = bundle.Platinum,
+            ItemName = bundle.Items.Count > 0 ? bundle.Items[0].Name : string.Empty,
+            ResultMessage = $"Generated loot for {request.Participants.Count} participant(s) at effective CR {effectiveCr}.",
+        });
+    }
+
+    /// <summary>
+    /// Adds currency to actor's inventory from nothing — the currency
+    /// equivalent of AddItemToInventory.
+    /// </summary>
+    public override Task<AddCurrencyResponse> AddCurrency(AddCurrencyRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new AddCurrencyResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var addResult = actor.Inventory.AddCurrency(request.Copper, request.Silver, request.Gold, request.Platinum);
+        if (addResult.IsFailure)
+            return Task.FromResult(new AddCurrencyResponse { Success = false, Error = addResult.Error });
+
+        return Task.FromResult(new AddCurrencyResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} receives {request.Copper}cp, {request.Silver}sp, {request.Gold}gp, {request.Platinum}pp.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Moves currency from source's inventory into target's — the
+    /// currency equivalent of TransferItem. Real rejection if source
+    /// doesn't carry enough of a requested denomination (see
+    /// <see cref="OpenCombatEngine.Implementation.Items.StandardInventory.RemoveCurrency"/>
+    /// — this does not make change across denominations).
+    /// </summary>
+    public override Task<TransferCurrencyResponse> TransferCurrency(TransferCurrencyRequest request, ServerCallContext context)
+    {
+        var sourceResult = ActorMapping.ToCreature(request.Source, _spellRepository, _itemLibrary);
+        if (sourceResult.IsFailure)
+            return Task.FromResult(new TransferCurrencyResponse { Success = false, Error = sourceResult.Error });
+        var source = sourceResult.Value;
+
+        if (request.Target is null)
+            return Task.FromResult(new TransferCurrencyResponse { Success = false, Error = "target is required for a transfer." });
+        var targetResult = ActorMapping.ToCreature(request.Target, _spellRepository, _itemLibrary);
+        if (targetResult.IsFailure)
+            return Task.FromResult(new TransferCurrencyResponse { Success = false, Error = targetResult.Error });
+        var target = targetResult.Value;
+
+        var removeResult = source.Inventory.RemoveCurrency(request.Copper, request.Silver, request.Gold, request.Platinum);
+        if (removeResult.IsFailure)
+            return Task.FromResult(new TransferCurrencyResponse { Success = false, Error = removeResult.Error });
+
+        var addResult = target.Inventory.AddCurrency(request.Copper, request.Silver, request.Gold, request.Platinum);
+        if (addResult.IsFailure)
+            return Task.FromResult(new TransferCurrencyResponse { Success = false, Error = addResult.Error });
+
+        return Task.FromResult(new TransferCurrencyResponse
+        {
+            Success = true,
+            ResultMessage = $"{source.Name} gives {request.Copper}cp, {request.Silver}sp, {request.Gold}gp, {request.Platinum}pp to {target.Name}.",
             Source = ActorMapping.ToActor(source),
             Target = ActorMapping.ToActor(target),
         });

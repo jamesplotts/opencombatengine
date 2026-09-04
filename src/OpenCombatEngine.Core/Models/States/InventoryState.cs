@@ -14,5 +14,14 @@ namespace OpenCombatEngine.Core.Models.States
     /// Serializable state for an inventory component.
     /// </summary>
     /// <param name="Items">Items in the inventory, in order.</param>
-    public record InventoryState(Collection<ItemInstanceState> Items);
+    /// <param name="Copper">Copper pieces carried.</param>
+    /// <param name="Silver">Silver pieces carried.</param>
+    /// <param name="Gold">Gold pieces carried.</param>
+    /// <param name="Platinum">Platinum pieces carried.</param>
+    public record InventoryState(
+        Collection<ItemInstanceState> Items,
+        int Copper = 0,
+        int Silver = 0,
+        int Gold = 0,
+        int Platinum = 0);
 }

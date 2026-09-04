@@ -56,6 +56,18 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="Inventory">State of the inventory (items owned by the creature).</param>
     /// <param name="Equipment">State of equipped/attuned items, referencing <paramref name="Inventory"/> by index.</param>
     /// <param name="Spellcasting">State of the spellcasting component, if the creature is a caster.</param>
+    /// <param name="ChallengeRating">
+    /// SRD challenge rating (0, 1/8, 1/4, 1/2, or a whole number up to 30).
+    /// Meaningful for a monster/NPC record (set by the DM at creation
+    /// time, the same way every other stat on that record is authored);
+    /// null for a player character, which has no CR in 5e, and for any
+    /// creature the DM never assigned one. Deliberately nullable rather
+    /// than defaulting to 0, since 0 is itself a real, valid SRD CR (a
+    /// commoner, a rat) — collapsing "never set" into 0 would silently
+    /// make an un-authored creature loot-eligible. Feeds the GenerateLoot
+    /// RPC's encounter-CR computation — a creature with no CR recorded
+    /// (null) cannot be included in a loot roll.
+    /// </param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -68,5 +80,6 @@ namespace OpenCombatEngine.Core.Models.States
         ActionEconomyState? ActionEconomy = null,
         InventoryState? Inventory = null,
         EquipmentState? Equipment = null,
-        SpellCasterState? Spellcasting = null);
+        SpellCasterState? Spellcasting = null,
+        double? ChallengeRating = null);
 }

@@ -30,6 +30,14 @@ namespace OpenCombatEngine.Implementation.Creatures
         public Guid Id { get; }
         public string Name { get; }
         public string Team { get; set; } = "Player";
+
+        /// <summary>
+        /// SRD challenge rating — meaningful for a monster/NPC, null (the
+        /// default) for a player character or any creature the DM never
+        /// assigned one. See <see cref="CreatureState.ChallengeRating"/>.
+        /// </summary>
+        public double? ChallengeRating { get; set; }
+
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
         
@@ -209,6 +217,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Id = state.Id;
             Name = state.Name;
             Team = state.Team;
+            ChallengeRating = state.ChallengeRating;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
 
             Inventory = new StandardInventory();
@@ -218,6 +227,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                 {
                     Inventory.AddItem(ResolveItem(itemState, itemLibrary));
                 }
+                Inventory.AddCurrency(state.Inventory.Copper, state.Inventory.Silver, state.Inventory.Gold, state.Inventory.Platinum);
             }
 
             Conditions = state.Conditions != null
@@ -438,7 +448,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
-                inventoryState, equipmentState, spellcastingState);
+                inventoryState, equipmentState, spellcastingState, ChallengeRating);
         }
 
         private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)

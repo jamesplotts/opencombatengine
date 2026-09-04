@@ -195,6 +195,28 @@ service SystemEngine {
   // mutating call in this contract: both updated actors come back for
   // Master to persist.
   rpc TransferItem(TransferItemRequest) returns (TransferItemResponse);
+
+  // GenerateLoot computes CR-appropriate treasure for a roster of
+  // creatures (typically called at encounter-prep time, right after
+  // creating them, so the DM can place real items onto real NPCs they
+  // can actually use in the fight — not as a post-combat reward roll).
+  // Combining multiple participants' challenge ratings into one
+  // effective CR is real system-engine math (docs/design.md §6.1) —
+  // Master never computes or holds a raw CR itself. A participant with
+  // no real challenge_rating recorded, or an empty participant list, is
+  // a real rejection.
+  rpc GenerateLoot(GenerateLootRequest) returns (GenerateLootResponse);
+
+  // AddCurrency adds currency to actor's inventory from nothing (a
+  // treasure placement, a narrative reward) — the currency equivalent
+  // of AddItemToInventory.
+  rpc AddCurrency(AddCurrencyRequest) returns (AddCurrencyResponse);
+
+  // TransferCurrency moves currency from source's inventory into
+  // target's — the currency equivalent of TransferItem. Rejects if
+  // source doesn't have enough of any requested denomination (this does
+  // not make change across denominations).
+  rpc TransferCurrency(TransferCurrencyRequest) returns (TransferCurrencyResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -798,6 +820,68 @@ message TransferItemRequest {
 message TransferItemResponse {
   bool success = 1;
   string error = 2; // set when item_name isn't in source's inventory
+  Actor source = 3;
+  Actor target = 4;
+  string result_message = 5;
+}
+
+message GenerateLootRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  // The creatures this roll's treasure is appropriate for — an
+  // encounter roster being prepped, or a single monster. Each must
+  // carry a real challenge_rating (see the character schema) or the
+  // whole call is rejected.
+  repeated Actor participants = 3;
+}
+
+message GenerateLootResponse {
+  bool success = 1;
+  // Set when the participant list is empty, or any participant has no
+  // real challenge_rating recorded.
+  string error = 2;
+  int32 copper = 3;
+  int32 silver = 4;
+  int32 gold = 5;
+  int32 platinum = 6;
+  // At most one item — this engine's loot generator awards zero or one
+  // item per roll, never a list.
+  string item_name = 7;
+  string result_message = 8;
+}
+
+message AddCurrencyRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  int32 copper = 4;
+  int32 silver = 5;
+  int32 gold = 6;
+  int32 platinum = 7;
+}
+
+message AddCurrencyResponse {
+  bool success = 1;
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message TransferCurrencyRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor source = 3;
+  Actor target = 4;
+  int32 copper = 5;
+  int32 silver = 6;
+  int32 gold = 7;
+  int32 platinum = 8;
+}
+
+message TransferCurrencyResponse {
+  bool success = 1;
+  // Set when source doesn't carry enough of a requested denomination.
+  string error = 2;
   Actor source = 3;
   Actor target = 4;
   string result_message = 5;

@@ -17,6 +17,37 @@ namespace OpenCombatEngine.Implementation.Items
 
         public double TotalWeight => _items.Sum(i => i.Weight);
 
+        public int Copper { get; private set; }
+        public int Silver { get; private set; }
+        public int Gold { get; private set; }
+        public int Platinum { get; private set; }
+
+        public Result<bool> AddCurrency(int copper, int silver, int gold, int platinum)
+        {
+            if (copper < 0 || silver < 0 || gold < 0 || platinum < 0)
+                return Result<bool>.Failure("Cannot add a negative amount of currency.");
+
+            Copper += copper;
+            Silver += silver;
+            Gold += gold;
+            Platinum += platinum;
+            return Result<bool>.Success(true);
+        }
+
+        public Result<bool> RemoveCurrency(int copper, int silver, int gold, int platinum)
+        {
+            if (copper < 0 || silver < 0 || gold < 0 || platinum < 0)
+                return Result<bool>.Failure("Cannot remove a negative amount of currency.");
+            if (copper > Copper || silver > Silver || gold > Gold || platinum > Platinum)
+                return Result<bool>.Failure("Insufficient currency.");
+
+            Copper -= copper;
+            Silver -= silver;
+            Gold -= gold;
+            Platinum -= platinum;
+            return Result<bool>.Success(true);
+        }
+
         public void SetEquipmentManager(OpenCombatEngine.Core.Interfaces.Items.IEquipmentManager equipmentManager)
         {
             _equipmentManager = equipmentManager;
@@ -50,7 +81,7 @@ namespace OpenCombatEngine.Implementation.Items
         public InventoryState GetState()
         {
             var itemStates = _items.Select(BuildItemState).ToList();
-            return new InventoryState(new Collection<ItemInstanceState>(itemStates));
+            return new InventoryState(new Collection<ItemInstanceState>(itemStates), Copper, Silver, Gold, Platinum);
         }
 
         private static ItemInstanceState BuildItemState(IItem item)
