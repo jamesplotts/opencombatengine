@@ -908,6 +908,56 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     }
 
     /// <summary>
+    /// Looks up item_name's real base price (<see cref="IItem.Value"/>,
+    /// copper pieces) from <see cref="_itemLibrary"/> — the same library
+    /// AddItemToInventory resolves names against — without adding it to
+    /// anyone's inventory. Decomposes the value into the fewest coins
+    /// (platinum first, down to copper) so the caller can hand the result
+    /// straight to TransferCurrency.
+    /// </summary>
+    public override Task<GetItemInfoResponse> GetItemInfo(GetItemInfoRequest request, ServerCallContext context)
+    {
+        var item = _itemLibrary.GetItem(request.ItemName);
+        if (item is null)
+            return Task.FromResult(new GetItemInfoResponse { Success = false, Error = $"'{request.ItemName}' is not a recognized item." });
+
+        var remaining = item.Value;
+        var platinum = remaining / 1000; remaining %= 1000;
+        var gold = remaining / 100; remaining %= 100;
+        var silver = remaining / 10; remaining %= 10;
+        var copper = remaining;
+
+        return Task.FromResult(new GetItemInfoResponse
+        {
+            Success = true,
+            ItemName = item.Name,
+            Copper = copper,
+            Silver = silver,
+            Gold = gold,
+            Platinum = platinum,
+            ResultMessage = $"{item.Name}: {platinum}pp, {gold}gp, {silver}sp, {copper}cp.",
+        });
+    }
+
+    /// <summary>
+    /// Returns the real item names currently held by actor. Exists because
+    /// Actor.character_data is opaque to Master (see the proto's own doc
+    /// comment on that field) — a vendor-stock listing needs this real RPC
+    /// rather than Master parsing character_data's inventory shape itself.
+    /// </summary>
+    public override Task<ListInventoryResponse> ListInventory(ListInventoryRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new ListInventoryResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var response = new ListInventoryResponse { Success = true };
+        response.ItemNames.AddRange(actor.Inventory.Items.Select(i => i.Name));
+        return Task.FromResult(response);
+    }
+
+    /// <summary>
     /// Computes the full concrete list of mechanically legal actions
     /// actor could take right now, against each of candidate_targets —
     /// see the proto's own doc comment for why this exists (real

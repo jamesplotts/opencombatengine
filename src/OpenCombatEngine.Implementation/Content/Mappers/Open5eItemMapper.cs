@@ -150,15 +150,17 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
         private static int ParseCost(string input)
         {
             if (string.IsNullOrWhiteSpace(input)) return 0;
-            // "10 gp"
-            // Convert to cp? Or keep as gold value? Interface says `int Value`. Let's assume Gold for now.
+            // "10 gp" — IItem.Value is denominated in copper pieces (the
+            // finest SRD unit), so every real price survives exactly. A
+            // gold-denominated int previously truncated anything under 1 gp
+            // to zero via integer truncation (e.g. "1 cp" -> 0).
             var parts = input.Split(' ');
             if (int.TryParse(parts[0], out int val))
             {
-                if (input.Contains("sp", StringComparison.OrdinalIgnoreCase)) return (int)(val * 0.1);
-                if (input.Contains("cp", StringComparison.OrdinalIgnoreCase)) return (int)(val * 0.01);
-                if (input.Contains("pp", StringComparison.OrdinalIgnoreCase)) return (int)(val * 10);
-                return val; // gp
+                if (input.Contains("sp", StringComparison.OrdinalIgnoreCase)) return val * 10;
+                if (input.Contains("cp", StringComparison.OrdinalIgnoreCase)) return val;
+                if (input.Contains("pp", StringComparison.OrdinalIgnoreCase)) return val * 1000;
+                return val * 100; // gp
             }
             return 0;
         }

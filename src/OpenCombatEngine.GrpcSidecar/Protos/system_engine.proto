@@ -20,7 +20,6 @@
 //
 // This copy is not the source of truth: if the contract changes, edit
 // layforge's copy first and re-copy here, not the other way around.
-
 syntax = "proto3";
 
 package layforge.systemengine.v1;
@@ -217,6 +216,22 @@ service SystemEngine {
   // source doesn't have enough of any requested denomination (this does
   // not make change across denominations).
   rpc TransferCurrency(TransferCurrencyRequest) returns (TransferCurrencyResponse);
+
+  // GetItemInfo looks up item_name's real base price from the sidecar's
+  // Open5e-backed item library (the same library AddItemToInventory
+  // resolves names against) without adding it to anyone's inventory —
+  // the vendor-economy tool layer's real price source (docs/design.md
+  // §8, §9: never let the DM model invent a price). An unrecognized name
+  // is a real rejection, not a guess, same as AddItemToInventory.
+  rpc GetItemInfo(GetItemInfoRequest) returns (GetItemInfoResponse);
+
+  // ListInventory returns the real item names currently held by actor —
+  // needed because Actor.character_data is opaque to Master (see that
+  // field's own doc comment): Master cannot enumerate a character's
+  // inventory by inspecting character_data itself, so a vendor-stock
+  // listing needs this real RPC rather than a Master-side guess at the
+  // engine's own inventory shape.
+  rpc ListInventory(ListInventoryRequest) returns (ListInventoryResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -885,4 +900,37 @@ message TransferCurrencyResponse {
   Actor source = 3;
   Actor target = 4;
   string result_message = 5;
+}
+
+message GetItemInfoRequest {
+  string request_id = 1;
+  string item_name = 2;
+}
+
+message GetItemInfoResponse {
+  bool success = 1;
+  string error = 2; // set when item_name isn't a real recognized item
+  string item_name = 3;
+  // Minimal-coin decomposition of the item's real base price (IItem.Value,
+  // copper pieces) — never Master-invented. A future per-campaign price
+  // adjustment (docs/design.md §9) is applied by Master on top of this
+  // engine-authoritative base, not baked in here.
+  int32 copper = 4;
+  int32 silver = 5;
+  int32 gold = 6;
+  int32 platinum = 7;
+  string result_message = 8;
+}
+
+message ListInventoryRequest {
+  string request_id = 1;
+  Actor actor = 2;
+}
+
+message ListInventoryResponse {
+  bool success = 1;
+  string error = 2;
+  // Real item names currently in actor's inventory — each independently
+  // resolvable via GetItemInfo for pricing.
+  repeated string item_names = 3;
 }

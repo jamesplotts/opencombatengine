@@ -1668,4 +1668,81 @@ public class SystemEngineGrpcServiceTests
         response.Success.Should().BeFalse();
         response.Error.Should().Contain("target is required");
     }
+
+    [Fact]
+    public async Task GetItemInfo_RecognizedItem_ReturnsCopperDecomposedPrice()
+    {
+        // FakeItemLibrary's Torch carries Value = 1 (copper pieces).
+        var response = await _service.GetItemInfo(new GetItemInfoRequest
+        {
+            RequestId = "r1", ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.ItemName.Should().Be("Torch");
+        response.Copper.Should().Be(1);
+        response.Silver.Should().Be(0);
+        response.Gold.Should().Be(0);
+        response.Platinum.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetItemInfo_ValueSpanningMultipleDenominations_DecomposesGreedily()
+    {
+        // FakeItemLibrary's Greatsword carries Value = 50 (copper pieces) ->
+        // 5 silver, no gold/platinum/copper remainder.
+        var response = await _service.GetItemInfo(new GetItemInfoRequest
+        {
+            RequestId = "r1", ItemName = "Greatsword",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Copper.Should().Be(0);
+        response.Silver.Should().Be(5);
+        response.Gold.Should().Be(0);
+        response.Platinum.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetItemInfo_UnrecognizedItem_ReturnsFailure()
+    {
+        var response = await _service.GetItemInfo(new GetItemInfoRequest
+        {
+            RequestId = "r1", ItemName = "Wand of Made-Up Nonsense",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not a recognized item");
+    }
+
+    [Fact]
+    public async Task ListInventory_ActorWithRealItems_ReturnsTheirNames()
+    {
+        var creature = new StandardCreature(MakeState());
+        creature.Inventory.AddItem(_itemLibrary.GetItem("Torch")!);
+        creature.Inventory.AddItem(_itemLibrary.GetItem("Dagger")!);
+        var actor = ActorMapping.ToActor(creature);
+
+        var response = await _service.ListInventory(new ListInventoryRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.ItemNames.Should().BeEquivalentTo(new[] { "Torch", "Dagger" });
+    }
+
+    [Fact]
+    public async Task ListInventory_ActorWithNoItems_ReturnsEmptyList()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.ListInventory(new ListInventoryRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.ItemNames.Should().BeEmpty();
+    }
 }

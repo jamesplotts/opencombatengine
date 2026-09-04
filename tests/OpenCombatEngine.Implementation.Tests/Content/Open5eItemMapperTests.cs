@@ -85,6 +85,26 @@ namespace OpenCombatEngine.Implementation.Tests.Content
             weapon.Properties.Should().Contain(WeaponProperty.Light);
         }
 
+        [Theory]
+        [InlineData("10 gp", 1000)]
+        [InlineData("5 sp", 50)]
+        [InlineData("2 cp", 2)]
+        // Regression guard: this used to truncate to 0 via `(int)(1 * 0.01)`
+        // before Value was normalized to copper pieces — a torch at "1 cp"
+        // silently mapped to a free item.
+        [InlineData("1 cp", 1)]
+        [InlineData("3 pp", 3000)]
+        [InlineData("", 0)]
+        public void MapWeapon_Cost_NormalizesToCopperPieces(string cost, int expectedCopper)
+        {
+            var source = MakeWeapon("Test Weapon", "1d6", "slashing");
+            source.Cost = cost;
+
+            var weapon = Open5eItemMapper.MapWeapon(source);
+
+            weapon.Value.Should().Be(expectedCopper);
+        }
+
         [Fact]
         public void MapMagicItem_Should_Produce_A_Real_Magic_Item_Not_A_Plain_Item()
         {
