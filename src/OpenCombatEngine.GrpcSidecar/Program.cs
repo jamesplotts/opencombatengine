@@ -121,30 +121,64 @@ builder.Services.AddSingleton<IDiceRoller, StandardDiceRoller>();
 // StandardCreature.ResolveItem's own remarks), so equipped-weapon data
 // (needed for the Attack RPC — melee_attack/ranged_attack) would silently
 // come back null on every round trip regardless of what was actually
-// equipped. Unlike the spell repository, this has no local on-disk cache
-// of its own yet: Open5e's weapon/armor/magic-item endpoints are small
-// (SRD 5.1 has a few dozen weapons/armor pieces; magic items are the
-// largest of the three but still nowhere near the ~1400-spell catalog),
-// so a startup fetch here is a much smaller, much less rate-limit-prone
-// operation than the spell one this cache exists for. If that changes
-// (a much larger third-party item catalog, or the same rate-limiting
-// this environment already hit twice for spells), an Open5eItemCache
-// mirroring Open5eSpellCache would be the same fix applied here.
+// equipped. Cache-first, same reasoning and same shape as the spell
+// repository above: this repo's own earlier RELEASE_NOTES/README already
+// documented this as a known gap ("Open5e's weapon/armor/magic-item
+// endpoints are small... so a startup fetch here is much less
+// rate-limit-prone"), which turned out to be optimistic — a real,
+// live-observed sidecar startup during this project's own later
+// development still hit the 15-second HttpClient timeout fetching the
+// full, paginated weapons+armor+magic-items catalog even with Open5e
+// itself reachable, leaving the item library empty for that run. This
+// cache (Open5eItemCache, mirroring Open5eSpellCache) closes that gap
+// the same way the spell one already was closed.
+var itemCachePath = Environment.GetEnvironmentVariable("OPEN5E_ITEM_CACHE_PATH")
+    ?? Path.Combine(AppContext.BaseDirectory, "open5e-cache", "items.json");
+var itemCacheMaxAge = TimeSpan.FromDays(7);
 var itemLibrary = new StandardItemLibrary(new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }), spellDiceRoller), spellDiceRoller, spellRepository);
 #pragma warning disable CA1031
 try
 {
-    await itemLibrary.InitializeAsync();
-    Console.WriteLine($"Loaded {itemLibrary.GetAllItems().Count()} SRD items (weapons/armor/magic items) from Open5e.");
+    var freshItemCache = Open5eItemCache.TryLoadFresh(itemCachePath, itemCacheMaxAge);
+    if (freshItemCache != null)
+    {
+        itemLibrary.InitializeFromDtos(freshItemCache.Weapons, freshItemCache.Armor, freshItemCache.MagicItems);
+        Console.WriteLine($"Loaded {itemLibrary.GetAllItems().Count()} SRD items (weapons/armor/magic items) from local cache ({itemCachePath}, {FormatAge(Open5eItemCache.Age(itemCachePath))}) — skipped the live Open5e fetch.");
+    }
+    else
+    {
+        var itemContentSource = new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }), spellDiceRoller);
+        var weaponDtos = await itemContentSource.GetAllWeaponDtosAsync();
+        var armorDtos = await itemContentSource.GetAllArmorDtosAsync();
+        var magicItemDtos = await itemContentSource.GetAllMagicItemDtosAsync();
+        if (weaponDtos.Count == 0 && armorDtos.Count == 0 && magicItemDtos.Count == 0)
+        {
+            throw new InvalidOperationException("Open5e returned no items (empty or unreachable).");
+        }
+        itemLibrary.InitializeFromDtos(weaponDtos, armorDtos, magicItemDtos);
+        Open5eItemCache.Save(itemCachePath, weaponDtos, armorDtos, magicItemDtos);
+        Console.WriteLine($"Loaded {itemLibrary.GetAllItems().Count()} SRD items (weapons/armor/magic items) from Open5e (cached to {itemCachePath} for future startups).");
+    }
 }
 catch (Exception ex)
 {
     // Same "degrade rather than crash" posture as the spell repository
-    // above: an Attack call against a character whose weapon isn't in
-    // (or wasn't loaded into) the library fails with a real, visible
-    // "No weapon equipped"/unresolvable-item error rather than the
-    // sidecar refusing to start at all over an Open5e outage.
-    Console.Error.WriteLine($"Warning: failed to populate item library from Open5e at startup: {ex.Message}. Equipped-weapon data will not resolve until this is fixed.");
+    // above: a stale cache is still far more useful than an empty item
+    // library, so try one before giving up entirely.
+    var staleItemCache = Open5eItemCache.TryLoadAny(itemCachePath);
+    if (staleItemCache != null)
+    {
+        itemLibrary.InitializeFromDtos(staleItemCache.Weapons, staleItemCache.Armor, staleItemCache.MagicItems);
+        Console.Error.WriteLine($"Warning: live Open5e item fetch failed ({ex.Message}); using stale local cache instead ({itemLibrary.GetAllItems().Count()} items, {FormatAge(Open5eItemCache.Age(itemCachePath))}).");
+    }
+    else
+    {
+        // An Attack call against a character whose weapon isn't in (or
+        // wasn't loaded into) the library fails with a real, visible "No
+        // weapon equipped"/unresolvable-item error rather than the
+        // sidecar refusing to start at all over an Open5e outage.
+        Console.Error.WriteLine($"Warning: failed to populate item library from Open5e at startup, and no local cache exists: {ex.Message}. Equipped-weapon data will not resolve until this is fixed.");
+    }
 }
 #pragma warning restore CA1031
 builder.Services.AddSingleton<IItemLibrary>(itemLibrary);

@@ -7,6 +7,7 @@ using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Content.Dtos;
 using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Core.Interfaces.Items;
+using OpenCombatEngine.Implementation.Open5e.Models;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -125,17 +126,55 @@ namespace OpenCombatEngine.Implementation.Open5e
             return dtos.Select(dto => SpellMapper.Map(dto, _diceRoller));
         }
 
-        public async Task<IEnumerable<IWeapon>> GetAllWeaponsAsync()
+        /// <summary>
+        /// Fetches every weapon in the Open5e SRD weapon list as its raw,
+        /// plain-serializable <see cref="Open5eWeapon"/> DTO (not yet
+        /// <c>IWeapon</c> — <see cref="GetAllWeaponsAsync"/> does that
+        /// last step), following pagination until Open5e reports no
+        /// further page. Split out so a caller (e.g.
+        /// <c>Open5eItemCache</c>) can persist the DTOs themselves — same
+        /// reasoning as <see cref="GetAllSpellDtosAsync"/>.
+        /// </summary>
+        public async Task<List<Open5eWeapon>> GetAllWeaponDtosAsync()
         {
-            var result = new List<IWeapon>();
+            var result = new List<Open5eWeapon>();
             int page = 1;
             while (true)
             {
                 var response = await _client.GetWeaponsAsync(page).ConfigureAwait(false);
                 if (response == null || response.Results.Count == 0) break;
 
-                result.AddRange(response.Results.Select(Open5eItemMapper.MapWeapon));
-                
+                result.AddRange(response.Results);
+
+                if (string.IsNullOrEmpty(response.Next)) break;
+                page++;
+            }
+            return result;
+        }
+
+        public async Task<IEnumerable<IWeapon>> GetAllWeaponsAsync()
+        {
+            var dtos = await GetAllWeaponDtosAsync().ConfigureAwait(false);
+            return dtos.Select(Open5eItemMapper.MapWeapon);
+        }
+
+        /// <summary>
+        /// Fetches every armor piece in the Open5e SRD armor list as its
+        /// raw <see cref="Open5eArmor"/> DTO — see
+        /// <see cref="GetAllWeaponDtosAsync"/> for why this is split from
+        /// <see cref="GetAllArmorAsync"/>.
+        /// </summary>
+        public async Task<List<Open5eArmor>> GetAllArmorDtosAsync()
+        {
+            var result = new List<Open5eArmor>();
+            int page = 1;
+            while (true)
+            {
+                var response = await _client.GetArmorAsync(page).ConfigureAwait(false);
+                if (response == null || response.Results.Count == 0) break;
+
+                result.AddRange(response.Results);
+
                 if (string.IsNullOrEmpty(response.Next)) break;
                 page++;
             }
@@ -144,15 +183,27 @@ namespace OpenCombatEngine.Implementation.Open5e
 
         public async Task<IEnumerable<IArmor>> GetAllArmorAsync()
         {
-            var result = new List<IArmor>();
+            var dtos = await GetAllArmorDtosAsync().ConfigureAwait(false);
+            return dtos.Select(Open5eItemMapper.MapArmor);
+        }
+
+        /// <summary>
+        /// Fetches every magic item in the Open5e SRD magic item list as
+        /// its raw <see cref="Open5eMagicItem"/> DTO — see
+        /// <see cref="GetAllWeaponDtosAsync"/> for why this is split from
+        /// <see cref="GetAllMagicItemsAsync"/>.
+        /// </summary>
+        public async Task<List<Open5eMagicItem>> GetAllMagicItemDtosAsync()
+        {
+            var result = new List<Open5eMagicItem>();
             int page = 1;
             while (true)
             {
-                var response = await _client.GetArmorAsync(page).ConfigureAwait(false);
+                var response = await _client.GetMagicItemsAsync(page).ConfigureAwait(false);
                 if (response == null || response.Results.Count == 0) break;
 
-                result.AddRange(response.Results.Select(Open5eItemMapper.MapArmor));
-                
+                result.AddRange(response.Results);
+
                 if (string.IsNullOrEmpty(response.Next)) break;
                 page++;
             }
@@ -161,19 +212,8 @@ namespace OpenCombatEngine.Implementation.Open5e
 
         public async Task<IEnumerable<IItem>> GetAllMagicItemsAsync()
         {
-            var result = new List<IItem>();
-            int page = 1;
-            while (true)
-            {
-                var response = await _client.GetMagicItemsAsync(page).ConfigureAwait(false);
-                if (response == null || response.Results.Count == 0) break;
-
-                result.AddRange(response.Results.Select(Open5eItemMapper.MapMagicItem));
-                
-                if (string.IsNullOrEmpty(response.Next)) break;
-                page++;
-            }
-            return result;
+            var dtos = await GetAllMagicItemDtosAsync().ConfigureAwait(false);
+            return dtos.Select(Open5eItemMapper.MapMagicItem);
         }
     }
 }

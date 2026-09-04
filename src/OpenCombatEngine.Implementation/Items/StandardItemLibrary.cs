@@ -9,7 +9,9 @@ using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Content;
+using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Implementation.Open5e;
+using OpenCombatEngine.Implementation.Open5e.Models;
 using OpenCombatEngine.Implementation.Spells;
 
 namespace OpenCombatEngine.Implementation.Items
@@ -43,6 +45,27 @@ namespace OpenCombatEngine.Implementation.Items
             _items.AddRange(weapons);
             _items.AddRange(armor);
             _items.AddRange(magicItems);
+
+            _isInitialized = true;
+        }
+
+        /// <summary>
+        /// Populates the library directly from already-fetched Open5e DTOs
+        /// (weapons/armor/magic items), mapping them the same way
+        /// <see cref="InitializeAsync"/> does internally — the entry point
+        /// for a cache-hit startup path (<c>Open5eItemCache</c>) that
+        /// never needs to touch the network at all, mirroring how a
+        /// cached spell list is mapped and added to a
+        /// <c>ISpellRepository</c> without ever calling this class's own
+        /// content-source-driven <see cref="InitializeAsync"/>.
+        /// </summary>
+        public void InitializeFromDtos(IEnumerable<Open5eWeapon> weapons, IEnumerable<Open5eArmor> armor, IEnumerable<Open5eMagicItem> magicItems)
+        {
+            if (_isInitialized) return;
+
+            _items.AddRange(weapons.Select(Open5eItemMapper.MapWeapon));
+            _items.AddRange(armor.Select(Open5eItemMapper.MapArmor));
+            _items.AddRange(magicItems.Select(Open5eItemMapper.MapMagicItem));
 
             _isInitialized = true;
         }

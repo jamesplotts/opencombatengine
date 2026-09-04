@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -9,6 +10,7 @@ using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Implementation.Items;
 using OpenCombatEngine.Implementation.Open5e;
+using OpenCombatEngine.Implementation.Open5e.Models;
 using OpenCombatEngine.Implementation.Spells;
 using Xunit;
 
@@ -143,6 +145,37 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             var result = library.ImportMagicItemsFromFile(string.Empty);
 
             result.IsSuccess.Should().BeFalse();
+        }
+
+        [Fact]
+        public void InitializeFromDtos_Should_Map_And_Add_All_Three_Item_Types()
+        {
+            var library = new StandardItemLibrary(_contentSource, _diceRoller);
+            var weapons = new List<Open5eWeapon> { new() { Name = "Longsword", Slug = "longsword", DamageDice = "1d8", DamageType = "slashing" } };
+            var armor = new List<Open5eArmor> { new() { Name = "Chain Mail", Slug = "chain-mail", BaseAc = 16 } };
+            var magicItems = new List<Open5eMagicItem> { new() { Name = "Potion of Healing", Slug = "potion-of-healing", Rarity = "Common" } };
+
+            library.InitializeFromDtos(weapons, armor, magicItems);
+
+            library.GetAllItems().Should().HaveCount(3);
+            library.GetWeapon("Longsword").Should().NotBeNull();
+            library.GetArmor("Chain Mail").Should().NotBeNull();
+            library.GetItem("Potion of Healing").Should().NotBeNull();
+        }
+
+        [Fact]
+        public void InitializeFromDtos_CalledTwice_Should_Not_Duplicate_Items()
+        {
+            // Mirrors InitializeAsync's own idempotency guard (_isInitialized) -
+            // a cache-hit startup path must be safe to call exactly like the
+            // live-fetch path already is.
+            var library = new StandardItemLibrary(_contentSource, _diceRoller);
+            var weapons = new List<Open5eWeapon> { new() { Name = "Longsword", Slug = "longsword" } };
+
+            library.InitializeFromDtos(weapons, new List<Open5eArmor>(), new List<Open5eMagicItem>());
+            library.InitializeFromDtos(weapons, new List<Open5eArmor>(), new List<Open5eMagicItem>());
+
+            library.GetAllItems().Should().ContainSingle();
         }
     }
 }
