@@ -908,6 +908,31 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     }
 
     /// <summary>
+    /// Removes currency from actor's inventory into nothing —
+    /// AddCurrency's inverse, and the single-actor equivalent of
+    /// TransferCurrency's own remove-half. Real rejection if actor
+    /// doesn't carry enough of a requested denomination.
+    /// </summary>
+    public override Task<RemoveCurrencyResponse> RemoveCurrency(RemoveCurrencyRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new RemoveCurrencyResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var removeResult = actor.Inventory.RemoveCurrency(request.Copper, request.Silver, request.Gold, request.Platinum);
+        if (removeResult.IsFailure)
+            return Task.FromResult(new RemoveCurrencyResponse { Success = false, Error = removeResult.Error });
+
+        return Task.FromResult(new RemoveCurrencyResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} loses {request.Copper}cp, {request.Silver}sp, {request.Gold}gp, {request.Platinum}pp.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
     /// Looks up item_name's real base price (<see cref="IItem.Value"/>,
     /// copper pieces) from <see cref="_itemLibrary"/> — the same library
     /// AddItemToInventory resolves names against — without adding it to

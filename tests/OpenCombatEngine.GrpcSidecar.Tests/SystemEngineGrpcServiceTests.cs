@@ -1670,6 +1670,36 @@ public class SystemEngineGrpcServiceTests
     }
 
     [Fact]
+    public async Task RemoveCurrency_Success_DecrementsActorCurrency()
+    {
+        var actor = MakeActorWithCurrency(0, 0, 50, 0);
+
+        var response = await _service.RemoveCurrency(new RemoveCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Gold = 20,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var restored = ActorMapping.ToCreature(response.Actor, _spellRepository, _itemLibrary);
+        restored.IsSuccess.Should().BeTrue();
+        restored.Value.Inventory.Gold.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task RemoveCurrency_InsufficientFunds_ReturnsFailure()
+    {
+        var actor = MakeActorWithCurrency(0, 0, 5, 0);
+
+        var response = await _service.RemoveCurrency(new RemoveCurrencyRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, Gold = 20,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("Insufficient");
+    }
+
+    [Fact]
     public async Task GetItemInfo_RecognizedItem_ReturnsCopperDecomposedPrice()
     {
         // FakeItemLibrary's Torch carries Value = 1 (copper pieces).

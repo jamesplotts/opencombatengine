@@ -217,6 +217,16 @@ service SystemEngine {
   // not make change across denominations).
   rpc TransferCurrency(TransferCurrencyRequest) returns (TransferCurrencyResponse);
 
+  // RemoveCurrency removes currency from actor's inventory into
+  // nothing — the currency equivalent of RemoveItemFromInventory, and
+  // AddCurrency's inverse. Rejects if actor doesn't have enough of any
+  // requested denomination, the same real precondition
+  // TransferCurrency's own remove-half already enforces. Exists for a
+  // caller that needs to debit an actor without a second real Actor on
+  // the receiving end (e.g. a location-scoped stash that isn't a
+  // character) — TransferCurrency can't express that.
+  rpc RemoveCurrency(RemoveCurrencyRequest) returns (RemoveCurrencyResponse);
+
   // GetItemInfo looks up item_name's real base price from the sidecar's
   // Open5e-backed item library (the same library AddItemToInventory
   // resolves names against) without adding it to anyone's inventory —
@@ -900,6 +910,24 @@ message TransferCurrencyResponse {
   Actor source = 3;
   Actor target = 4;
   string result_message = 5;
+}
+
+message RemoveCurrencyRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  int32 copper = 4;
+  int32 silver = 5;
+  int32 gold = 6;
+  int32 platinum = 7;
+}
+
+message RemoveCurrencyResponse {
+  bool success = 1;
+  // Set when actor doesn't carry enough of a requested denomination.
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
 }
 
 message GetItemInfoRequest {
