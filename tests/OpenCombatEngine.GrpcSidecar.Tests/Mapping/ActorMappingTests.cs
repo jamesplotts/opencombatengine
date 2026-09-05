@@ -46,6 +46,26 @@ public class ActorMappingTests
         actor.CharacterData.Fields["name"].StringValue.Should().Be("Kestrel");
     }
 
+    // Regression coverage for a bug found during character-creation live
+    // verification (design doc §9.4): a rolled character's player-chosen
+    // Gender came back null after StartCharacterCreation/
+    // AnswerCharacterCreationPrompt, even though the CreatureState the
+    // creation service itself built had the right value. The loss was in
+    // this exact ToActor path — StandardCreature's CreatureState-restoring
+    // constructor never captured Gender, so its own GetState() could not
+    // put it back — not in CreatureStateJson (already covered by
+    // CreatureStateJsonTests, which serializes CreatureState directly and
+    // never exercises the StandardCreature round trip in between).
+    [Fact]
+    public void ToActor_StandardCreatureFromStateWithGender_PreservesGenderThroughRoundTrip()
+    {
+        var creature = new StandardCreature(MakeState() with { Gender = "Nonbinary" });
+
+        var actor = ActorMapping.ToActor(creature);
+
+        actor.CharacterData.Fields["gender"].StringValue.Should().Be("Nonbinary");
+    }
+
     [Fact]
     public void ToCreature_ActorFromToActor_RoundTripsCoreFields()
     {

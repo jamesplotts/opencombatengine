@@ -68,6 +68,15 @@ namespace OpenCombatEngine.Core.Models.States
     /// RPC's encounter-CR computation — a creature with no CR recorded
     /// (null) cannot be included in a loot roll.
     /// </param>
+    /// <param name="Gender">
+    /// Free-text roleplay flavor — the SRD attaches no mechanical effect
+    /// to gender, so this is never validated against an enum or read by
+    /// any rules logic. Null for a creature nobody set one on (every
+    /// existing record before this field existed, and any DM-authored
+    /// monster/NPC that doesn't care to set it). Appended as the last
+    /// parameter (not grouped near Spellcasting) so every pre-existing
+    /// positional call site in this repo keeps compiling unchanged.
+    /// </param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -81,5 +90,6 @@ namespace OpenCombatEngine.Core.Models.States
         InventoryState? Inventory = null,
         EquipmentState? Equipment = null,
         SpellCasterState? Spellcasting = null,
-        double? ChallengeRating = null);
+        double? ChallengeRating = null,
+        string? Gender = null);
 }

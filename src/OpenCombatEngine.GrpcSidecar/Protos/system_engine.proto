@@ -9,17 +9,16 @@
 // in any language with a protobuf compiler — that's the whole point of
 // this being the extensibility seam rather than an in-language interface.
 //
-// Vendored from github.com/jamesplotts/layforge's protocol/system_engine.proto,
-// which is the canonical source of truth for this contract — that repo's
-// own generate.sh regenerates Go stubs from it, and the same file is
-// copied here verbatim so this project's build can generate the C#
-// server stubs Grpc.Tools produces automatically from any .proto file
-// under Protos/ (see OpenCombatEngine.GrpcSidecar.csproj's <Protobuf>
-// item) — no separate generate step needed on this side, unlike
-// layforge's Go tooling.
-//
-// This copy is not the source of truth: if the contract changes, edit
-// layforge's copy first and re-copy here, not the other way around.
+// Generate stubs with protocol/generate.sh; do not hand-edit generated
+// code. The Go stubs land inside the Master module itself
+// (master/internal/systemenginepb/, gitignored — regenerate, don't
+// commit) rather than under a repo-level protocol/gen/, since Go modules
+// can't cleanly import generated code living outside their own tree
+// without workspace/multi-module machinery this project doesn't need
+// yet — see protocol/README.md. A future non-Go consumer's stubs (e.g. a
+// Python reference SDK) would generate into that consumer's own
+// language-appropriate location instead.
+
 syntax = "proto3";
 
 package layforge.systemengine.v1;
@@ -242,6 +241,40 @@ service SystemEngine {
   // listing needs this real RPC rather than a Master-side guess at the
   // engine's own inventory shape.
   rpc ListInventory(ListInventoryRequest) returns (ListInventoryResponse);
+
+  // StartCharacterCreation begins a new interactive character-creation
+  // session (docs/design.md §9.4's "roll a new character" path) and
+  // returns the first prompt. The engine owns the entire question
+  // sequence — what to ask next given what's answered so far, when a
+  // spellcasting class needs an extra step, when the character is
+  // done — Master's role is only to relay each CharacterCreationPromptResponse
+  // to the requesting player and forward their answer back via
+  // AnswerCharacterCreationPrompt, never to decide step order itself
+  // (that would be D&D/SRD-specific logic leaking into Master, the
+  // same "adapter is thin, the engine owns domain logic" principle
+  // every other call in this contract already follows). Session state
+  // is held in-memory by the engine, keyed by session_id — ephemeral
+  // by design; a sidecar restart or an abandoned session loses that
+  // player's in-progress answers, the same "lost until a persistence
+  // layer is added" posture Master itself accepts for other in-memory
+  // state.
+  rpc StartCharacterCreation(StartCharacterCreationRequest) returns (CharacterCreationPromptResponse);
+
+  // AnswerCharacterCreationPrompt records an answer against whatever
+  // question session_id currently has pending, and returns either the
+  // next prompt or (once every required question has been answered
+  // for the session's mode) the finished character. Calling this with
+  // an unknown/expired session_id is a real rejection (success =
+  // false), not a crash.
+  rpc AnswerCharacterCreationPrompt(AnswerCharacterCreationPromptRequest) returns (CharacterCreationPromptResponse);
+
+  // ListClassSpells returns class_name's real cantrip and first-level
+  // spell options, straight from the same spell repository the
+  // character-creation spell-pick prompts and cast_spell's own
+  // class-list validation already use — so Master can show a detailed-
+  // roll player their real choices before they answer, without a
+  // second, possibly-drifting spell list of its own.
+  rpc ListClassSpells(ListClassSpellsRequest) returns (ListClassSpellsResponse);
 }
 
 // Actor identifies a character/creature and carries its current data as
@@ -961,4 +994,70 @@ message ListInventoryResponse {
   // Real item names currently in actor's inventory — each independently
   // resolvable via GetItemInfo for pricing.
   repeated string item_names = 3;
+}
+
+// CharacterCreationMode selects how much of the question sequence
+// StartCharacterCreation actually surfaces to the player.
+// CHARACTER_CREATION_MODE_UNSPECIFIED is the required proto3 zero
+// value, not a real mode — the engine rejects a request carrying it,
+// the same "never let an unset value silently mean something valid"
+// reasoning as every other enum in this contract.
+enum CharacterCreationMode {
+  CHARACTER_CREATION_MODE_UNSPECIFIED = 0;
+  // Player picks race, class, and gender; everything else (background,
+  // ability scores, starting spells) is rolled by the engine itself —
+  // fewer questions, not zero.
+  CHARACTER_CREATION_MODE_QUICK = 1;
+  // Every step is a real, player-visible prompt.
+  CHARACTER_CREATION_MODE_DETAILED = 2;
+}
+
+message StartCharacterCreationRequest {
+  // Master-generated, the same id scheme as any other Master-assigned
+  // id (character_id, vehicle_id) — the engine only keys its own
+  // session table on this, it never generates or interprets it.
+  string session_id = 1;
+  string campaign_id = 2;
+  CharacterCreationMode mode = 3;
+  // The player's own already-typed display name — the finished
+  // character's Name is set from this directly; it is never asked as
+  // a prompt of its own.
+  string character_name = 4;
+}
+
+message AnswerCharacterCreationPromptRequest {
+  string session_id = 1;
+  // The chosen option's raw value (must be a real member of the most
+  // recent CharacterCreationPromptResponse.choices for this session),
+  // or free text for a prompt with no enumerated choices (today, only
+  // the gender prompt).
+  string answer = 2;
+}
+
+message CharacterCreationPromptResponse {
+  bool success = 1;
+  // Set when success = false: unknown/expired session_id, or answer
+  // isn't a real member of the pending prompt's choices.
+  string error = 2;
+  // True once every question this session's mode requires has been
+  // answered — actor is set, prompt_text/choices are not.
+  bool done = 3;
+  string prompt_text = 4;
+  // Enumerated options the player picks from; empty means the client
+  // should collect free text instead (today, only the gender prompt).
+  repeated string choices = 5;
+  // Set only when done = true: the finished, fully-generated character.
+  Actor actor = 6;
+}
+
+message ListClassSpellsRequest {
+  string class_name = 1;
+}
+
+message ListClassSpellsResponse {
+  bool success = 1;
+  string error = 2; // set when class_name isn't a real spellcasting class
+  repeated string cantrips = 3;
+  // Level-1 spells only, at this scope.
+  repeated string leveled_spells = 4;
 }

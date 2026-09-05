@@ -38,12 +38,14 @@ public class SystemEngineGrpcServiceTests
     private readonly IItemLibrary _itemLibrary = new FakeItemLibrary();
     private readonly OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator _lootGenerator;
     private readonly OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator _encounterCalculator = new OpenCombatEngine.Implementation.Loot.StandardEncounterChallengeCalculator();
+    private readonly OpenCombatEngine.Core.Interfaces.CharacterCreation.ICharacterCreationService _characterCreationService;
     private readonly SystemEngineGrpcService _service;
 
     public SystemEngineGrpcServiceTests()
     {
         _lootGenerator = new OpenCombatEngine.Implementation.Loot.StandardLootGenerator(_itemLibrary, _diceRoller);
-        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller, _itemLibrary, _lootGenerator, _encounterCalculator);
+        _characterCreationService = new OpenCombatEngine.Implementation.CharacterCreation.StandardCharacterCreationService(_diceRoller, _spellRepository);
+        _service = new SystemEngineGrpcService(_spellRepository, _diceRoller, _itemLibrary, _lootGenerator, _encounterCalculator, _characterCreationService);
     }
 
     // Minimal IItemLibrary test double — StandardCreature.ResolveItem

@@ -4,11 +4,13 @@
 // See LEGAL.md for full disclaimers
 
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using OpenCombatEngine.Core.Interfaces.CharacterCreation;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Loot;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.GrpcSidecar;
+using OpenCombatEngine.Implementation.CharacterCreation;
 using OpenCombatEngine.Implementation.Content.Mappers;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Items;
@@ -189,6 +191,12 @@ builder.Services.AddSingleton<IItemLibrary>(itemLibrary);
 // dependency at all).
 builder.Services.AddSingleton<ILootGenerator>(new StandardLootGenerator(itemLibrary, new StandardDiceRoller()));
 builder.Services.AddSingleton<IEncounterChallengeCalculator, StandardEncounterChallengeCalculator>();
+
+// Character creation (StartCharacterCreation/AnswerCharacterCreationPrompt,
+// design doc §9.4's "roll a new character" path) needs the same real
+// dice roller and the same already-populated spell repository the rest
+// of this file wires up above — no new dependencies of its own.
+builder.Services.AddSingleton<ICharacterCreationService, StandardCharacterCreationService>();
 
 // Sidecars talk gRPC in-process/loopback only (docs/design.md §6.1 — no
 // public-facing listener), so this runs cleartext HTTP/2 (h2c) rather than

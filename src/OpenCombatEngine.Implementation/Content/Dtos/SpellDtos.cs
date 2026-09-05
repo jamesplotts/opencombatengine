@@ -68,6 +68,15 @@ namespace OpenCombatEngine.Implementation.Content.Dtos
 
         [JsonPropertyName("instanceCountPerUpcastLevel")]
         public int InstanceCountPerUpcastLevel { get; set; }
+
+        // Also Open5e-specific — populated from its real dnd_class field
+        // (Open5eAdapter splits the comma-separated string), not part of
+        // the 5etools format this DTO otherwise mirrors. Used by
+        // character-creation's spell-pick prompts (ICharacterCreationService)
+        // to filter the real spell repository down to one class's actual
+        // list, rather than a second, hand-authored spell list.
+        [JsonPropertyName("classes")]
+        public List<string> Classes { get; set; } = new();
     }
 #pragma warning restore CA2227
 #pragma warning restore CA1002

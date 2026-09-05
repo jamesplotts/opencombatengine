@@ -64,6 +64,10 @@ Used as the reference D&D system engine for [Layforge](https://github.com/jamesp
   - Passive Bonuses (Features/Conditions applied automatically)
   - Item Types (Weapons, Armor, Rings, Wondrous Items)
   - Cloned on resolve so owners never share mutable item state
+- **Character Creation**:
+  - Stateful, question-at-a-time SRD character generation (`ICharacterCreationService`) — 4 races, 4 classes, 4 backgrounds, 2 ability-score methods
+  - Quick roll (race/class/gender, rest auto-rolled) and detailed roll (every choice) share one decision engine, distinguished only by which steps are surfaced
+  - Real SRD spellcasting at creation for a Wizard/Cleric (cantrips, slots, prepared/known spells) generated from the same live spell repository every other spell-aware RPC uses
 - **Persistence**:
   - Memento-pattern save/load for creature state (JSON compatible)
   - Full round-trip serialization for inventory, equipment, and spellcasting — including nested container contents

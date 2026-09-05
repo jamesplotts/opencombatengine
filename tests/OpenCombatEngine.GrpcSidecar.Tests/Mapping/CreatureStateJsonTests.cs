@@ -48,6 +48,27 @@ public class CreatureStateJsonTests
     }
 
     [Fact]
+    public void Deserialize_ValidJsonWithGender_RoundTripsGender()
+    {
+        var original = MakeState() with { Gender = "Nonbinary" };
+        var json = CreatureStateJson.Serialize(original);
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Gender.Should().Be("Nonbinary");
+    }
+
+    [Fact]
+    public void Deserialize_NoGenderInJson_GenderIsNull()
+    {
+        var result = CreatureStateJson.Deserialize(CreatureStateJson.Serialize(MakeState()));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Gender.Should().BeNull();
+    }
+
+    [Fact]
     public void Deserialize_MalformedJson_ReturnsFailureNotException()
     {
         var result = CreatureStateJson.Deserialize("{not valid json");

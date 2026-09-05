@@ -48,6 +48,19 @@ namespace OpenCombatEngine.Core.Interfaces.Spells
         OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
         /// <summary>
+        /// Which SRD classes' spell lists include this spell (e.g.
+        /// ["Wizard", "Sorcerer"]) — sourced from Open5e's own
+        /// <c>dnd_class</c> field where available (see
+        /// Open5eAdapter.ToStandard). A default interface member
+        /// returning an empty list, not a required member: this is an
+        /// additive capability (design doc's "design fields forward"
+        /// principle, Layforge CLAUDE.md) that every pre-existing
+        /// <see cref="ISpell"/> implementation — including this repo's own
+        /// test fakes — should not need to be touched to keep compiling.
+        /// </summary>
+        System.Collections.Generic.IReadOnlyList<string> Classes => System.Array.Empty<string>();
+
+        /// <summary>
         /// Executes the spell's effect.
         /// </summary>
         /// <param name="caster">The creature casting the spell.</param>

@@ -48,7 +48,8 @@ namespace OpenCombatEngine.Implementation.Content.Mappers
                 damageRolls,
                 dto.HealingDice,
                 instanceCount: dto.InstanceCount,
-                instanceCountPerUpcastLevel: dto.InstanceCountPerUpcastLevel
+                instanceCountPerUpcastLevel: dto.InstanceCountPerUpcastLevel,
+                classes: dto.Classes
             );
         }
 

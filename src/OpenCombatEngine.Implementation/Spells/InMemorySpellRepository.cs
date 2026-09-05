@@ -30,5 +30,10 @@ namespace OpenCombatEngine.Implementation.Spells
 
             return Result<ISpell>.Failure($"Spell '{name}' not found.");
         }
+
+        /// <summary>
+        /// Returns every spell currently held, in no particular order.
+        /// </summary>
+        public IEnumerable<ISpell> GetAllSpells() => _spells.Values;
     }
 }

@@ -18,6 +18,7 @@ using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 using OpenCombatEngine.Implementation.Actions;
 using OpenCombatEngine.Implementation.Actions.Contexts;
+using OpenCombatEngine.Implementation.CharacterCreation;
 using OpenCombatEngine.Implementation.Conditions;
 using OpenCombatEngine.Implementation.Creatures;
 using OpenCombatEngine.Implementation.Spatial;
@@ -52,29 +53,32 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     private readonly IItemLibrary _itemLibrary;
     private readonly OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator _lootGenerator;
     private readonly OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator _encounterCalculator;
+    private readonly OpenCombatEngine.Core.Interfaces.CharacterCreation.ICharacterCreationService _characterCreationService;
 
     /// <summary>
     /// Constructs the service. <paramref name="spellRepository"/>,
     /// <paramref name="diceRoller"/>, <paramref name="itemLibrary"/>,
-    /// <paramref name="lootGenerator"/>, and
-    /// <paramref name="encounterCalculator"/> are resolved by ASP.NET
-    /// Core's DI container (gRPC service instances are DI-constructed) —
-    /// see <c>Program.cs</c> for where the singleton spell repository and
-    /// item library instances are populated from Open5e at startup and
-    /// registered.
+    /// <paramref name="lootGenerator"/>, <paramref name="encounterCalculator"/>,
+    /// and <paramref name="characterCreationService"/> are resolved by
+    /// ASP.NET Core's DI container (gRPC service instances are
+    /// DI-constructed) — see <c>Program.cs</c> for where the singleton
+    /// spell repository and item library instances are populated from
+    /// Open5e at startup and registered.
     /// </summary>
     public SystemEngineGrpcService(
         ISpellRepository spellRepository,
         IDiceRoller diceRoller,
         IItemLibrary itemLibrary,
         OpenCombatEngine.Core.Interfaces.Loot.ILootGenerator lootGenerator,
-        OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator encounterCalculator)
+        OpenCombatEngine.Core.Interfaces.Loot.IEncounterChallengeCalculator encounterCalculator,
+        OpenCombatEngine.Core.Interfaces.CharacterCreation.ICharacterCreationService characterCreationService)
     {
         _spellRepository = spellRepository ?? throw new System.ArgumentNullException(nameof(spellRepository));
         _diceRoller = diceRoller ?? throw new System.ArgumentNullException(nameof(diceRoller));
         _itemLibrary = itemLibrary ?? throw new System.ArgumentNullException(nameof(itemLibrary));
         _lootGenerator = lootGenerator ?? throw new System.ArgumentNullException(nameof(lootGenerator));
         _encounterCalculator = encounterCalculator ?? throw new System.ArgumentNullException(nameof(encounterCalculator));
+        _characterCreationService = characterCreationService ?? throw new System.ArgumentNullException(nameof(characterCreationService));
     }
 
     public override Task<GetCharacterSchemaResponse> GetCharacterSchema(
@@ -1216,6 +1220,62 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
         }
 
         return Task.FromResult(response);
+    }
+
+    public override Task<CharacterCreationPromptResponse> StartCharacterCreation(
+        StartCharacterCreationRequest request, ServerCallContext context)
+    {
+        var mode = MapMode(request.Mode);
+        var result = _characterCreationService.Start(request.SessionId, mode, request.CharacterName);
+        return Task.FromResult(MapCreationPrompt(result));
+    }
+
+    public override Task<CharacterCreationPromptResponse> AnswerCharacterCreationPrompt(
+        AnswerCharacterCreationPromptRequest request, ServerCallContext context)
+    {
+        var result = _characterCreationService.Answer(request.SessionId, request.Answer);
+        return Task.FromResult(MapCreationPrompt(result));
+    }
+
+    public override Task<ListClassSpellsResponse> ListClassSpells(
+        ListClassSpellsRequest request, ServerCallContext context)
+    {
+        if (_characterCreationService is not StandardCharacterCreationService standardService)
+        {
+            // Every real registration in Program.cs is this concrete type;
+            // a different ICharacterCreationService implementation simply
+            // doesn't support this convenience lookup.
+            return Task.FromResult(new ListClassSpellsResponse { Success = false, Error = "ListClassSpells is not supported by the configured character creation service." });
+        }
+
+        var (cantrips, leveled) = standardService.ListClassSpells(request.ClassName);
+        var response = new ListClassSpellsResponse { Success = true };
+        response.Cantrips.AddRange(cantrips);
+        response.LeveledSpells.AddRange(leveled);
+        return Task.FromResult(response);
+    }
+
+    private static OpenCombatEngine.Core.Interfaces.CharacterCreation.CharacterCreationMode MapMode(CharacterCreationMode mode) => mode switch
+    {
+        CharacterCreationMode.Quick => OpenCombatEngine.Core.Interfaces.CharacterCreation.CharacterCreationMode.Quick,
+        CharacterCreationMode.Detailed => OpenCombatEngine.Core.Interfaces.CharacterCreation.CharacterCreationMode.Detailed,
+        _ => OpenCombatEngine.Core.Interfaces.CharacterCreation.CharacterCreationMode.Unspecified,
+    };
+
+    private CharacterCreationPromptResponse MapCreationPrompt(OpenCombatEngine.Core.Interfaces.CharacterCreation.CharacterCreationPrompt prompt)
+    {
+        var response = new CharacterCreationPromptResponse
+        {
+            Success = prompt.Success,
+            Error = prompt.Error ?? string.Empty,
+            Done = prompt.Done,
+            PromptText = prompt.PromptText ?? string.Empty,
+        };
+        if (prompt.Choices is not null)
+            response.Choices.AddRange(prompt.Choices);
+        if (prompt.Done && prompt.Character is not null)
+            response.Actor = ActorMapping.ToActor(new StandardCreature(prompt.Character, _spellRepository, _itemLibrary));
+        return response;
     }
 
     public override Task StreamEvents(

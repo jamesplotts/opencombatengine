@@ -32,6 +32,8 @@ namespace OpenCombatEngine.Implementation.Spells
         
         public OpenCombatEngine.Core.Interfaces.Spatial.IShape? AreaOfEffect { get; }
 
+        public System.Collections.Generic.IReadOnlyList<string> Classes { get; }
+
         private readonly OpenCombatEngine.Core.Interfaces.Dice.IDiceRoller _diceRoller;
         // private readonly Func<ICreature, object?, Result<OpenCombatEngine.Core.Models.Spells.SpellResolution>>? _customEffect;
 
@@ -54,7 +56,8 @@ namespace OpenCombatEngine.Implementation.Spells
             System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Spells.SpellConditionDefinition>? appliedConditions = null,
             OpenCombatEngine.Core.Interfaces.Spatial.IShape? areaOfEffect = null,
             int instanceCount = 1,
-            int instanceCountPerUpcastLevel = 0)
+            int instanceCountPerUpcastLevel = 0,
+            System.Collections.Generic.IReadOnlyList<string>? classes = null)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty", nameof(name));
             if (level < 0 || level > 9) throw new ArgumentOutOfRangeException(nameof(level), "Level must be between 0 and 9");
@@ -81,6 +84,7 @@ namespace OpenCombatEngine.Implementation.Spells
             AreaOfEffect = areaOfEffect;
             InstanceCount = instanceCount;
             InstanceCountPerUpcastLevel = instanceCountPerUpcastLevel;
+            Classes = classes ?? new System.Collections.Generic.List<string>();
         }
 
         public Result<OpenCombatEngine.Core.Models.Spells.SpellResolution> Cast(ICreature caster, object? target = null)

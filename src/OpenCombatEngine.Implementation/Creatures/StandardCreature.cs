@@ -38,6 +38,13 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// </summary>
         public double? ChallengeRating { get; set; }
 
+        /// <summary>
+        /// Purely-cosmetic player-chosen gender text (design doc §9.4
+        /// character creation) — no mechanical effect, mirrors
+        /// <see cref="CreatureState.Gender"/>.
+        /// </summary>
+        public string? Gender { get; set; }
+
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
         
@@ -218,6 +225,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Name = state.Name;
             Team = state.Team;
             ChallengeRating = state.ChallengeRating;
+            Gender = state.Gender;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
 
             Inventory = new StandardInventory();
@@ -448,7 +456,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
-                inventoryState, equipmentState, spellcastingState, ChallengeRating);
+                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender);
         }
 
         private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)

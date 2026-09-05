@@ -20,7 +20,10 @@ namespace OpenCombatEngine.Implementation.Open5e
                 Range = new RangeDto { Distance = new DistanceDto { Amount = ParseNumber(source.Range), Type = ParseUnit(source.Range) } },
                 Components = ParseComponents(source.Components, source.Material),
                 Duration = new List<DurationDto> { new DurationDto { Type = source.Duration, Concentration = string.Equals(source.Concentration, "yes", System.StringComparison.OrdinalIgnoreCase) } },
-                Entries = new List<object> { source.Desc, source.HigherLevel }.Where(x => !string.IsNullOrEmpty(x as string)).ToList()
+                Entries = new List<object> { source.Desc, source.HigherLevel }.Where(x => !string.IsNullOrEmpty(x as string)).ToList(),
+                Classes = string.IsNullOrWhiteSpace(source.DndClass)
+                    ? new List<string>()
+                    : source.DndClass.Split(',').Select(c => c.Trim()).Where(c => c.Length > 0).ToList()
             };
 
             // Open5e's REST API has no structured damage/save fields for
