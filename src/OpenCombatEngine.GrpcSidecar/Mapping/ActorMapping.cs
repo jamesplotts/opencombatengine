@@ -46,6 +46,7 @@ public static class ActorMapping
             ActorId = creature.Id.ToString(),
             CharacterData = StructJson.FromJson(json),
             SchemaVersion = SchemaVersion,
+            Level = creature.LevelManager.TotalLevel,
         };
     }
 

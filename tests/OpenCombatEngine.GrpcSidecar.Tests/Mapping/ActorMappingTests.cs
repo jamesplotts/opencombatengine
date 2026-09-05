@@ -66,6 +66,42 @@ public class ActorMappingTests
         actor.CharacterData.Fields["gender"].StringValue.Should().Be("Nonbinary");
     }
 
+    // Actor.level (layforge design doc §9.4's character-import review
+    // flow) is a plain top-level field precisely so Master can read a
+    // character's total level without parsing character_data's
+    // engine-specific shape — see ToActor's own reasoning. It must sum
+    // every class level for a multiclass character, not just report the
+    // first.
+    [Fact]
+    public void ToActor_MulticlassCreature_LevelIsSumOfEveryClass()
+    {
+        var state = MakeState() with
+        {
+            LevelManager = new LevelManagerState(
+                ExperiencePoints: 0,
+                Classes: new Collection<ClassLevelState> { new("Fighter", 3, 10), new("Wizard", 2, 6) }),
+        };
+        var creature = new StandardCreature(state);
+
+        var actor = ActorMapping.ToActor(creature);
+
+        actor.Level.Should().Be(5);
+    }
+
+    // A creature with no class levels at all (e.g. a monster stat block
+    // with only a challenge_rating) reports Level 0 — "unknown/not
+    // applicable," per the proto field's own doc comment, never a real
+    // level.
+    [Fact]
+    public void ToActor_CreatureWithNoClassLevels_LevelIsZero()
+    {
+        var creature = new StandardCreature(MakeState());
+
+        var actor = ActorMapping.ToActor(creature);
+
+        actor.Level.Should().Be(0);
+    }
+
     [Fact]
     public void ToCreature_ActorFromToActor_RoundTripsCoreFields()
     {

@@ -285,6 +285,15 @@ message Actor {
   string actor_id = 1;
   google.protobuf.Struct character_data = 2;
   string schema_version = 3;
+  // Total character level (sum across every class for a multiclass
+  // character) — a real cross-system RPG concept, exposed as a plain
+  // field so Master can read it without parsing character_data's
+  // engine-specific shape (docs/design.md §6.1, CLAUDE.md's "no
+  // D&D-shortcut inside Master" rule). 0 means the engine has no class
+  // levels to report for this actor (e.g. a monster with only a
+  // challenge_rating), not "level 0" — callers should treat 0 as
+  // "unknown/not applicable," never as a real level.
+  int32 level = 4;
 }
 
 message ResolveCheckRequest {
