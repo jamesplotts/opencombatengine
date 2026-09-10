@@ -430,7 +430,8 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
                 ActionEconomy: new ActionEconomyState(true, true, true),
                 Inventory: new InventoryState(inventoryItems, Gold: background.StartingGoldPieces),
                 Spellcasting: spellcasting,
-                Gender: session.Gender);
+                Gender: session.Gender,
+                RaceName: session.Race);
 
             return new CharacterCreationPrompt(true, null, true, null, null, character);
         }

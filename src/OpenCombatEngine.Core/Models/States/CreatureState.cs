@@ -77,6 +77,15 @@ namespace OpenCombatEngine.Core.Models.States
     /// parameter (not grouped near Spellcasting) so every pre-existing
     /// positional call site in this repo keeps compiling unchanged.
     /// </param>
+    /// <param name="RaceName">
+    /// The SRD race name the character was created as ("Human", "Elf",
+    /// "Dwarf", "Halfling"). The mechanical racial effects are already
+    /// baked into ability scores / features at creation; this is the
+    /// plain string kept purely so a downstream consumer can display
+    /// "Male Dwarven Fighter" without re-deriving it. Null for a creature
+    /// nobody set one on (every DM-authored monster/NPC, every record
+    /// before this field). Appended last, same reasoning as Gender.
+    /// </param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -91,5 +100,6 @@ namespace OpenCombatEngine.Core.Models.States
         EquipmentState? Equipment = null,
         SpellCasterState? Spellcasting = null,
         double? ChallengeRating = null,
-        string? Gender = null);
+        string? Gender = null,
+        string? RaceName = null);
 }

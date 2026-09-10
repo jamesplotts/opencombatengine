@@ -134,6 +134,7 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
 
             character.Name.Should().Be("Kestrel");
             character.Gender.Should().Be("Male");
+            character.RaceName.Should().Be("Human");
             character.Team.Should().Be("Player");
             // Human: +1 to every ability. Standard array assigned in order
             // Str,Con,Dex,Int,Wis,Cha -> 15,14,13,12,10,8 respectively.

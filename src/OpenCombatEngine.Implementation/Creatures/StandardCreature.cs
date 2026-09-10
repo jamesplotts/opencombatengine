@@ -45,6 +45,14 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// </summary>
         public string? Gender { get; set; }
 
+        /// <summary>
+        /// The SRD race name the character was created as, for display
+        /// only (mirrors <see cref="CreatureState.RaceName"/>). Distinct
+        /// from <see cref="Race"/>, the mechanical
+        /// <see cref="OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition"/>.
+        /// </summary>
+        public string? RaceName { get; set; }
+
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
         
@@ -226,6 +234,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Team = state.Team;
             ChallengeRating = state.ChallengeRating;
             Gender = state.Gender;
+            RaceName = state.RaceName;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
 
             Inventory = new StandardInventory();
@@ -456,7 +465,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
-                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender);
+                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender, RaceName);
         }
 
         private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)

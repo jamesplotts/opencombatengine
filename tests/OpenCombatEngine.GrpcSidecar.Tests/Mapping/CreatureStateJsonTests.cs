@@ -69,6 +69,18 @@ public class CreatureStateJsonTests
     }
 
     [Fact]
+    public void Deserialize_ValidJsonWithRaceName_RoundTripsRaceName()
+    {
+        var original = MakeState() with { RaceName = "Dwarf" };
+        var json = CreatureStateJson.Serialize(original);
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.RaceName.Should().Be("Dwarf");
+    }
+
+    [Fact]
     public void Deserialize_MalformedJson_ReturnsFailureNotException()
     {
         var result = CreatureStateJson.Deserialize("{not valid json");
