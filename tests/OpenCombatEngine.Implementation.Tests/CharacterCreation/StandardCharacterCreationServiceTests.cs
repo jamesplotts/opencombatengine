@@ -261,6 +261,8 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             var afterClass = service.Answer("quick-1", "Wizard");
             afterClass.Done.Should().BeFalse();
             afterClass.PromptText.Should().Contain("gender");
+            afterClass.Choices.Should().BeEquivalentTo(new[] { "Male", "Female", "Nonbinary" },
+                "gender is a fixed choice list, never a free-text box");
 
             var afterGender = service.Answer("quick-1", "Nonbinary");
 
@@ -285,6 +287,24 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
 
             result.Done.Should().BeTrue();
             result.Character!.Spellcasting.Should().BeNull();
+        }
+
+        [Fact]
+        public void Gender_RejectsAnyValueNotInTheChoiceList_ThenAcceptsCanonicalCasing()
+        {
+            var service = NewService(out _);
+            service.Start("g-1", CharacterCreationMode.Quick, "Ash");
+            service.Answer("g-1", "Human");
+            service.Answer("g-1", "Rogue");
+
+            var rejected = service.Answer("g-1", "Attack Helicopter");
+            rejected.Success.Should().BeFalse();
+            rejected.Error.Should().Contain("not a valid gender");
+
+            // Case-insensitive, normalized to the canonical option.
+            var accepted = service.Answer("g-1", "female");
+            accepted.Success.Should().BeTrue();
+            accepted.Character!.Gender.Should().Be("Female");
         }
 
         [Fact]
