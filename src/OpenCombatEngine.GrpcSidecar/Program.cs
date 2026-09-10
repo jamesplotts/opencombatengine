@@ -63,11 +63,13 @@ try
     }
     else
     {
-        // Bounded well under HttpClient's 100-second default: a startup
-        // path should fail fast into the cache fallback below, not leave
-        // an operator staring at an unresponsive process for a minute
-        // and a half before finding out Open5e is unreachable.
-        using var open5eHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        // Open5eClient owns the timeout now — per attempt, with retries and
+        // backoff (see Open5eRequestPolicy) — so HttpClient itself must not
+        // impose a shorter whole-fetch budget on top. An earlier single
+        // 15-second HttpClient.Timeout across the ~14-page spell list threw
+        // the moment two pages ran slow, stranding a cold-cache startup
+        // with nothing to fall back on; the retry policy rides that out.
+        using var open5eHttpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         var open5eClient = new Open5eClient(open5eHttpClient);
         var open5eContentSource = new Open5eContentSource(open5eClient, spellDiceRoller);
         var dtos = await open5eContentSource.GetAllSpellDtosAsync();
@@ -104,7 +106,9 @@ catch (Exception ex)
         // spellcasting for a creature referencing a spell that never got
         // loaded is simply dropped on restore, not an error
         // (StandardSpellCaster's own documented behavior).
-        Console.Error.WriteLine($"Warning: failed to populate spell repository from Open5e at startup, and no local cache exists: {ex.Message}");
+        Console.Error.WriteLine(
+            $"Warning: could not populate the SRD spell repository — Open5e was unreachable after retries and no local cache exists ({spellCachePath}): {ex.Message}. " +
+            "Spellcasting data will be unavailable until the sidecar restarts with Open5e reachable, or OPEN5E_SPELL_CACHE_PATH points at a saved spells.json.");
     }
 }
 #pragma warning restore CA1031
@@ -137,7 +141,7 @@ builder.Services.AddSingleton<IDiceRoller, StandardDiceRoller>();
 var itemCachePath = Environment.GetEnvironmentVariable("OPEN5E_ITEM_CACHE_PATH")
     ?? Path.Combine(AppContext.BaseDirectory, "open5e-cache", "items.json");
 var itemCacheMaxAge = TimeSpan.FromDays(7);
-var itemLibrary = new StandardItemLibrary(new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }), spellDiceRoller), spellDiceRoller, spellRepository);
+var itemLibrary = new StandardItemLibrary(new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }), spellDiceRoller), spellDiceRoller, spellRepository);
 #pragma warning disable CA1031
 try
 {
@@ -149,7 +153,7 @@ try
     }
     else
     {
-        var itemContentSource = new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = TimeSpan.FromSeconds(15) }), spellDiceRoller);
+        var itemContentSource = new Open5eContentSource(new Open5eClient(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }), spellDiceRoller);
         var weaponDtos = await itemContentSource.GetAllWeaponDtosAsync();
         var armorDtos = await itemContentSource.GetAllArmorDtosAsync();
         var magicItemDtos = await itemContentSource.GetAllMagicItemDtosAsync();
@@ -179,7 +183,9 @@ catch (Exception ex)
         // wasn't loaded into) the library fails with a real, visible "No
         // weapon equipped"/unresolvable-item error rather than the
         // sidecar refusing to start at all over an Open5e outage.
-        Console.Error.WriteLine($"Warning: failed to populate item library from Open5e at startup, and no local cache exists: {ex.Message}. Equipped-weapon data will not resolve until this is fixed.");
+        Console.Error.WriteLine(
+            $"Warning: could not populate the SRD item library — Open5e was unreachable after retries and no local cache exists ({itemCachePath}): {ex.Message}. " +
+            "Equipped-weapon/armor data will not resolve until the sidecar restarts with Open5e reachable, or OPEN5E_ITEM_CACHE_PATH points at a saved items.json.");
     }
 }
 #pragma warning restore CA1031
