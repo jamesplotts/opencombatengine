@@ -45,10 +45,8 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
         private static readonly IReadOnlyList<string> AbilityScoreMethods = new List<string> { "standard_array", "random_4d6_drop_lowest" };
         // A fixed choice list, not free text — a downstream client renders
         // whatever this service offers, and an unbounded gender box was
-        // exactly the wrong control for it. Nonbinary stays an option
-        // because CreatureState.Gender is a free-form string end to end
-        // and this engine already supported/round-tripped it.
-        private static readonly IReadOnlyList<string> GenderOptions = new List<string> { "Male", "Female", "Nonbinary" };
+        // exactly the wrong control for it.
+        private static readonly IReadOnlyList<string> GenderOptions = new List<string> { "Male", "Female" };
         private static readonly IReadOnlyList<int> StandardArray = new List<int> { 15, 14, 13, 12, 10, 8 };
         private static readonly IReadOnlyList<string> AbilityOrder = new List<string> { "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" };
 

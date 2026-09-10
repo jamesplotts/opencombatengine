@@ -125,7 +125,7 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             var service = NewService(out _);
             var abilityOrder = new[] { "Strength", "Constitution", "Dexterity", "Intelligence", "Wisdom", "Charisma" };
 
-            var result = WalkDetailedNonCaster(service, "fighter-session", "Human", "Fighter", "Nonbinary", "Soldier", "standard_array", abilityOrder);
+            var result = WalkDetailedNonCaster(service, "fighter-session", "Human", "Fighter", "Male", "Soldier", "standard_array", abilityOrder);
 
             result.Success.Should().BeTrue();
             result.Done.Should().BeTrue();
@@ -133,7 +133,7 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             var character = result.Character!;
 
             character.Name.Should().Be("Kestrel");
-            character.Gender.Should().Be("Nonbinary");
+            character.Gender.Should().Be("Male");
             character.Team.Should().Be("Player");
             // Human: +1 to every ability. Standard array assigned in order
             // Str,Con,Dex,Int,Wis,Cha -> 15,14,13,12,10,8 respectively.
@@ -261,15 +261,15 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             var afterClass = service.Answer("quick-1", "Wizard");
             afterClass.Done.Should().BeFalse();
             afterClass.PromptText.Should().Contain("gender");
-            afterClass.Choices.Should().BeEquivalentTo(new[] { "Male", "Female", "Nonbinary" },
+            afterClass.Choices.Should().BeEquivalentTo(new[] { "Male", "Female" },
                 "gender is a fixed choice list, never a free-text box");
 
-            var afterGender = service.Answer("quick-1", "Nonbinary");
+            var afterGender = service.Answer("quick-1", "Female");
 
             afterGender.Success.Should().BeTrue();
             afterGender.Done.Should().BeTrue("quick mode has nothing left to ask after race/class/gender");
             var character = afterGender.Character!;
-            character.Gender.Should().Be("Nonbinary");
+            character.Gender.Should().Be("Female");
             character.Spellcasting.Should().NotBeNull("Wizard is always a spellcaster, even when auto-rolled");
             var realSpellNames = spellRepository.GetAllSpells().Select(s => s.Name).ToList();
             foreach (var name in character.Spellcasting!.PreparedSpellNames)

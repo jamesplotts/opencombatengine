@@ -59,11 +59,11 @@ public class ActorMappingTests
     [Fact]
     public void ToActor_StandardCreatureFromStateWithGender_PreservesGenderThroughRoundTrip()
     {
-        var creature = new StandardCreature(MakeState() with { Gender = "Nonbinary" });
+        var creature = new StandardCreature(MakeState() with { Gender = "Female" });
 
         var actor = ActorMapping.ToActor(creature);
 
-        actor.CharacterData.Fields["gender"].StringValue.Should().Be("Nonbinary");
+        actor.CharacterData.Fields["gender"].StringValue.Should().Be("Female");
     }
 
     // Actor.level (layforge design doc §9.4's character-import review
