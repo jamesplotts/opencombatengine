@@ -86,6 +86,18 @@ namespace OpenCombatEngine.Core.Models.States
     /// nobody set one on (every DM-authored monster/NPC, every record
     /// before this field). Appended last, same reasoning as Gender.
     /// </param>
+    /// <param name="Background">
+    /// The SRD background the character was created with ("Criminal",
+    /// "Sage", "Acolyte", ...). Its mechanical effects (starting
+    /// equipment/gold, and any skill proficiencies a future feature adds)
+    /// are already baked in at creation the same way race's are; this is
+    /// the plain string kept so a downstream consumer — a DM composing a
+    /// character's personal introduction, a character sheet — can read
+    /// and roleplay from it without re-deriving which background was
+    /// chosen. Null for a creature nobody set one on (every DM-authored
+    /// monster/NPC, every record before this field). Appended last, same
+    /// reasoning as Gender/RaceName.
+    /// </param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -101,5 +113,6 @@ namespace OpenCombatEngine.Core.Models.States
         SpellCasterState? Spellcasting = null,
         double? ChallengeRating = null,
         string? Gender = null,
-        string? RaceName = null);
+        string? RaceName = null,
+        string? Background = null);
 }

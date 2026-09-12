@@ -135,6 +135,7 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             character.Name.Should().Be("Kestrel");
             character.Gender.Should().Be("Male");
             character.RaceName.Should().Be("Human");
+            character.Background.Should().Be("Soldier");
             character.Team.Should().Be("Player");
             // Human: +1 to every ability. Standard array assigned in order
             // Str,Con,Dex,Int,Wis,Cha -> 15,14,13,12,10,8 respectively.
@@ -271,6 +272,9 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             afterGender.Done.Should().BeTrue("quick mode has nothing left to ask after race/class/gender");
             var character = afterGender.Character!;
             character.Gender.Should().Be("Female");
+            character.Background.Should().NotBeNullOrEmpty("quick mode still auto-rolls a real background, never leaves it unset");
+            SrdCharacterCreationData.Backgrounds.Select(b => b.Name).Should().Contain(character.Background,
+                "quick mode must never invent a background name");
             character.Spellcasting.Should().NotBeNull("Wizard is always a spellcaster, even when auto-rolled");
             var realSpellNames = spellRepository.GetAllSpells().Select(s => s.Name).ToList();
             foreach (var name in character.Spellcasting!.PreparedSpellNames)

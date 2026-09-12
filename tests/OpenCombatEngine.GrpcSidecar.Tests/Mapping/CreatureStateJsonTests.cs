@@ -81,6 +81,27 @@ public class CreatureStateJsonTests
     }
 
     [Fact]
+    public void Deserialize_ValidJsonWithBackground_RoundTripsBackground()
+    {
+        var original = MakeState() with { Background = "Criminal" };
+        var json = CreatureStateJson.Serialize(original);
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Background.Should().Be("Criminal");
+    }
+
+    [Fact]
+    public void Deserialize_NoBackgroundInJson_BackgroundIsNull()
+    {
+        var result = CreatureStateJson.Deserialize(CreatureStateJson.Serialize(MakeState()));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Background.Should().BeNull();
+    }
+
+    [Fact]
     public void Deserialize_MalformedJson_ReturnsFailureNotException()
     {
         var result = CreatureStateJson.Deserialize("{not valid json");

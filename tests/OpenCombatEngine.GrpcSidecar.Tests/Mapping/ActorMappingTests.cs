@@ -78,6 +78,18 @@ public class ActorMappingTests
         actor.CharacterData.Fields["raceName"].StringValue.Should().Be("Dwarf");
     }
 
+    [Fact]
+    public void ToActor_StandardCreatureFromStateWithBackground_PreservesBackgroundThroughRoundTrip()
+    {
+        // Same StandardCreature-restoring-constructor path Gender/RaceName
+        // needed a fix for — Background rides through it the same way.
+        var creature = new StandardCreature(MakeState() with { Background = "Criminal" });
+
+        var actor = ActorMapping.ToActor(creature);
+
+        actor.CharacterData.Fields["background"].StringValue.Should().Be("Criminal");
+    }
+
     // Actor.level (layforge design doc §9.4's character-import review
     // flow) is a plain top-level field precisely so Master can read a
     // character's total level without parsing character_data's

@@ -431,7 +431,8 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
                 Inventory: new InventoryState(inventoryItems, Gold: background.StartingGoldPieces),
                 Spellcasting: spellcasting,
                 Gender: session.Gender,
-                RaceName: session.Race);
+                RaceName: session.Race,
+                Background: session.Background);
 
             return new CharacterCreationPrompt(true, null, true, null, null, character);
         }

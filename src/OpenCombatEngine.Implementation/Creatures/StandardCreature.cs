@@ -53,6 +53,14 @@ namespace OpenCombatEngine.Implementation.Creatures
         /// </summary>
         public string? RaceName { get; set; }
 
+        /// <summary>
+        /// The SRD background the character was created with, for
+        /// display/roleplay only (mirrors <see cref="CreatureState.Background"/>).
+        /// Its mechanical effects (starting equipment/gold) are already
+        /// baked into <see cref="Inventory"/> at creation.
+        /// </summary>
+        public string? Background { get; set; }
+
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
         public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
         
@@ -235,6 +243,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             ChallengeRating = state.ChallengeRating;
             Gender = state.Gender;
             RaceName = state.RaceName;
+            Background = state.Background;
             AbilityScores = new StandardAbilityScores(state.AbilityScores);
 
             Inventory = new StandardInventory();
@@ -465,7 +474,7 @@ namespace OpenCombatEngine.Implementation.Creatures
 
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
-                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender, RaceName);
+                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender, RaceName, Background);
         }
 
         private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)
