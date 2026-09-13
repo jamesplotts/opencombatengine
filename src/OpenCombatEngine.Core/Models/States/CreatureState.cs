@@ -36,10 +36,21 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="HasAction">Whether the Action is still available this turn.</param>
     /// <param name="HasBonusAction">Whether the Bonus Action is still available this turn.</param>
     /// <param name="HasReaction">Whether the Reaction is still available.</param>
+    /// <param name="HasFreeObjectInteraction">
+    /// Whether this turn's free object interaction (draw/sheathe a weapon, or
+    /// similar) is still available — a fourth, smaller resource distinct from
+    /// the three above (see <see cref="OpenCombatEngine.Core.Interfaces.Creatures.IActionEconomy"/>).
+    /// Defaults to true so a record predating this field (deserialized from
+    /// JSON with the property absent) restores as "available," the same
+    /// backward-compatible-optional-field convention every other addition to
+    /// this project's state records already follows. Appended last so every
+    /// pre-existing positional call site keeps compiling unchanged.
+    /// </param>
     public record ActionEconomyState(
         bool HasAction,
         bool HasBonusAction,
-        bool HasReaction);
+        bool HasReaction,
+        bool HasFreeObjectInteraction = true);
 
     /// <summary>
     /// Serializable state for a creature.

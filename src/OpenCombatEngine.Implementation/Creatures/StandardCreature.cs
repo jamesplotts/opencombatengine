@@ -450,9 +450,35 @@ namespace OpenCombatEngine.Implementation.Creatures
             }
         }
 
+        public System.Collections.Generic.IReadOnlyList<CarriedItemLocation> GetCarriedItemLocations()
+        {
+            var results = new List<CarriedItemLocation>();
+            // Inventory.Items is the only real root: every equipped item is,
+            // by construction, also a flat member of it (Equip never removes
+            // an item from Inventory — see StandardEquipmentManager), so a
+            // single depth-first walk from here sees everything, equipped or
+            // not, without a second traversal starting from Equipment.
+            void Walk(IItem item, IContainer? parent)
+            {
+                results.Add(new CarriedItemLocation(item, parent, Equipment.GetSlotFor(item)));
+                if (item is IContainer container)
+                {
+                    foreach (var nested in container.Contents)
+                    {
+                        Walk(nested, container);
+                    }
+                }
+            }
+            foreach (var item in Inventory.Items)
+            {
+                Walk(item, null);
+            }
+            return results;
+        }
+
         public CreatureState GetState()
         {
-             var abilityState = (AbilityScores as IStateful<AbilityScoresState>)?.GetState() 
+             var abilityState = (AbilityScores as IStateful<AbilityScoresState>)?.GetState()
                 ?? throw new InvalidOperationException("AbilityScores component does not support state export");
                 
             var hpState = (HitPoints as IStateful<HitPointsState>)?.GetState()
@@ -530,6 +556,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             TryAddSlot(Equipment.Feet, EquipmentSlot.Feet);
             TryAddSlot(Equipment.Ring1, EquipmentSlot.Ring1);
             TryAddSlot(Equipment.Ring2, EquipmentSlot.Ring2);
+            TryAddSlot(Equipment.Back, EquipmentSlot.Back);
 
             var attunedIndices = Equipment.AttunedItems
                 .Select(item => inventoryItems.FindIndex(i => ReferenceEquals(i, item)))

@@ -102,6 +102,53 @@ public class CreatureStateJsonTests
     }
 
     [Fact]
+    public void Deserialize_ValidJsonWithActionEconomy_RoundTripsActionEconomy()
+    {
+        var original = MakeState() with { ActionEconomy = new ActionEconomyState(true, false, true, false) };
+        var json = CreatureStateJson.Serialize(original);
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ActionEconomy.Should().Be(new ActionEconomyState(true, false, true, false));
+    }
+
+    [Fact]
+    public void Deserialize_ActionEconomyJsonMissingHasFreeObjectInteraction_DefaultsToTrue()
+    {
+        // Mirrors the Gender/RaceName/Background bug class directly: a save
+        // written before HasFreeObjectInteraction existed must still restore
+        // to "available" rather than silently binding to false. Unlike
+        // those string fields (which bind to null when absent), this one is
+        // a positional record parameter with its own default — the fixture
+        // below hand-writes JSON as if from an older save, omitting the
+        // field entirely, to prove the default actually takes effect
+        // through JsonSerializer's constructor binding, not just in code
+        // that never went through JSON at all.
+        var json = """
+            {"id":"11111111-1111-1111-1111-111111111111","name":"Kestrel","team":"Player",
+             "abilityScores":{"strength":16,"dexterity":12,"constitution":14,"intelligence":10,"wisdom":13,"charisma":8},
+             "hitPoints":{"current":24,"max":30,"temporary":0},
+             "actionEconomy":{"hasAction":true,"hasBonusAction":true,"hasReaction":true}}
+            """;
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ActionEconomy.Should().NotBeNull();
+        result.Value.ActionEconomy!.HasFreeObjectInteraction.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Deserialize_NoActionEconomyInJson_ActionEconomyIsNull()
+    {
+        var result = CreatureStateJson.Deserialize(CreatureStateJson.Serialize(MakeState()));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ActionEconomy.Should().BeNull();
+    }
+
+    [Fact]
     public void Deserialize_MalformedJson_ReturnsFailureNotException()
     {
         var result = CreatureStateJson.Deserialize("{not valid json");

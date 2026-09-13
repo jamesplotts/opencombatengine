@@ -121,6 +121,17 @@ public interface ICreature
     IEquipmentManager Equipment { get; }
 
     /// <summary>
+    /// Gets where every one of this creature's carried items currently is —
+    /// equipped in a slot, stowed inside another carried item's Contents (at
+    /// any depth), or loose in the flat inventory ("quick access"). One
+    /// traversal, computed on demand: the single source of truth any caller
+    /// (a StowItem/DrawItem mutation, a read-only carried-items query) needs
+    /// for "where is this item," rather than each maintaining its own walk
+    /// of <see cref="Inventory"/>/<see cref="Equipment"/>.
+    /// </summary>
+    System.Collections.Generic.IReadOnlyList<OpenCombatEngine.Core.Models.Creatures.CarriedItemLocation> GetCarriedItemLocations();
+
+    /// <summary>
     /// Gets the spellcasting component, if the creature is a spellcaster.
     /// </summary>
     ISpellCaster? Spellcasting { get; }

@@ -227,6 +227,49 @@ namespace OpenCombatEngine.Implementation.Tests.Serialization
             restoredPouch!.Contents.Should().ContainSingle(i => i.Name == "Ruby");
         }
 
+        [Fact]
+        public void Should_Save_And_Load_FourDeep_Nested_Container_Contents()
+        {
+            // Extends the single-level test above to prove arbitrary depth,
+            // not just one level — a potion in a flask in a purse in a pack,
+            // the exact scenario the item-carry-location feature's own
+            // persistence concern is about. Every level's library copy
+            // starts empty, same reasoning as above: if restore ends up with
+            // the full chain intact, that's proof it was rebuilt from state.
+            var itemLibrary = new TestItemLibrary();
+            itemLibrary.Add(new ContainerItem("Pack", baseWeight: 5, weightCapacity: 50));
+            itemLibrary.Add(new ContainerItem("Purse", baseWeight: 0.5, weightCapacity: 5));
+            itemLibrary.Add(new ContainerItem("Flask", baseWeight: 0.5, weightCapacity: 2));
+
+            var heroFlask = new ContainerItem("Flask", baseWeight: 0.5, weightCapacity: 2);
+            heroFlask.AddItem(new Item("Potion"));
+            var heroPurse = new ContainerItem("Purse", baseWeight: 0.5, weightCapacity: 5);
+            heroPurse.AddItem(heroFlask);
+            var heroPack = new ContainerItem("Pack", baseWeight: 5, weightCapacity: 50);
+            heroPack.AddItem(heroPurse);
+
+            var hero = (StandardCreature)CreateCreature("Hero", 20, 15, "Heroes");
+            hero.Inventory.AddItem(heroPack);
+
+            var goblin = CreateCreature("Goblin", 10, 12, "Monsters");
+            _combatManager.StartEncounter(new[] { hero, goblin });
+
+            var json = _serializer.Serialize(_combatManager);
+
+            var newCombatManager = new StandardCombatManager(new StandardTurnManager(new StandardDiceRoller()));
+            _serializer.Deserialize(json, newCombatManager, itemLibrary: itemLibrary);
+
+            var restoredHero = newCombatManager.Participants.First(p => p.Name == "Hero");
+            var restoredPack = restoredHero.Inventory.Items.Single() as IContainer;
+
+            restoredPack.Should().NotBeNull();
+            var restoredPurse = restoredPack!.Contents.Single() as IContainer;
+            restoredPurse.Should().NotBeNull();
+            var restoredFlask = restoredPurse!.Contents.Single() as IContainer;
+            restoredFlask.Should().NotBeNull();
+            restoredFlask!.Contents.Should().ContainSingle(i => i.Name == "Potion");
+        }
+
         private sealed class TestItemLibrary : IItemLibrary
         {
             private readonly Dictionary<string, IItem> _items = new(StringComparer.OrdinalIgnoreCase);

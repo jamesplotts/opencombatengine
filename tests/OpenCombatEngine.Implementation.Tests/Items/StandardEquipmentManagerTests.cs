@@ -98,5 +98,107 @@ namespace OpenCombatEngine.Implementation.Tests.Items
             manager.OffHand.Should().Be(sword);
             manager.GetEquippedItems().Should().ContainSingle();
         }
+
+        [Fact]
+        public void Equip_HandSlotOccupiedByDifferentItem_Rejects()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            var axe = new Weapon("Handaxe", "1d6", DamageType.Slashing);
+            manager.EquipMainHand(sword);
+
+            var result = manager.Equip(axe, EquipmentSlot.MainHand);
+
+            result.IsSuccess.Should().BeFalse();
+            result.Error.Should().Contain("already occupied");
+            manager.MainHand.Should().Be(sword);
+        }
+
+        [Fact]
+        public void Equip_HandSlotOccupiedBySameItem_Idempotent()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            manager.EquipMainHand(sword);
+
+            var result = manager.Equip(sword, EquipmentSlot.MainHand);
+
+            result.IsSuccess.Should().BeTrue();
+            manager.MainHand.Should().Be(sword);
+        }
+
+        [Fact]
+        public void Equip_HandSlotFreedByUnequip_ThenAcceptsNewItem()
+        {
+            // The "drop it (free)" half of the hands-full rule: UnequipItem
+            // already has no action-economy cost anywhere, so freeing a hand
+            // this way and then equipping something new must just work.
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            var axe = new Weapon("Handaxe", "1d6", DamageType.Slashing);
+            manager.EquipMainHand(sword);
+
+            manager.Unequip(EquipmentSlot.MainHand);
+            var result = manager.Equip(axe, EquipmentSlot.MainHand);
+
+            result.IsSuccess.Should().BeTrue();
+            manager.MainHand.Should().Be(axe);
+        }
+
+        [Fact]
+        public void Equip_ArmorSlotOccupied_StillSwapsSilently()
+        {
+            // Confirms the hand-slot gate is scoped to MainHand/OffHand only —
+            // Armor and the other non-hand slots keep their original silent-
+            // swap ergonomics, deliberately unchanged by this feature.
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var leather = new Armor("Leather", 11, ArmorCategory.Light);
+            var studded = new Armor("Studded Leather", 12, ArmorCategory.Light);
+            manager.EquipArmor(leather);
+
+            var result = manager.Equip(studded, EquipmentSlot.Armor);
+
+            result.IsSuccess.Should().BeTrue();
+            manager.Armor.Should().Be(studded);
+        }
+
+        [Fact]
+        public void GetSlotFor_EquippedItem_ReturnsItsSlot()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            manager.EquipMainHand(sword);
+
+            manager.GetSlotFor(sword).Should().Be(EquipmentSlot.MainHand);
+        }
+
+        [Fact]
+        public void GetSlotFor_UnequippedItem_ReturnsNull()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+
+            manager.GetSlotFor(sword).Should().BeNull();
+        }
+
+        [Fact]
+        public void Equip_Back_Succeeds()
+        {
+            var owner = Substitute.For<ICreature>();
+            var manager = new StandardEquipmentManager(owner);
+            var pack = new MagicItem("Explorer's Pack", "Desc", 1, 10, ItemType.Accessory, false);
+
+            var result = manager.Equip(pack, EquipmentSlot.Back);
+
+            result.IsSuccess.Should().BeTrue();
+            manager.Back.Should().Be(pack);
+            manager.GetSlotFor(pack).Should().Be(EquipmentSlot.Back);
+        }
     }
 }

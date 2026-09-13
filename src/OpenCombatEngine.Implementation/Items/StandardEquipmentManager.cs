@@ -20,6 +20,7 @@ namespace OpenCombatEngine.Implementation.Items
         public IItem? Feet { get; private set; }
         public IItem? Ring1 { get; private set; }
         public IItem? Ring2 { get; private set; }
+        public IItem? Back { get; private set; }
 
         private readonly System.Collections.Generic.List<IMagicItem> _attunedItems = new();
         public System.Collections.Generic.IReadOnlyList<IMagicItem> AttunedItems => _attunedItems;
@@ -41,6 +42,23 @@ namespace OpenCombatEngine.Implementation.Items
         public Result<bool> Equip(IItem item, OpenCombatEngine.Core.Enums.EquipmentSlot slot)
         {
             if (item == null) return Result<bool>.Failure("Item cannot be null.");
+
+            // A hand slot already holding a different item must be freed first
+            // (unequip it — free — or stow it in a container — costs the
+            // action) rather than silently swapped. Scoped to MainHand/OffHand
+            // only: those are the two slots a creature can physically only
+            // have so many of (two hands), which is the actual constraint a
+            // player runs into ("both hands are full"); Armor/Head/rings/etc.
+            // stay a free swap, since widening this further changes ergonomics
+            // nobody asked for. Re-equipping the SAME item already in the slot
+            // (e.g. re-confirming a grip) is not a conflict — only a
+            // *different* item is rejected.
+            if (slot is OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand or OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand
+                && _equippedItems.TryGetValue(slot, out var existing)
+                && existing != null && !ReferenceEquals(existing, item))
+            {
+                return Result<bool>.Failure($"{slot} is already occupied by {existing.Name} — unequip it (free) or stow it in a container (costs the action) first.");
+            }
 
             // The same physical item cannot occupy more than one slot at once.
             var otherSlots = _equippedItems
@@ -81,6 +99,8 @@ namespace OpenCombatEngine.Implementation.Items
                     Ring1 = item; result = Result<bool>.Success(true); break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2:
                     Ring2 = item; result = Result<bool>.Success(true); break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Back:
+                    Back = item; result = Result<bool>.Success(true); break;
                 default:
                     return Result<bool>.Failure("Invalid slot.");
             }
@@ -153,6 +173,7 @@ namespace OpenCombatEngine.Implementation.Items
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Feet: Feet = null; break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1: Ring1 = null; break;
                 case OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2: Ring2 = null; break;
+                case OpenCombatEngine.Core.Enums.EquipmentSlot.Back: Back = null; break;
             }
             _equippedItems.Remove(slot);
             return Result<bool>.Success(true);
@@ -232,6 +253,16 @@ namespace OpenCombatEngine.Implementation.Items
         public System.Collections.Generic.IEnumerable<IItem> GetEquippedItems()
         {
             return _equippedItems.Values;
+        }
+
+        public OpenCombatEngine.Core.Enums.EquipmentSlot? GetSlotFor(IItem item)
+        {
+            if (item == null) return null;
+            foreach (var kvp in _equippedItems)
+            {
+                if (ReferenceEquals(kvp.Value, item)) return kvp.Key;
+            }
+            return null;
         }
     }
 }

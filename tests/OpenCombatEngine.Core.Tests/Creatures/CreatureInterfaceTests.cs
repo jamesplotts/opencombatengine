@@ -92,6 +92,7 @@ public class CreatureInterfaceTests
         public int ProficiencyBonus { get; }
         public IInventory Inventory { get; }
         public IEquipmentManager Equipment { get; }
+        public IReadOnlyList<OpenCombatEngine.Core.Models.Creatures.CarriedItemLocation> GetCarriedItemLocations() => new List<OpenCombatEngine.Core.Models.Creatures.CarriedItemLocation>();
         public EncumbranceLevel EncumbranceLevel => EncumbranceLevel.None;
         public ILevelManager LevelManager { get; set; }
         public OpenCombatEngine.Core.Interfaces.Races.IRaceDefinition? Race { get; }
@@ -183,9 +184,12 @@ public class CreatureInterfaceTests
         public bool HasAction => true;
         public bool HasBonusAction => true;
         public bool HasReaction => true;
+        public bool HasFreeObjectInteraction => true;
         public void UseAction() { }
         public void UseBonusAction() { }
         public void UseReaction() { }
+        public bool TryUseFreeObjectInteraction() => true;
+        public void GrantFreeObjectInteraction() { }
         public void ResetTurn() { }
         public void ResetReaction() { }
     }

@@ -17,6 +17,7 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         IItem? Feet { get; }
         IItem? Ring1 { get; }
         IItem? Ring2 { get; }
+        IItem? Back { get; }
 
         Result<bool> EquipMainHand(IItem item);
         Result<bool> EquipOffHand(IItem item);
@@ -61,5 +62,13 @@ namespace OpenCombatEngine.Core.Interfaces.Items
         /// Gets all equipped items.
         /// </summary>
         System.Collections.Generic.IEnumerable<IItem> GetEquippedItems();
+
+        /// <summary>
+        /// Gets which slot the given item currently occupies, or null if
+        /// it isn't equipped at all — the per-item lookup <see cref="GetEquippedItems"/>
+        /// doesn't expose (it only returns the items, not their slots).
+        /// </summary>
+        /// <param name="item">The item to look up.</param>
+        OpenCombatEngine.Core.Enums.EquipmentSlot? GetSlotFor(IItem item);
     }
 }

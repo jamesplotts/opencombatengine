@@ -194,6 +194,30 @@ service SystemEngine {
   // Master to persist.
   rpc TransferItem(TransferItemRequest) returns (TransferItemResponse);
 
+  // StowItem moves a real carried item (equipped or loose) into a named
+  // container actor is also carrying (e.g. put the crowbar in the
+  // backpack) — the real mechanical gate behind "properly stowing
+  // something away," which always costs actor's Action: this is
+  // deliberately heavier than DrawItem's quick-access case (docs/design.md
+  // §8, §9 — gates over prompting, not a DM-narrated assumption of what's
+  // free). Unequips item first if it was equipped. Rejects if item_name
+  // isn't carried, container_name isn't a real container actor is
+  // carrying, the container's weight capacity is exceeded, the container
+  // is (directly or by nesting) the item itself, or actor has no Action
+  // left this turn.
+  rpc StowItem(StowItemRequest) returns (StowItemResponse);
+
+  // DrawItem brings a carried item to hand/ready-to-use. Cost depends on
+  // where it actually is (see CarryLocationKind, ListCarriedItems): a
+  // quick-access item (loose, not stowed) consumes actor's one free
+  // object interaction this turn if one remains, or rejects if not — it
+  // never falls back to costing the Action; an item stowed inside a
+  // container always costs the Action outright, the real mechanical
+  // consequence of "digging something out of a pack" (docs/design.md §8,
+  // §9). Rejects if item_name isn't carried at all, or is already
+  // equipped (nothing to draw).
+  rpc DrawItem(DrawItemRequest) returns (DrawItemResponse);
+
   // GenerateLoot computes CR-appropriate treasure for a roster of
   // creatures (typically called at encounter-prep time, right after
   // creating them, so the DM can place real items onto real NPCs they
@@ -241,6 +265,16 @@ service SystemEngine {
   // listing needs this real RPC rather than a Master-side guess at the
   // engine's own inventory shape.
   rpc ListInventory(ListInventoryRequest) returns (ListInventoryResponse);
+
+  // ListCarriedItems answers "where is everything actor is carrying" —
+  // equipped in a slot, stowed inside another carried item, or loose
+  // ("quick access") — computed fresh from real structure every call,
+  // never a separately-tracked field (docs/design.md §6.1: never let a
+  // location fact drift out of sync with what's actually equipped/
+  // nested). This is what grounds the DM's narration in where an item
+  // actually is instead of an assumption carried over from an earlier
+  // turn.
+  rpc ListCarriedItems(ListCarriedItemsRequest) returns (ListCarriedItemsResponse);
 
   // StartCharacterCreation begins a new interactive character-creation
   // session (docs/design.md §9.4's "roll a new character" path) and
@@ -807,6 +841,18 @@ enum EquipmentSlot {
   EQUIPMENT_SLOT_FEET = 10;
   EQUIPMENT_SLOT_RING_1 = 11;
   EQUIPMENT_SLOT_RING_2 = 12;
+  // A worn backpack/quiver — the slot a carried container is equipped
+  // into, distinct from being held in a hand.
+  EQUIPMENT_SLOT_BACK = 13;
+}
+
+// CarryLocationKind categorizes where ListCarriedItems found one item —
+// see that RPC's own doc comment for what each value costs to change.
+enum CarryLocationKind {
+  CARRY_LOCATION_KIND_UNSPECIFIED = 0;
+  CARRY_LOCATION_KIND_EQUIPPED = 1;
+  CARRY_LOCATION_KIND_QUICK_ACCESS = 2;
+  CARRY_LOCATION_KIND_STOWED = 3;
 }
 
 message EquipItemRequest {
@@ -838,6 +884,48 @@ message UnequipItemRequest {
 
 message UnequipItemResponse {
   bool success = 1;
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message StowItemRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  // Must already be a real member of actor's inventory (equipped or
+  // quick-access — either is accepted).
+  string item_name = 4;
+  // Must be a real container actor is also carrying.
+  string container_name = 5;
+}
+
+message StowItemResponse {
+  bool success = 1;
+  // Set when success = false: item_name isn't carried, container_name
+  // isn't a real carried container, the container's weight capacity
+  // would be exceeded, the container is item_name itself or nested
+  // inside it, or actor has no Action left this turn.
+  string error = 2;
+  Actor actor = 3;
+  string result_message = 4;
+}
+
+message DrawItemRequest {
+  string request_id = 1;
+  string campaign_id = 2;
+  Actor actor = 3;
+  // Must already be a real member of actor's inventory, currently
+  // quick-access or stowed (not already equipped).
+  string item_name = 4;
+}
+
+message DrawItemResponse {
+  bool success = 1;
+  // Set when success = false: item_name isn't carried, is already
+  // equipped, or the required action economy (a free object interaction
+  // for a quick-access item, the Action for a stowed one) isn't
+  // available.
   string error = 2;
   Actor actor = 3;
   string result_message = 4;
@@ -1003,6 +1091,31 @@ message ListInventoryResponse {
   // Real item names currently in actor's inventory — each independently
   // resolvable via GetItemInfo for pricing.
   repeated string item_names = 3;
+}
+
+message ListCarriedItemsRequest {
+  string request_id = 1;
+  Actor actor = 2;
+}
+
+// CarriedItem is one entry of ListCarriedItemsResponse — where a single
+// item actually is right now.
+message CarriedItem {
+  string item_name = 1;
+  // Human-readable, e.g. "wielded (main hand)", "worn (back)", "stowed
+  // in Explorer's Pack", "quick access" — safe to narrate verbatim.
+  string location_description = 2;
+  CarryLocationKind kind = 3;
+  // Set only when kind = CARRY_LOCATION_KIND_STOWED.
+  string container_name = 4;
+  // Set only when kind = CARRY_LOCATION_KIND_EQUIPPED.
+  EquipmentSlot slot = 5;
+}
+
+message ListCarriedItemsResponse {
+  bool success = 1;
+  string error = 2;
+  repeated CarriedItem items = 3;
 }
 
 // CharacterCreationMode selects how much of the question sequence

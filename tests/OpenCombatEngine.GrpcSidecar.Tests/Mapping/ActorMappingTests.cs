@@ -311,4 +311,63 @@ public class ActorMappingTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Equipment.MainHand.Should().BeNull();
     }
+
+    // Extends the "one level deep" coverage CombatSerializationTests
+    // already has for CombatSerializer's own internal save/load path —
+    // this is the SAME nested-container mechanism
+    // (ItemInstanceState.Contents/IContainer), but exercised through the
+    // actual external wire path (Actor.character_data) the item-carry-
+    // location feature uses in production, which had zero coverage
+    // before this. Four deep — Potion in Flask in Purse in Pack —
+    // directly answers the "does stowed-in-a-container survive
+    // save/load at arbitrary nesting depth" concern this feature was
+    // built to settle.
+    [Fact]
+    public void ToActor_Then_ToCreature_RoundTripsDeeplyNestedContainerContents()
+    {
+        var libraryPack = new ContainerItem("Pack", baseWeight: 5, weightCapacity: 50);
+        var libraryPurse = new ContainerItem("Purse", baseWeight: 0.5, weightCapacity: 5);
+        var libraryFlask = new ContainerItem("Flask", baseWeight: 0.5, weightCapacity: 2);
+        var libraryPotion = new StandardItem(Guid.NewGuid(), "Potion", "A potion.", 0.5, 50);
+        // Restore resolves each nested item's name independently against
+        // the library (StandardCreature.ResolveItem recurses into
+        // itemState.Contents calling itself again) — every name in the
+        // chain needs its own entry, not just the top-level one.
+        var library = Substitute.For<IItemLibrary>();
+        library.GetItem("Pack").Returns(libraryPack);
+        library.GetItem("Purse").Returns(libraryPurse);
+        library.GetItem("Flask").Returns(libraryFlask);
+        library.GetItem("Potion").Returns(libraryPotion);
+
+        // Built from live objects directly (CombatSerializationTests'
+        // own style), not restored from state — so the one and only
+        // restore this test exercises happens inside ToCreature below.
+        var originalCreature = new StandardCreature(MakeState());
+        var pack = new ContainerItem("Pack", baseWeight: 5, weightCapacity: 50);
+        var purse = new ContainerItem("Purse", baseWeight: 0.5, weightCapacity: 5);
+        var flask = new ContainerItem("Flask", baseWeight: 0.5, weightCapacity: 2);
+        var potion = new StandardItem(Guid.NewGuid(), "Potion", "A potion.", 0.5, 50);
+        flask.AddItem(potion);
+        purse.AddItem(flask);
+        pack.AddItem(purse);
+        originalCreature.Inventory.AddItem(pack);
+
+        var actor = ActorMapping.ToActor(originalCreature);
+        var result = ActorMapping.ToCreature(actor, EmptySpellRepository, library);
+
+        result.IsSuccess.Should().BeTrue();
+        var restoredPack = result.Value.Inventory.Items.Single() as IContainer;
+        restoredPack.Should().NotBeNull();
+        // Confirms the tree was genuinely REBUILT from the library's own
+        // instances rather than just coincidentally sharing the original
+        // live object graph — the same regression shape
+        // Should_Save_And_Load_Nested_Container_Contents already guards
+        // for the internal CombatSerializer path.
+        ReferenceEquals(restoredPack, pack).Should().BeFalse();
+        var restoredPurse = restoredPack!.Contents.Single() as IContainer;
+        restoredPurse.Should().NotBeNull();
+        var restoredFlask = restoredPurse!.Contents.Single() as IContainer;
+        restoredFlask.Should().NotBeNull();
+        restoredFlask!.Contents.Should().ContainSingle(i => i.Name == "Potion");
+    }
 }

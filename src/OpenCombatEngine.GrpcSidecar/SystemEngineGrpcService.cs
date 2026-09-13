@@ -632,10 +632,91 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Feet: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Feet; return true;
             case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring1: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1; return true;
             case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring2: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2; return true;
+            case Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Back: domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.Back; return true;
             default:
                 domainSlot = OpenCombatEngine.Core.Enums.EquipmentSlot.None;
                 return false;
         }
+    }
+
+    /// <summary>
+    /// The reverse of <see cref="TryMapEquipmentSlot"/> — used by
+    /// <see cref="ListCarriedItems"/> to report which slot an equipped
+    /// item occupies. There is no domain "Shield" slot (a shield lives in
+    /// the same domain OffHand slot as an off-hand weapon — see
+    /// <c>StandardEquipmentManager.EquipOffHandInternal</c>), so this
+    /// always maps OffHand back to the proto OffHand value; a caller that
+    /// wants "shield" specifically for display purposes checks
+    /// <c>IEquipmentManager.Shield</c> itself (see <see cref="DescribeLocation"/>).
+    /// </summary>
+    private static Layforge.Protocol.SystemEngine.V1.EquipmentSlot ToProtoEquipmentSlot(OpenCombatEngine.Core.Enums.EquipmentSlot domainSlot)
+    {
+        return domainSlot switch
+        {
+            OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.OffHand,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Armor => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Armor,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Head => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Head,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Neck => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Neck,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Shoulders => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Shoulders,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Hands => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Hands,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Waist => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Waist,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Feet => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Feet,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Ring1 => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring1,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Ring2 => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Ring2,
+            OpenCombatEngine.Core.Enums.EquipmentSlot.Back => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Back,
+            _ => Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Unspecified,
+        };
+    }
+
+    /// <summary>
+    /// Reports whether moving itemToStow inside destination would create a
+    /// containment cycle — true when destination IS itemToStow, or is
+    /// reachable by walking itemToStow's own nested Contents (only
+    /// possible when itemToStow is itself a container). <see cref="ContainerItem.AddItem"/>
+    /// only guards the direct case (an item cannot contain itself); this
+    /// closes the indirect one (a Pack cannot be stowed inside a Pouch
+    /// that's already inside that same Pack).
+    /// </summary>
+    private static bool WouldCreateCycle(IItem itemToStow, IContainer destination)
+    {
+        if (ReferenceEquals(itemToStow, destination)) return true;
+        if (itemToStow is not IContainer itemAsContainer) return false;
+        foreach (var nested in itemAsContainer.Contents)
+        {
+            if (WouldCreateCycle(nested, destination)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Renders one <see cref="OpenCombatEngine.Core.Models.Creatures.CarriedItemLocation"/>
+    /// into ListCarriedItems' wire shape — the single place that decides
+    /// what a location actually reads like ("wielded (main hand)",
+    /// "stowed in Explorer's Pack", "quick access"), so <see cref="StowItem"/>/
+    /// <see cref="DrawItem"/>'s own result_message text and this RPC's
+    /// output never drift apart.
+    /// </summary>
+    private static (string Description, Layforge.Protocol.SystemEngine.V1.CarryLocationKind Kind, string ContainerName, Layforge.Protocol.SystemEngine.V1.EquipmentSlot Slot)
+        DescribeLocation(OpenCombatEngine.Core.Interfaces.Creatures.ICreature actor, OpenCombatEngine.Core.Models.Creatures.CarriedItemLocation location)
+    {
+        if (location.EquippedSlot is OpenCombatEngine.Core.Enums.EquipmentSlot slot)
+        {
+            string label = slot switch
+            {
+                OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand => "wielded (main hand)",
+                OpenCombatEngine.Core.Enums.EquipmentSlot.OffHand =>
+                    ReferenceEquals(actor.Equipment.Shield, location.Item) ? "wielded (shield)" : "wielded (off hand)",
+                OpenCombatEngine.Core.Enums.EquipmentSlot.Back => "worn (back)",
+                _ => $"worn ({slot.ToString().ToLowerInvariant()})",
+            };
+            return (label, Layforge.Protocol.SystemEngine.V1.CarryLocationKind.Equipped, string.Empty, ToProtoEquipmentSlot(slot));
+        }
+        if (location.ParentContainer is IContainer container)
+        {
+            return ($"stowed in {container.Name}", Layforge.Protocol.SystemEngine.V1.CarryLocationKind.Stowed, container.Name, Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Unspecified);
+        }
+        return ("quick access", Layforge.Protocol.SystemEngine.V1.CarryLocationKind.QuickAccess, string.Empty, Layforge.Protocol.SystemEngine.V1.EquipmentSlot.Unspecified);
     }
 
     /// <summary>
@@ -803,6 +884,117 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             ResultMessage = $"{source.Name} gives {item.Name} to {target.Name}.",
             Source = ActorMapping.ToActor(source),
             Target = ActorMapping.ToActor(target),
+        });
+    }
+
+    /// <summary>
+    /// Moves a real carried item (equipped or quick-access) into a named
+    /// container actor is also carrying — see the proto's own StowItem
+    /// doc comment for the real cost (always the Action) and rejections
+    /// (cycle, capacity, no Action left). Looked up via
+    /// <see cref="OpenCombatEngine.Core.Interfaces.Creatures.ICreature.GetCarriedItemLocations"/>
+    /// rather than <c>Inventory.GetItem</c>, since the destination
+    /// container (and, for a re-stow, the item itself) may already be
+    /// nested rather than a top-level inventory member.
+    /// </summary>
+    public override Task<StowItemResponse> StowItem(StowItemRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new StowItemResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var locations = actor.GetCarriedItemLocations();
+        var itemLocation = locations.FirstOrDefault(l => l.Item.Name == request.ItemName);
+        if (itemLocation is null)
+            return Task.FromResult(new StowItemResponse { Success = false, Error = $"{request.ItemName} is not in {actor.Name}'s inventory." });
+
+        var container = locations.FirstOrDefault(l => l.Item.Name == request.ContainerName)?.Item as IContainer;
+        if (container is null)
+            return Task.FromResult(new StowItemResponse { Success = false, Error = $"{request.ContainerName} is not a real container {actor.Name} is carrying." });
+
+        if (ReferenceEquals(itemLocation.ParentContainer, container))
+            return Task.FromResult(new StowItemResponse { Success = false, Error = $"{request.ItemName} is already in {request.ContainerName}." });
+
+        if (WouldCreateCycle(itemLocation.Item, container))
+            return Task.FromResult(new StowItemResponse { Success = false, Error = $"Cannot stow {request.ItemName} inside {request.ContainerName} — {request.ContainerName} is already inside {request.ItemName}." });
+
+        if (!actor.ActionEconomy.HasAction)
+            return Task.FromResult(new StowItemResponse { Success = false, Error = $"{actor.Name} has no Action remaining this turn." });
+
+        // Add to the destination before removing from wherever it was —
+        // a capacity rejection here must never leave the item vanished.
+        var addResult = container.AddItem(itemLocation.Item);
+        if (addResult.IsFailure)
+            return Task.FromResult(new StowItemResponse { Success = false, Error = addResult.Error });
+
+        if (itemLocation.ParentContainer is IContainer oldParent)
+        {
+            oldParent.RemoveItem(itemLocation.Item);
+        }
+        else
+        {
+            // Was equipped or flat/quick-access — RemoveItem auto-unequips
+            // first if needed (StandardInventory's own existing behavior).
+            actor.Inventory.RemoveItem(itemLocation.Item);
+        }
+
+        actor.ActionEconomy.UseAction();
+
+        return Task.FromResult(new StowItemResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} stows {itemLocation.Item.Name} in {container.Name}.",
+            Actor = ActorMapping.ToActor(actor),
+        });
+    }
+
+    /// <summary>
+    /// Brings a carried item to hand/ready-to-use — see the proto's own
+    /// DrawItem doc comment for the two different costs this enforces
+    /// depending on where the item actually is. A stowed item surfaces
+    /// into the flat inventory (quick access), not straight into an
+    /// equipment slot — a separate EquipItem call readies it from there,
+    /// the same "equip requires an already-carried, top-level item"
+    /// constraint EquipItem already enforces.
+    /// </summary>
+    public override Task<DrawItemResponse> DrawItem(DrawItemRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new DrawItemResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var itemLocation = actor.GetCarriedItemLocations().FirstOrDefault(l => l.Item.Name == request.ItemName);
+        if (itemLocation is null)
+            return Task.FromResult(new DrawItemResponse { Success = false, Error = $"{request.ItemName} is not in {actor.Name}'s inventory." });
+
+        if (itemLocation.EquippedSlot is not null)
+            return Task.FromResult(new DrawItemResponse { Success = false, Error = $"{request.ItemName} is already in hand." });
+
+        if (itemLocation.ParentContainer is IContainer parent)
+        {
+            if (!actor.ActionEconomy.HasAction)
+                return Task.FromResult(new DrawItemResponse { Success = false, Error = $"{actor.Name} has no Action remaining this turn." });
+
+            parent.RemoveItem(itemLocation.Item);
+            actor.Inventory.AddItem(itemLocation.Item);
+            actor.ActionEconomy.UseAction();
+        }
+        else
+        {
+            // Quick access already — bringing it fully to hand only costs
+            // this turn's free object interaction, never falls back to the
+            // Action if that's already spent.
+            if (!actor.ActionEconomy.TryUseFreeObjectInteraction())
+                return Task.FromResult(new DrawItemResponse { Success = false, Error = $"{actor.Name} has already used this turn's free object interaction." });
+        }
+
+        return Task.FromResult(new DrawItemResponse
+        {
+            Success = true,
+            ResultMessage = $"{actor.Name} draws {itemLocation.Item.Name}.",
+            Actor = ActorMapping.ToActor(actor),
         });
     }
 
@@ -983,6 +1175,36 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
 
         var response = new ListInventoryResponse { Success = true };
         response.ItemNames.AddRange(actor.Inventory.Items.Select(i => i.Name));
+        return Task.FromResult(response);
+    }
+
+    /// <summary>
+    /// Answers "where is everything actor is carrying" — see the proto's
+    /// own ListCarriedItems doc comment. Every entry is computed fresh
+    /// from <see cref="OpenCombatEngine.Core.Interfaces.Creatures.ICreature.GetCarriedItemLocations"/>
+    /// via <see cref="DescribeLocation"/>, never a separately-tracked
+    /// field.
+    /// </summary>
+    public override Task<ListCarriedItemsResponse> ListCarriedItems(ListCarriedItemsRequest request, ServerCallContext context)
+    {
+        var actorResult = ActorMapping.ToCreature(request.Actor, _spellRepository, _itemLibrary);
+        if (actorResult.IsFailure)
+            return Task.FromResult(new ListCarriedItemsResponse { Success = false, Error = actorResult.Error });
+        var actor = actorResult.Value;
+
+        var response = new ListCarriedItemsResponse { Success = true };
+        foreach (var location in actor.GetCarriedItemLocations())
+        {
+            var (description, kind, containerName, slot) = DescribeLocation(actor, location);
+            response.Items.Add(new CarriedItem
+            {
+                ItemName = location.Item.Name,
+                LocationDescription = description,
+                Kind = kind,
+                ContainerName = containerName,
+                Slot = slot,
+            });
+        }
         return Task.FromResult(response);
     }
 

@@ -56,6 +56,64 @@ namespace OpenCombatEngine.Implementation.Tests
             economy.HasBonusAction.Should().BeTrue();
             economy.HasReaction.Should().BeTrue();
         }
+
+        [Fact]
+        public void Should_Start_With_FreeObjectInteraction_Available()
+        {
+            var economy = new StandardActionEconomy();
+            economy.HasFreeObjectInteraction.Should().BeTrue();
+        }
+
+        [Fact]
+        public void TryUseFreeObjectInteraction_FirstCallSameTurn_Succeeds()
+        {
+            var economy = new StandardActionEconomy();
+
+            var used = economy.TryUseFreeObjectInteraction();
+
+            used.Should().BeTrue();
+            economy.HasFreeObjectInteraction.Should().BeFalse();
+        }
+
+        [Fact]
+        public void TryUseFreeObjectInteraction_SecondCallSameTurn_Fails()
+        {
+            var economy = new StandardActionEconomy();
+            economy.TryUseFreeObjectInteraction();
+
+            var usedAgain = economy.TryUseFreeObjectInteraction();
+
+            usedAgain.Should().BeFalse();
+            economy.HasFreeObjectInteraction.Should().BeFalse();
+        }
+
+        [Fact]
+        public void GrantFreeObjectInteraction_AllowsExtraUseSameTurn()
+        {
+            // The extensibility hook a future "this becomes a free action"
+            // feat calls from IFeature.OnStartTurn — proves the underlying
+            // counter actually stacks rather than just re-flipping a bool
+            // that a second grant would no-op against.
+            var economy = new StandardActionEconomy();
+            economy.TryUseFreeObjectInteraction(); // spend the turn's normal allotment
+
+            economy.GrantFreeObjectInteraction();
+
+            economy.HasFreeObjectInteraction.Should().BeTrue();
+            economy.TryUseFreeObjectInteraction().Should().BeTrue();
+            economy.HasFreeObjectInteraction.Should().BeFalse();
+        }
+
+        [Fact]
+        public void ResetTurn_RestoresFreeObjectInteraction()
+        {
+            var economy = new StandardActionEconomy();
+            economy.TryUseFreeObjectInteraction();
+
+            economy.ResetTurn();
+
+            economy.HasFreeObjectInteraction.Should().BeTrue();
+        }
         
         [Fact]
         public void StandardCreature_StartTurn_Should_Reset_Economy()

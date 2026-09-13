@@ -14,6 +14,7 @@ namespace OpenCombatEngine.Core.Enums
         Feet,
         Ring1,
         Ring2,
-        Accessory // Generic accessory? Or maybe generic "Attuned" slot? Sticking to specific body slots for now.
+        Accessory, // Generic accessory? Or maybe generic "Attuned" slot? Sticking to specific body slots for now.
+        Back // A worn backpack/quiver — the slot a carried container is equipped into, distinct from being held.
     }
 }

@@ -80,6 +80,15 @@ public class SystemEngineGrpcServiceTests
             // A plain non-weapon item, for equip/unequip/receive/discard/
             // transfer tests that don't need weapon-specific behavior.
             ["Torch"] = new StandardItem(Guid.NewGuid(), "Torch", "A wooden torch.", 1, 1, ItemRarity.Common, ItemType.Other),
+            // Real IContainer fixtures for StowItem/DrawItem/ListCarriedItems
+            // tests. Backpack has generous capacity for the ordinary success
+            // cases; TinyPouch's capacity (0.5) is deliberately smaller than
+            // Torch's own weight (1) so a capacity-exceeded rejection has
+            // something real to trigger against, the same way this library's
+            // other fixtures are sized for the specific test that needs them.
+            ["Backpack"] = new ContainerItem("Backpack", baseWeight: 5, weightCapacity: 30),
+            ["Pouch"] = new ContainerItem("Pouch", baseWeight: 0.5, weightCapacity: 10),
+            ["TinyPouch"] = new ContainerItem("TinyPouch", baseWeight: 0.1, weightCapacity: 0.5),
         };
 
         public IItem? GetItem(string slug) => _items.TryGetValue(slug, out var item) ? item : null;
@@ -162,6 +171,86 @@ public class SystemEngineGrpcServiceTests
 
     private Actor MakeActorWithInventoryItem(string itemName, int currentHp = 24, int maxHp = 30) =>
         ActorMapping.ToActor(new StandardCreature(MakeStateWithInventoryItem(itemName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    // Two loose top-level items — a real IContainer (containerName, from
+    // FakeItemLibrary's Backpack/Pouch fixtures) plus a separate item not
+    // yet inside it — for StowItem tests exercising the "put it away"
+    // half of the feature.
+    private static CreatureState MakeStateWithContainerAndLooseItem(string containerName, string itemName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(containerName), new(itemName) }),
+    };
+
+    private Actor MakeActorWithContainerAndLooseItem(string containerName, string itemName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithContainerAndLooseItem(containerName, itemName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    // An item already nested inside a real container — for DrawItem and
+    // ListCarriedItems tests exercising the "bring it back out"/"where is
+    // it right now" halves of the feature.
+    private static CreatureState MakeStateWithItemStowedInContainer(string containerName, string itemName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState>
+        {
+            new(containerName, Contents: new Collection<ItemInstanceState> { new(itemName) }),
+        }),
+    };
+
+    // Uses its own throwaway FakeItemLibrary, deliberately not the shared
+    // _itemLibrary the service itself restores actors with: FakeItemLibrary
+    // hands out one shared, mutable IContainer instance per name (documented
+    // above), and building this fixture already performs one restore that
+    // populates the container's Contents. Restoring against the same shared
+    // _itemLibrary the RPC call restores AGAIN from would double-add the
+    // nested item into that one shared container instance.
+    private Actor MakeActorWithItemStowedInContainer(string containerName, string itemName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithItemStowedInContainer(containerName, itemName, currentHp, maxHp), _spellRepository, new FakeItemLibrary()));
+
+    // One container nested inside another — the fixture WouldCreateCycle's
+    // own rejection tests need: stowing outerName into innerName would
+    // create a cycle, since innerName is already inside outerName.
+    private static CreatureState MakeStateWithNestedContainer(string outerName, string innerName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState>
+        {
+            new(outerName, Contents: new Collection<ItemInstanceState> { new(innerName) }),
+        }),
+    };
+
+    // Same throwaway-library reasoning as MakeActorWithItemStowedInContainer
+    // above — this fixture's own restore already nests innerName inside
+    // outerName's shared container instance.
+    private Actor MakeActorWithNestedContainer(string outerName, string innerName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithNestedContainer(outerName, innerName, currentHp, maxHp), _spellRepository, new FakeItemLibrary()));
+
+    // A weapon equipped in MainHand plus a second, loose weapon — the
+    // "hands full" sequence-proof fixture: EquipItem-ing the loose one
+    // into MainHand must reject until the equipped one is freed.
+    private static CreatureState MakeStateWithEquippedAndLooseWeapon(string equippedName, string looseName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(equippedName), new(looseName) }),
+        Equipment = new EquipmentState(
+            new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0) },
+            new Collection<int>()),
+    };
+
+    private Actor MakeActorWithEquippedAndLooseWeapon(string equippedName, string looseName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithEquippedAndLooseWeapon(equippedName, looseName, currentHp, maxHp), _spellRepository, _itemLibrary));
+
+    // A weapon equipped in MainHand, a second loose weapon, and a real
+    // container all at once — the "stow it properly (costs the action)"
+    // sequence-proof fixture: StowItem-ing the equipped one into the
+    // container must free the hand for the loose one to be equipped
+    // afterward.
+    private static CreatureState MakeStateWithEquippedWeaponLooseWeaponAndContainer(string equippedName, string looseName, string containerName, int currentHp = 24, int maxHp = 30) => MakeState(currentHp, maxHp) with
+    {
+        Inventory = new InventoryState(new Collection<ItemInstanceState> { new(equippedName), new(looseName), new(containerName) }),
+        Equipment = new EquipmentState(
+            new Collection<EquippedSlotState> { new(OpenCombatEngine.Core.Enums.EquipmentSlot.MainHand, 0) },
+            new Collection<int>()),
+    };
+
+    private Actor MakeActorWithEquippedWeaponLooseWeaponAndContainer(string equippedName, string looseName, string containerName, int currentHp = 24, int maxHp = 30) =>
+        ActorMapping.ToActor(new StandardCreature(MakeStateWithEquippedWeaponLooseWeaponAndContainer(equippedName, looseName, containerName, currentHp, maxHp), _spellRepository, _itemLibrary));
 
     // A creature with a real challenge_rating recorded (or none, when cr
     // is null) — for GenerateLoot tests. id lets a test place several
@@ -1388,6 +1477,45 @@ public class SystemEngineGrpcServiceTests
     }
 
     [Fact]
+    public async Task EquipItem_HandSlotAlreadyOccupiedByDifferentItem_ReturnsFailure()
+    {
+        var actor = MakeActorWithEquippedAndLooseWeapon("Longsword", "Shortsword");
+
+        var response = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Shortsword", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("already occupied");
+    }
+
+    [Fact]
+    public async Task EquipItem_AfterFreeingOccupiedHandViaUnequip_Succeeds()
+    {
+        // Sequence proof for the "drop it (free)" half of the hands-full
+        // rule: the rejected Equip above becomes a success once the
+        // occupied hand is freed via the already-free UnequipItem.
+        var actor = MakeActorWithEquippedAndLooseWeapon("Longsword", "Shortsword");
+
+        var unequipResponse = await _service.UnequipItem(new UnequipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+        unequipResponse.Success.Should().BeTrue();
+
+        var equipResponse = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = unequipResponse.Actor,
+            ItemName = "Shortsword", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        equipResponse.Success.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task UnequipItem_Succeeds()
     {
         var actor = MakeActorWithWeapon("Longsword");
@@ -1534,6 +1662,303 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeFalse();
         response.Error.Should().Contain("target is required");
+    }
+
+    // StowItem/DrawItem: the actual mechanical fix for the "crowbar
+    // teleporting" continuity bug (design doc's own worked example) —
+    // retrieving something properly packed away costs the Action;
+    // something already at hand/quick-access is free once per turn.
+
+    [Fact]
+    public async Task StowItem_LooseItemIntoRealContainer_Succeeds()
+    {
+        var actor = MakeActorWithContainerAndLooseItem("Backpack", "Torch");
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "Backpack",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Actor.Should().NotBeNull();
+        response.ResultMessage.Should().Contain("Torch").And.Contain("Backpack");
+    }
+
+    [Fact]
+    public async Task StowItem_ItemNotCarried_ReturnsFailure()
+    {
+        var actor = MakeActorWithInventoryItem("Backpack");
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "Backpack",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not in");
+    }
+
+    [Fact]
+    public async Task StowItem_DestinationNotARealContainer_ReturnsFailure()
+    {
+        var actor = MakeActorWithContainerAndLooseItem("Dagger", "Torch"); // Dagger isn't a container
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "Dagger",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not a real container");
+    }
+
+    [Fact]
+    public async Task StowItem_AlreadyInThatContainer_ReturnsFailure()
+    {
+        var actor = MakeActorWithItemStowedInContainer("Backpack", "Torch");
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "Backpack",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("already in");
+    }
+
+    [Fact]
+    public async Task StowItem_WouldCreateCycle_ReturnsFailure()
+    {
+        // Pouch is already inside Backpack — stowing Backpack into Pouch
+        // would nest a container inside its own contents.
+        var actor = MakeActorWithNestedContainer("Backpack", "Pouch");
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Backpack", ContainerName = "Pouch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("already inside");
+    }
+
+    [Fact]
+    public async Task StowItem_CapacityExceeded_ReturnsFailure()
+    {
+        var actor = MakeActorWithContainerAndLooseItem("TinyPouch", "Torch");
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "TinyPouch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("too heavy");
+    }
+
+    [Fact]
+    public async Task StowItem_NoActionAvailable_ReturnsFailure()
+    {
+        var actor = ActorMapping.ToActor(new StandardCreature(
+            MakeStateWithContainerAndLooseItem("Backpack", "Torch") with { ActionEconomy = new ActionEconomyState(false, true, true, true) },
+            _spellRepository, _itemLibrary));
+
+        var response = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Torch", ContainerName = "Backpack",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("no Action remaining");
+    }
+
+    [Fact]
+    public async Task DrawItem_QuickAccessItem_Succeeds()
+    {
+        var actor = MakeActorWithInventoryItem("Torch");
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+        response.Actor.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DrawItem_QuickAccessItem_FreeInteractionAlreadySpent_ReturnsFailure()
+    {
+        // No fallback to the Action, per this feature's own judgment call:
+        // burning the whole Action just to grab something already on the
+        // belt would be a worse outcome than the bug this feature fixes.
+        var actor = ActorMapping.ToActor(new StandardCreature(
+            MakeStateWithInventoryItem("Torch") with { ActionEconomy = new ActionEconomyState(true, true, true, false) },
+            _spellRepository, _itemLibrary));
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("free object interaction");
+    }
+
+    [Fact]
+    public async Task DrawItem_StowedItem_UsesTheAction()
+    {
+        var actor = MakeActorWithItemStowedInContainer("Backpack", "Torch");
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DrawItem_StowedItemNoActionAvailable_ReturnsFailure()
+    {
+        var actor = ActorMapping.ToActor(new StandardCreature(
+            MakeStateWithItemStowedInContainer("Backpack", "Torch") with { ActionEconomy = new ActionEconomyState(false, true, true, true) },
+            _spellRepository, new FakeItemLibrary())); // throwaway library — see MakeActorWithItemStowedInContainer's own remarks
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("no Action remaining");
+    }
+
+    [Fact]
+    public async Task DrawItem_AlreadyEquipped_ReturnsFailure()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Longsword",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("already in hand");
+    }
+
+    [Fact]
+    public async Task DrawItem_ItemNotCarried_ReturnsFailure()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.DrawItem(new DrawItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeFalse();
+        response.Error.Should().Contain("not in");
+    }
+
+    [Fact]
+    public async Task StowItem_ThenEquipItem_Succeeds()
+    {
+        // Sequence proof for the "properly stow it (costs the action)"
+        // half of the hands-full rule: stowing the equipped weapon frees
+        // MainHand for the loose one, exactly like UnequipItem's own free
+        // sequence proof above, but through the action-costing path.
+        var actor = MakeActorWithEquippedWeaponLooseWeaponAndContainer("Longsword", "Shortsword", "Backpack");
+
+        var stowResponse = await _service.StowItem(new StowItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = actor,
+            ItemName = "Longsword", ContainerName = "Backpack",
+        }, null!);
+        stowResponse.Success.Should().BeTrue();
+
+        var equipResponse = await _service.EquipItem(new EquipItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Actor = stowResponse.Actor,
+            ItemName = "Shortsword", Slot = Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand,
+        }, null!);
+
+        equipResponse.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ListCarriedItems_EquippedItem_ReportsWieldedMainHand()
+    {
+        var actor = MakeActorWithWeapon("Longsword");
+
+        var response = await _service.ListCarriedItems(new ListCarriedItemsRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var entry = response.Items.Should().ContainSingle(i => i.ItemName == "Longsword").Subject;
+        entry.Kind.Should().Be(Layforge.Protocol.SystemEngine.V1.CarryLocationKind.Equipped);
+        entry.LocationDescription.Should().Be("wielded (main hand)");
+        entry.Slot.Should().Be(Layforge.Protocol.SystemEngine.V1.EquipmentSlot.MainHand);
+    }
+
+    [Fact]
+    public async Task ListCarriedItems_StowedItem_ReportsContainerName()
+    {
+        var actor = MakeActorWithItemStowedInContainer("Backpack", "Torch");
+
+        var response = await _service.ListCarriedItems(new ListCarriedItemsRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var entry = response.Items.Should().ContainSingle(i => i.ItemName == "Torch").Subject;
+        entry.Kind.Should().Be(Layforge.Protocol.SystemEngine.V1.CarryLocationKind.Stowed);
+        entry.ContainerName.Should().Be("Backpack");
+        entry.LocationDescription.Should().Be("stowed in Backpack");
+    }
+
+    [Fact]
+    public async Task ListCarriedItems_QuickAccessItem_ReportsQuickAccess()
+    {
+        var actor = MakeActorWithInventoryItem("Torch");
+
+        var response = await _service.ListCarriedItems(new ListCarriedItemsRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        var entry = response.Items.Should().ContainSingle(i => i.ItemName == "Torch").Subject;
+        entry.Kind.Should().Be(Layforge.Protocol.SystemEngine.V1.CarryLocationKind.QuickAccess);
+        entry.LocationDescription.Should().Be("quick access");
+    }
+
+    [Fact]
+    public async Task ListCarriedItems_ActorWithNoItems_ReturnsEmptyList()
+    {
+        var actor = MakeActor();
+
+        var response = await _service.ListCarriedItems(new ListCarriedItemsRequest
+        {
+            RequestId = "r1", Actor = actor,
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Items.Should().BeEmpty();
     }
 
     [Fact]
