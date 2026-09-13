@@ -1522,6 +1522,18 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             response.Choices.AddRange(prompt.Choices);
         if (prompt.Done && prompt.Character is not null)
             response.Actor = ActorMapping.ToActor(new StandardCreature(prompt.Character, _spellRepository, _itemLibrary));
+        if (prompt.AbilityScoreRolls is not null)
+        {
+            foreach (var set in prompt.AbilityScoreRolls)
+            {
+                var mappedSet = new AbilityScoreRollSet { Total = set.Total };
+                foreach (var die in set.Dice)
+                {
+                    mappedSet.Dice.Add(new DieRoll { Sides = 6, Result = die.Value, Dropped = die.Dropped });
+                }
+                response.AbilityScoreRolls.Add(mappedSet);
+            }
+        }
         return response;
     }
 

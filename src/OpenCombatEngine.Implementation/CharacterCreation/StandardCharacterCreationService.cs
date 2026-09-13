@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.CharacterCreation;
@@ -50,7 +51,7 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
         private static readonly IReadOnlyList<int> StandardArray = new List<int> { 15, 14, 13, 12, 10, 8 };
         private static readonly IReadOnlyList<string> AbilityOrder = new List<string> { "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" };
 
-        private enum Phase { Race, Class, Gender, Background, AbilityMethod, AssignScores, PickCantrips, PickLeveledSpells, Done }
+        private enum Phase { Race, Class, Gender, Background, AbilityMethod, RevealAbilityRolls, AssignScores, PickCantrips, PickLeveledSpells, Done }
 
         private sealed class Session
         {
@@ -135,6 +136,8 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
                     return HandleBackground(session, answer);
                 case Phase.AbilityMethod:
                     return HandleAbilityMethod(session, answer);
+                case Phase.RevealAbilityRolls:
+                    return HandleRevealAbilityRollsAck(session);
                 case Phase.AssignScores:
                     return HandleAssignScore(sessionId, session, answer);
                 case Phase.PickCantrips:
@@ -193,28 +196,56 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
             if (!AbilityScoreMethods.Contains(answer, StringComparer.OrdinalIgnoreCase))
                 return Fail($"'{answer}' is not a valid ability score method. Choose one of: {string.Join(", ", AbilityScoreMethods)}.");
             session.AbilityScoreMethod = answer;
+
+            if (string.Equals(answer, "random_4d6_drop_lowest", StringComparison.OrdinalIgnoreCase))
+            {
+                // Interactive reveal: the dice are already fully decided
+                // here (server computes, client reveals — same principle
+                // client.roll's combat checks already use), but the
+                // player watches each of the six sets land before being
+                // asked to assign any of them. session.Phase pauses in
+                // RevealAbilityRolls until the caller acknowledges.
+                var sets = RollAbilityScoreDiceSets();
+                session.UnassignedScores.AddRange(sets.Select(s => s.Total));
+                session.Phase = Phase.RevealAbilityRolls;
+                return new CharacterCreationPrompt(true, null, false,
+                    "Time to roll your six ability scores! Click each die to reveal it.",
+                    new List<string>(), null, sets);
+            }
+
             session.UnassignedScores.AddRange(RollAbilityScores(answer));
+            session.Phase = Phase.AssignScores;
+            return NextAssignScorePrompt(session);
+        }
+
+        // HandleRevealAbilityRollsAck advances past the dice-reveal pause
+        // above. answer's content is deliberately never inspected — this
+        // step has nothing to validate, it's purely "the player has now
+        // seen the rolls, ask the real next question."
+        private static CharacterCreationPrompt HandleRevealAbilityRollsAck(Session session)
+        {
             session.Phase = Phase.AssignScores;
             return NextAssignScorePrompt(session);
         }
 
         private static CharacterCreationPrompt NextAssignScorePrompt(Session session)
         {
-            var value = session.UnassignedScores[0];
-            return Prompt($"Assign the score {value} to which ability?", session.RemainingAbilities);
+            var ability = session.RemainingAbilities[0];
+            var choices = session.UnassignedScores.Select(s => s.ToString(CultureInfo.InvariantCulture)).ToList();
+            return Prompt($"Assign which score to {ability}?", choices);
         }
 
         private CharacterCreationPrompt HandleAssignScore(string sessionId, Session session, string answer)
         {
-            var ability = session.RemainingAbilities.FirstOrDefault(a => string.Equals(a, answer, StringComparison.OrdinalIgnoreCase));
-            if (ability is null) return Fail($"'{answer}' is not a remaining ability. Choose one of: {string.Join(", ", session.RemainingAbilities)}.");
+            if (!int.TryParse(answer, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || !session.UnassignedScores.Contains(value))
+                return Fail($"'{answer}' is not one of the remaining scores. Choose one of: {string.Join(", ", session.UnassignedScores)}.");
 
-            var value = session.UnassignedScores[0];
-            session.UnassignedScores.RemoveAt(0);
+            var ability = session.RemainingAbilities[0];
+            session.UnassignedScores.Remove(value);
             session.AbilityAssignments[ability] = value;
-            session.RemainingAbilities.Remove(ability);
+            session.RemainingAbilities.RemoveAt(0);
 
-            if (session.UnassignedScores.Count > 0)
+            if (session.RemainingAbilities.Count > 0)
                 return NextAssignScorePrompt(session);
 
             return AdvancePastScoreAssignment(sessionId, session);
@@ -344,22 +375,41 @@ namespace OpenCombatEngine.Implementation.CharacterCreation
             if (string.Equals(method, "standard_array", StringComparison.OrdinalIgnoreCase))
                 return new List<int>(StandardArray);
 
-            // random_4d6_drop_lowest: roll 4d6, drop the lowest die, six
-            // times — IDiceRoller has no built-in "drop lowest" helper, so
-            // this is built from Roll("4d6")'s own IndividualRolls.
-            var scores = new List<int>();
+            // random_4d6_drop_lowest: totals only, for a caller (quick
+            // mode) that never shows the individual dice to a player.
+            return RollAbilityScoreDiceSets().Select(s => s.Total).ToList();
+        }
+
+        /// <summary>
+        /// Rolls all six ability scores via 4d6-drop-lowest, preserving
+        /// each set's individual dice (not just the collapsed total) so a
+        /// detailed-mode caller can show the player a real per-die reveal
+        /// instead of a blind pre-summed number — the gap a live player
+        /// report flagged ("I had to assign each number to an ability
+        /// without knowing what all was rolled"). IDiceRoller has no
+        /// built-in "drop lowest" helper, so this is built from
+        /// Roll("4d6")'s own IndividualRolls.
+        /// </summary>
+        private List<AbilityScoreRollSet> RollAbilityScoreDiceSets()
+        {
+            var sets = new List<AbilityScoreRollSet>();
             for (var i = 0; i < 6; i++)
             {
                 var result = _diceRoller.Roll("4d6");
-                if (!result.IsSuccess)
-                {
-                    scores.Add(10); // should not happen; a safe SRD-average fallback rather than throwing
-                    continue;
-                }
-                var rolls = result.Value.IndividualRolls.OrderBy(r => r).ToList();
-                scores.Add(rolls.Skip(1).Sum()); // drop the lowest of the four
+                // Should not happen; a safe SRD-average fallback (four 3s,
+                // matching the old single-total fallback's spirit) rather
+                // than throwing.
+                var rolls = result.IsSuccess ? result.Value.IndividualRolls.ToList() : new List<int> { 3, 3, 3, 3 };
+                var lowest = rolls.Min();
+                // First occurrence of the minimum — on a tie it doesn't
+                // matter which specific die is marked dropped, only that
+                // exactly one is, and picking deterministically (not e.g.
+                // the last occurrence) keeps this reproducible for tests.
+                var droppedIndex = rolls.IndexOf(lowest);
+                var dice = rolls.Select((v, idx) => new RolledDie(v, idx == droppedIndex)).ToList();
+                sets.Add(new AbilityScoreRollSet(dice, rolls.Sum() - lowest));
             }
-            return scores;
+            return sets;
         }
 
         /// <summary>

@@ -4,6 +4,7 @@
 // See LEGAL.md for full disclaimers
 
 using System.Collections.ObjectModel;
+using System.Linq;
 using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -2264,5 +2265,38 @@ public class SystemEngineGrpcServiceTests
 
         response.Success.Should().BeTrue();
         response.ItemNames.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AnswerCharacterCreationPrompt_Random4d6DropLowest_MapsAbilityScoreRollsWithSelfConsistentDropMath()
+    {
+        // MapCreationPrompt's new branch, exercised through the real RPC
+        // surface — proves the gRPC-facing shape (AbilityScoreRollSet/
+        // DieRoll.Dropped), not just the Core-side prompt this session's
+        // service-level tests already pin exact values for.
+        await _service.StartCharacterCreation(new StartCharacterCreationRequest
+        {
+            SessionId = "grpc-d6-session", CampaignId = "c1",
+            Mode = CharacterCreationMode.Detailed, CharacterName = "Kestrel",
+        }, null!);
+        var answer = new AnswerCharacterCreationPromptRequest { SessionId = "grpc-d6-session" };
+        answer.Answer = "Human"; await _service.AnswerCharacterCreationPrompt(answer, null!);
+        answer.Answer = "Fighter"; await _service.AnswerCharacterCreationPrompt(answer, null!);
+        answer.Answer = "Male"; await _service.AnswerCharacterCreationPrompt(answer, null!);
+        answer.Answer = "Soldier"; await _service.AnswerCharacterCreationPrompt(answer, null!);
+        answer.Answer = "random_4d6_drop_lowest";
+        var response = await _service.AnswerCharacterCreationPrompt(answer, null!);
+
+        response.Success.Should().BeTrue();
+        response.Done.Should().BeFalse();
+        response.Choices.Should().BeEmpty();
+        response.AbilityScoreRolls.Should().HaveCount(6);
+        foreach (var set in response.AbilityScoreRolls)
+        {
+            set.Dice.Should().HaveCount(4);
+            set.Dice.Should().OnlyContain(d => d.Sides == 6 && d.Result >= 1 && d.Result <= 6);
+            set.Dice.Count(d => d.Dropped).Should().Be(1);
+            set.Dice.Where(d => !d.Dropped).Sum(d => d.Result).Should().Be(set.Total);
+        }
     }
 }

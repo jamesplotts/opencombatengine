@@ -353,6 +353,10 @@ message DieRoll {
   int32 result = 2;
   // e.g. "d20", "damage-1", "damage-2" — disambiguates multi-die pools.
   string label = 3;
+  // True for the one die a drop-lowest roll (e.g. ability score
+  // generation's 4d6-drop-lowest) excluded from its total. False for
+  // every other roll — a normal check has nothing to drop.
+  bool dropped = 4;
 }
 
 message Outcome {
@@ -1161,8 +1165,12 @@ message AnswerCharacterCreationPromptRequest {
   string session_id = 1;
   // The chosen option's raw value (must be a real member of the most
   // recent CharacterCreationPromptResponse.choices for this session),
-  // or free text for a prompt with no enumerated choices (today, only
-  // the gender prompt).
+  // free text for a prompt with no enumerated choices (today, the
+  // gender prompt), or an arbitrary acknowledgment value when the
+  // pending prompt is the ability_score_rolls reveal step below (its
+  // content is ignored — any answer just tells the engine the player
+  // has finished watching the dice reveal and it's time for the real
+  // next question).
   string answer = 2;
 }
 
@@ -1176,10 +1184,32 @@ message CharacterCreationPromptResponse {
   bool done = 3;
   string prompt_text = 4;
   // Enumerated options the player picks from; empty means the client
-  // should collect free text instead (today, only the gender prompt).
+  // should collect free text instead (today, the gender prompt), or —
+  // when ability_score_rolls below is populated — that no answer is
+  // expected until the player finishes watching the reveal.
   repeated string choices = 5;
   // Set only when done = true: the finished, fully-generated character.
   Actor actor = 6;
+  // Populated only for the one response where the player just chose
+  // "roll 4d6, drop the lowest" as their ability-score method: the six
+  // sets of already-rolled dice (one drop-lowest total each), so a
+  // client can show an interactive per-die reveal instead of a blind
+  // pre-summed total. prompt_text is the roll-intro line; choices is
+  // empty here — the next real question (assigning each rolled total
+  // to an ability) only arrives after AnswerCharacterCreationPrompt is
+  // called again to acknowledge the reveal.
+  repeated AbilityScoreRollSet ability_score_rolls = 7;
+}
+
+message AbilityScoreRollSet {
+  // All 4 dice from one ability score's 4d6 roll, in rolled order —
+  // including the dropped one, flagged via DieRoll.dropped rather than
+  // omitted, so a client can show it (struck through) alongside the
+  // three that counted.
+  repeated DieRoll dice = 1;
+  // The sum of the 3 kept dice (every DieRoll in `dice` with
+  // dropped = false).
+  int32 total = 2;
 }
 
 message ListClassSpellsRequest {

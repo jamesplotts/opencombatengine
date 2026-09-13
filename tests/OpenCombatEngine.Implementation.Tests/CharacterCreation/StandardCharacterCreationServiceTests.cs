@@ -6,9 +6,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
+using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.CharacterCreation;
 using OpenCombatEngine.Core.Interfaces.Dice;
+using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.CharacterCreation;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Spells;
@@ -51,14 +53,38 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             return repo;
         }
 
-        private static StandardCharacterCreationService NewService(out InMemorySpellRepository spellRepository)
+        private static StandardCharacterCreationService NewService(out InMemorySpellRepository spellRepository, IDiceRoller? roller = null)
         {
             spellRepository = SeededSpellRepository();
-            IDiceRoller roller = new StandardDiceRoller();
-            return new StandardCharacterCreationService(roller, spellRepository);
+            return new StandardCharacterCreationService(roller ?? new StandardDiceRoller(), spellRepository);
         }
 
-        private static CharacterCreationPrompt WalkDetailedNonCaster(StandardCharacterCreationService service, string sessionId, string race, string className, string gender, string background, string abilityMethod, IReadOnlyList<string> abilityAssignmentOrder)
+        /// <summary>
+        /// A fixed 4d6 sequence for the dice roller — the Nth call to
+        /// Roll("4d6") returns rolls[N]'s individual dice (the last entry
+        /// repeats for any call beyond what's given, matching NSubstitute's
+        /// own multi-return semantics). Lets a test control exactly what
+        /// StandardCharacterCreationService's 4d6-drop-lowest path rolls.
+        /// </summary>
+        private static IDiceRoller FixedD6Rolls(params int[][] rolls)
+        {
+            var roller = Substitute.For<IDiceRoller>();
+            var results = rolls
+                .Select(r => Result<DiceRollResult>.Success(new DiceRollResult(r.Sum(), "4d6", r.ToList(), 0, RollType.Normal)))
+                .ToArray();
+            roller.Roll("4d6").Returns(results[0], results.Skip(1).ToArray());
+            return roller;
+        }
+
+        /// <summary>
+        /// Walks race/class/gender/background/ability-method, then answers
+        /// the by-ability assignment prompts in scoreAssignmentOrder —
+        /// applied to the fixed Strength/Dexterity/Constitution/
+        /// Intelligence/Wisdom/Charisma order NextAssignScorePrompt always
+        /// asks in, never a caller-chosen ability order (that choice no
+        /// longer exists; the player picks the *score*, not the ability).
+        /// </summary>
+        private static CharacterCreationPrompt WalkDetailedNonCaster(StandardCharacterCreationService service, string sessionId, string race, string className, string gender, string background, string abilityMethod, IReadOnlyList<int> scoreAssignmentOrder)
         {
             service.Start(sessionId, CharacterCreationMode.Detailed, "Kestrel");
             service.Answer(sessionId, race);
@@ -66,10 +92,10 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             service.Answer(sessionId, gender);
             service.Answer(sessionId, background);
             var prompt = service.Answer(sessionId, abilityMethod);
-            foreach (var ability in abilityAssignmentOrder)
+            foreach (var score in scoreAssignmentOrder)
             {
                 prompt.Done.Should().BeFalse();
-                prompt = service.Answer(sessionId, ability);
+                prompt = service.Answer(sessionId, score.ToString());
             }
             return prompt;
         }
@@ -123,9 +149,12 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
         public void DetailedMode_Fighter_FullSequence_ProducesCorrectCharacter()
         {
             var service = NewService(out _);
-            var abilityOrder = new[] { "Strength", "Constitution", "Dexterity", "Intelligence", "Wisdom", "Charisma" };
+            // Assignment now proceeds in the fixed Str,Dex,Con,Int,Wis,Cha
+            // order — to reproduce the original Str=15/Con=14/Dex=13 result,
+            // answer 15 for Strength, 13 for Dexterity, 14 for Constitution.
+            var scoreOrder = new[] { 15, 13, 14, 12, 10, 8 };
 
-            var result = WalkDetailedNonCaster(service, "fighter-session", "Human", "Fighter", "Male", "Soldier", "standard_array", abilityOrder);
+            var result = WalkDetailedNonCaster(service, "fighter-session", "Human", "Fighter", "Male", "Soldier", "standard_array", scoreOrder);
 
             result.Success.Should().BeTrue();
             result.Done.Should().BeTrue();
@@ -137,8 +166,9 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
             character.RaceName.Should().Be("Human");
             character.Background.Should().Be("Soldier");
             character.Team.Should().Be("Player");
-            // Human: +1 to every ability. Standard array assigned in order
-            // Str,Con,Dex,Int,Wis,Cha -> 15,14,13,12,10,8 respectively.
+            // Human: +1 to every ability. Assignment order is fixed
+            // (Str,Dex,Con,Int,Wis,Cha); scoreOrder above answers
+            // 15/13/14/12/10/8 for those slots respectively.
             character.AbilityScores.Strength.Should().Be(16);
             character.AbilityScores.Constitution.Should().Be(15);
             character.AbilityScores.Dexterity.Should().Be(14);
@@ -157,11 +187,166 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
         public void DetailedMode_NonCasterClasses_NeverPromptForSpells(string className)
         {
             var service = NewService(out _);
-            var abilityOrder = new[] { "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" };
-            var result = WalkDetailedNonCaster(service, "session-" + className, "Human", className, "Male", "Criminal", "standard_array", abilityOrder);
+            var scoreOrder = new[] { 15, 14, 13, 12, 10, 8 };
+            var result = WalkDetailedNonCaster(service, "session-" + className, "Human", className, "Male", "Criminal", "standard_array", scoreOrder);
 
             result.Done.Should().BeTrue("a non-caster has nothing left to ask after ability scores");
             result.PromptText.Should().BeNullOrEmpty();
+        }
+
+        [Fact]
+        public void AbilityMethod_StandardArray_AsksByAbilityOfferingRemainingScores()
+        {
+            // standard_array shares the same AssignScores phase as the
+            // dice method, so it gets the same by-ability wording as a
+            // natural side effect, not separate scope: "Assign which
+            // score to Strength?" with the standard array's values as
+            // buttons, rather than "Assign the score 15 to which ability?".
+            var service = NewService(out _);
+            service.Start("std-array-session", CharacterCreationMode.Detailed, "Kestrel");
+            service.Answer("std-array-session", "Human");
+            service.Answer("std-array-session", "Fighter");
+            service.Answer("std-array-session", "Male");
+            service.Answer("std-array-session", "Soldier");
+
+            var prompt = service.Answer("std-array-session", "standard_array");
+
+            prompt.PromptText.Should().Be("Assign which score to Strength?");
+            prompt.Choices.Should().BeEquivalentTo(new[] { "15", "14", "13", "12", "10", "8" });
+        }
+
+        [Fact]
+        public void AbilityMethod_Random4d6DropLowest_ReturnsSixDiceSetsWithNoChoicesYet()
+        {
+            // Regression test for a live player report: choosing 4d6-drop-
+            // lowest used to blind-assign six totals with zero visibility
+            // into what was rolled. This is the reveal step's shape —
+            // Choices must be empty (nothing to answer until the player
+            // has watched the dice land) and every set must carry real
+            // per-die data, not a pre-collapsed total.
+            var roller = FixedD6Rolls(
+                new[] { 5, 3, 2, 6 },   // drop 2 -> 14
+                new[] { 2, 2, 3, 5 },   // tie on the lowest -> drop one 2 -> 10
+                new[] { 4, 4, 4, 4 },   // drop 4 -> 12
+                new[] { 1, 1, 1, 6 },   // drop 1 -> 8
+                new[] { 6, 6, 6, 6 },   // drop 6 -> 18
+                new[] { 3, 3, 3, 3 });  // drop 3 -> 9
+            var service = NewService(out _, roller);
+            service.Start("d6-session", CharacterCreationMode.Detailed, "Kestrel");
+            service.Answer("d6-session", "Human");
+            service.Answer("d6-session", "Fighter");
+            service.Answer("d6-session", "Male");
+            service.Answer("d6-session", "Soldier");
+
+            var prompt = service.Answer("d6-session", "random_4d6_drop_lowest");
+
+            prompt.Success.Should().BeTrue();
+            prompt.Done.Should().BeFalse();
+            prompt.Choices.Should().BeEmpty("nothing is answerable until the player has watched all six sets reveal");
+            prompt.AbilityScoreRolls.Should().HaveCount(6);
+            var sets = prompt.AbilityScoreRolls!;
+            sets.Select(s => s.Total).Should().Equal(14, 10, 12, 8, 18, 9);
+            foreach (var set in sets)
+            {
+                set.Dice.Should().HaveCount(4);
+                set.Dice.Count(d => d.Dropped).Should().Be(1, "exactly one die drops per 4d6 set, even with a tie for lowest");
+                set.Dice.Where(d => !d.Dropped).Sum(d => d.Value).Should().Be(set.Total);
+            }
+            // The tie case: dice [2,2,3,5] drops the first 2 (index 0), not
+            // the second — deterministic, and either way the total (10) is
+            // identical, but this pins the exact behavior against a change.
+            sets[1].Dice[0].Dropped.Should().BeTrue();
+            sets[1].Dice[1].Dropped.Should().BeFalse();
+        }
+
+        [Fact]
+        public void AbilityMethod_Random4d6DropLowest_AckAdvancesToByAbilityAssignmentPrompt()
+        {
+            var roller = FixedD6Rolls(
+                new[] { 5, 3, 2, 6 }, new[] { 2, 2, 3, 5 }, new[] { 4, 4, 4, 4 },
+                new[] { 1, 1, 1, 6 }, new[] { 6, 6, 6, 6 }, new[] { 3, 3, 3, 3 });
+            var service = NewService(out _, roller);
+            service.Start("d6-ack-session", CharacterCreationMode.Detailed, "Kestrel");
+            service.Answer("d6-ack-session", "Human");
+            service.Answer("d6-ack-session", "Fighter");
+            service.Answer("d6-ack-session", "Male");
+            service.Answer("d6-ack-session", "Soldier");
+            service.Answer("d6-ack-session", "random_4d6_drop_lowest");
+
+            // The ack's own content is never inspected — any non-empty
+            // string just means "the player has seen the rolls."
+            var afterAck = service.Answer("d6-ack-session", "acknowledged");
+
+            afterAck.Success.Should().BeTrue();
+            afterAck.Done.Should().BeFalse();
+            afterAck.PromptText.Should().Be("Assign which score to Strength?");
+            afterAck.Choices.Should().BeEquivalentTo(new[] { "14", "10", "12", "8", "18", "9" });
+            afterAck.AbilityScoreRolls.Should().BeNullOrEmpty("the reveal data is only sent once, on the roll step itself");
+        }
+
+        [Fact]
+        public void AbilityMethod_Random4d6DropLowest_FullWalkthrough_AssignsExactlyWhatWasRolled()
+        {
+            var roller = FixedD6Rolls(
+                new[] { 5, 3, 2, 6 },   // 14
+                new[] { 2, 2, 3, 5 },   // 10
+                new[] { 4, 4, 4, 4 },   // 12
+                new[] { 1, 1, 1, 6 },   // 8
+                new[] { 6, 6, 6, 6 },   // 18
+                new[] { 3, 3, 3, 3 });  // 9
+            var service = NewService(out _, roller);
+            service.Start("d6-full-session", CharacterCreationMode.Detailed, "Kestrel");
+            service.Answer("d6-full-session", "Human");
+            service.Answer("d6-full-session", "Fighter");
+            service.Answer("d6-full-session", "Male");
+            service.Answer("d6-full-session", "Soldier");
+            service.Answer("d6-full-session", "random_4d6_drop_lowest");
+            service.Answer("d6-full-session", "acknowledged");
+
+            // Assign in the fixed Str,Dex,Con,Int,Wis,Cha order, picking a
+            // different rolled total each time.
+            var prompt = service.Answer("d6-full-session", "14"); // Strength
+            prompt = service.Answer("d6-full-session", "10");     // Dexterity
+            prompt = service.Answer("d6-full-session", "12");     // Constitution
+            prompt = service.Answer("d6-full-session", "8");      // Intelligence
+            prompt = service.Answer("d6-full-session", "18");     // Wisdom
+            prompt = service.Answer("d6-full-session", "9");      // Charisma
+
+            prompt.Done.Should().BeTrue();
+            var character = prompt.Character!;
+            // Human: +1 to every ability.
+            character.AbilityScores.Strength.Should().Be(15);
+            character.AbilityScores.Dexterity.Should().Be(11);
+            character.AbilityScores.Constitution.Should().Be(13);
+            character.AbilityScores.Intelligence.Should().Be(9);
+            character.AbilityScores.Wisdom.Should().Be(19);
+            character.AbilityScores.Charisma.Should().Be(10);
+        }
+
+        [Fact]
+        public void AbilityMethod_Random4d6DropLowest_AssignScore_RejectsValueNotInRemainingPool()
+        {
+            var roller = FixedD6Rolls(
+                new[] { 5, 3, 2, 6 }, new[] { 2, 2, 3, 5 }, new[] { 4, 4, 4, 4 },
+                new[] { 1, 1, 1, 6 }, new[] { 6, 6, 6, 6 }, new[] { 3, 3, 3, 3 });
+            var service = NewService(out _, roller);
+            service.Start("d6-reject-session", CharacterCreationMode.Detailed, "Kestrel");
+            service.Answer("d6-reject-session", "Human");
+            service.Answer("d6-reject-session", "Fighter");
+            service.Answer("d6-reject-session", "Male");
+            service.Answer("d6-reject-session", "Soldier");
+            service.Answer("d6-reject-session", "random_4d6_drop_lowest");
+            service.Answer("d6-reject-session", "acknowledged");
+
+            var rejected = service.Answer("d6-reject-session", "99");
+            rejected.Success.Should().BeFalse();
+            rejected.Error.Should().Contain("not one of the remaining scores");
+
+            // A subsequent real answer is still accepted — the bad answer
+            // didn't advance or corrupt the session.
+            var retry = service.Answer("d6-reject-session", "14");
+            retry.Success.Should().BeTrue();
+            retry.PromptText.Should().Be("Assign which score to Dexterity?");
         }
 
         [Fact]
@@ -177,11 +362,12 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
 
             // Assign scores: Intelligence gets the highest (15) so the
             // prepared-spell-count formula below is exercised at its
-            // real, non-trivial value.
-            foreach (var ability in new[] { "Intelligence", "Constitution", "Dexterity", "Strength", "Wisdom", "Charisma" })
+            // real, non-trivial value. Assignment order is fixed
+            // (Str,Dex,Con,Int,Wis,Cha); Intelligence is the 4th prompt.
+            foreach (var score in new[] { 8, 10, 12, 15, 13, 14 })
             {
                 prompt.Done.Should().BeFalse();
-                prompt = service.Answer("wizard-session", ability);
+                prompt = service.Answer("wizard-session", score.ToString());
             }
 
             // Now three cantrip prompts.
@@ -228,9 +414,10 @@ namespace OpenCombatEngine.Implementation.Tests.CharacterCreation
 
             // Wisdom deliberately gets the lowest standard-array value (8)
             // so its modifier is negative, to prove the "minimum of one"
-            // floor from the SRD formula.
-            foreach (var ability in new[] { "Strength", "Constitution", "Dexterity", "Intelligence", "Charisma", "Wisdom" })
-                prompt = service.Answer("cleric-session", ability);
+            // floor from the SRD formula. Assignment order is fixed
+            // (Str,Dex,Con,Int,Wis,Cha); Wisdom is the 5th prompt.
+            foreach (var score in new[] { 15, 14, 13, 12, 8, 10 })
+                prompt = service.Answer("cleric-session", score.ToString());
 
             for (var i = 0; i < 3; i++)
             {

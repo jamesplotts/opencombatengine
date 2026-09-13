@@ -54,16 +54,51 @@ namespace OpenCombatEngine.Core.Interfaces.CharacterCreation
     /// <param name="PromptText">Set when <paramref name="Done"/> is false.</param>
     /// <param name="Choices">
     /// Enumerated options the caller picks from; empty means the caller
-    /// should collect free text instead (today, only the gender prompt).
+    /// should collect free text instead (today, the gender prompt), or —
+    /// when <paramref name="AbilityScoreRolls"/> is set — that no answer
+    /// is expected until the caller acknowledges the reveal.
     /// </param>
     /// <param name="Character">Set only when <paramref name="Done"/> is true.</param>
+    /// <param name="AbilityScoreRolls">
+    /// Set only on the one prompt where the player just chose "roll 4d6,
+    /// drop the lowest" as their ability-score method: the six already-
+    /// rolled sets, so a caller can show an interactive per-die reveal
+    /// instead of a blind pre-summed total. <paramref name="PromptText"/>
+    /// is the roll-intro line; <paramref name="Choices"/> is empty here —
+    /// the real next question (assigning each rolled total to an
+    /// ability) only arrives once <see cref="ICharacterCreationService.Answer"/>
+    /// is called again to acknowledge the reveal (any answer content
+    /// works; it's ignored).
+    /// </param>
     public record CharacterCreationPrompt(
         bool Success,
         string? Error,
         bool Done,
         string? PromptText,
         IReadOnlyList<string>? Choices,
-        CreatureState? Character);
+        CreatureState? Character,
+        IReadOnlyList<AbilityScoreRollSet>? AbilityScoreRolls = null);
+
+    /// <summary>
+    /// One die from a drop-lowest roll (today, only ability-score
+    /// generation's 4d6-drop-lowest uses this) — kept alongside whether
+    /// it was the one dropped, rather than omitted, so a caller can show
+    /// it struck through alongside the ones that counted.
+    /// </summary>
+    /// <param name="Value">The face this die landed on.</param>
+    /// <param name="Dropped">
+    /// True for the single lowest die of the set (ties broken by
+    /// original roll order — which specific die is marked doesn't change
+    /// the total, only which one a client visually excludes).
+    /// </param>
+    public record RolledDie(int Value, bool Dropped);
+
+    /// <summary>
+    /// One ability score's worth of dice from a drop-lowest roll.
+    /// </summary>
+    /// <param name="Dice">All 4 dice, in rolled order, including the dropped one.</param>
+    /// <param name="Total">The sum of the 3 kept dice (every entry in <paramref name="Dice"/> with <see cref="RolledDie.Dropped"/> false).</param>
+    public record AbilityScoreRollSet(IReadOnlyList<RolledDie> Dice, int Total);
 
     /// <summary>
     /// Runs an interactive, stateful character-creation conversation — the
