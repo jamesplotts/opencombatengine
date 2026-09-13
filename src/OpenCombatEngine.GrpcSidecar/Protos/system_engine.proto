@@ -868,8 +868,13 @@ message EquipItemRequest {
 message EquipItemResponse {
   bool success = 1;
   // Set when success = false: item_name isn't in actor's inventory,
-  // slot is unspecified, or the item can't occupy that slot (e.g. a
-  // weapon into the Armor slot) — a real mechanical rejection.
+  // slot is unspecified, the item can't occupy that slot (e.g. a
+  // weapon into the Armor slot), or (main_hand/off_hand only) that hand
+  // is already occupied by a DIFFERENT item — a real mechanical
+  // rejection either way. A full hand must be freed first: unequip it
+  // (free) or StowItem it in a container (costs the Action).
+  // Re-equipping the same item already in that slot is not a conflict
+  // and still succeeds.
   string error = 2;
   Actor actor = 3;
   string result_message = 4;
