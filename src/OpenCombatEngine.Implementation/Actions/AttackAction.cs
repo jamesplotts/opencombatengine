@@ -5,6 +5,7 @@ using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Models.Actions;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Dice;
 
 namespace OpenCombatEngine.Implementation.Actions
 {
@@ -107,7 +108,7 @@ namespace OpenCombatEngine.Implementation.Actions
             }
 
             // 1. Roll to Hit
-            string attackNotation = $"1d20+{_attackBonus}";
+            string attackNotation = DiceNotation.WithModifier("1d20", _attackBonus);
             
             bool isProne = source.Conditions?.HasCondition(ConditionType.Prone) ?? false;
             

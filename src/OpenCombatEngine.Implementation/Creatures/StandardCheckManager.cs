@@ -4,6 +4,7 @@ using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces.Creatures;
 using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Results;
+using OpenCombatEngine.Implementation.Dice;
 
 namespace OpenCombatEngine.Implementation.Creatures
 {
@@ -34,7 +35,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                 proficiencyBonus = _creature.ProficiencyBonus;
             }
 
-            var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
+            var roll = _diceRoller.Roll(DiceNotation.WithModifier("1d20", modifier + proficiencyBonus));
 
             if (!roll.IsSuccess) return Result<DiceRollResult>.Failure(roll.Error);
 
@@ -60,7 +61,7 @@ namespace OpenCombatEngine.Implementation.Creatures
                 proficiencyBonus = _creature.ProficiencyBonus;
             }
 
-            var roll = _diceRoller.Roll($"1d20+{modifier + proficiencyBonus}");
+            var roll = _diceRoller.Roll(DiceNotation.WithModifier("1d20", modifier + proficiencyBonus));
 
             if (!roll.IsSuccess) return Result<DiceRollResult>.Failure(roll.Error);
 

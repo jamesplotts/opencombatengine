@@ -8,6 +8,7 @@ using OpenCombatEngine.Core.Models;
 using OpenCombatEngine.Core.Models.Events;
 
 using OpenCombatEngine.Core.Models.States;
+using OpenCombatEngine.Implementation.Dice;
 
 namespace OpenCombatEngine.Implementation
 {
@@ -55,7 +56,7 @@ namespace OpenCombatEngine.Implementation
                 // Interface definition: ICombatStats CombatStats { get; } - it's not nullable in the interface.
                 
                 int bonus = creature.CombatStats.InitiativeBonus;
-                var rollResult = _diceRoller.Roll($"1d20+{bonus}");
+                var rollResult = _diceRoller.Roll(DiceNotation.WithModifier("1d20", bonus));
                 
                 // If roll fails (shouldn't happen with standard roller), default to bonus (effectively rolling 0) or throw?
                 // Let's assume success for now, or default to 0 + bonus.

@@ -60,6 +60,31 @@ namespace OpenCombatEngine.Implementation.Tests
         }
 
         [Fact]
+        public void StartCombat_NegativeInitiativeBonus_BuildsValidNotationAndRolls()
+        {
+            // Regression test for a real bug: naively string-interpolating
+            // a negative InitiativeBonus used to build "1d20+-2" (a double
+            // sign), which the dice notation regex rejects outright.
+            // StartCombat's own defensive fallback (a failed roll falls
+            // back to the bare bonus) meant this never crashed, but it
+            // silently skipped the actual d20 roll for every creature with
+            // a negative bonus — always "rolling" a flat 0 instead of a
+            // real 1-20.
+            var c1 = CreateCreature("Clumsy", dex: 6, initBonus: -2);
+            var c2 = CreateCreature("Average", dex: 10, initBonus: 0);
+
+            // c1 rolls a real 18 on the d20 (total 16) — only reachable if
+            // the roll was actually attempted with valid notation, not
+            // silently substituted with the bare -2 bonus.
+            _diceRoller.Roll("1d20-2").Returns(Result<DiceRollResult>.Success(new DiceRollResult(16, "1d20-2", new List<int> { 18 }, -2, RollType.Normal)));
+            _diceRoller.Roll("1d20+0").Returns(Result<DiceRollResult>.Success(new DiceRollResult(10, "1d20+0", new List<int> { 10 }, 0, RollType.Normal)));
+
+            _turnManager.StartCombat(new[] { c2, c1 });
+
+            _turnManager.TurnOrder.Should().ContainInOrder(c1, c2);
+        }
+
+        [Fact]
         public void NextTurn_Should_Cycle_And_Increment_Round()
         {
             // Arrange

@@ -64,6 +64,62 @@ namespace OpenCombatEngine.Implementation.Tests
         }
 
         [Fact]
+        public void RollAbilityCheck_NegativeModifier_BuildsValidNotationAndSucceeds()
+        {
+            // Regression test for a real, live-observed bug: naively
+            // string-interpolating a negative modifier used to build
+            // "1d20+-1" (a double sign), which StandardDiceRoller's own
+            // notation regex (a single leading +/- before the digits)
+            // rejects outright — the check failed with no roll ever
+            // attempted for any creature whose modifier was negative.
+            // Confirmed live: a Charisma 8 (-1 modifier, no proficiency)
+            // character's Persuasion check came back "resolution_failed".
+            var abilityScores = Substitute.For<IAbilityScores>();
+            abilityScores.GetModifier(Ability.Charisma).Returns(-1);
+
+            var diceRoller = Substitute.For<IDiceRoller>();
+            diceRoller.Roll("1d20-1").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(9, "1d20-1", new List<int> { 10 }, -1, RollType.Normal)
+            ));
+
+            var creature = Substitute.For<ICreature>();
+            creature.Effects.Returns((IEffectManager)null);
+            creature.AbilityScores.Returns(abilityScores);
+
+            var manager = new StandardCheckManager(diceRoller, creature);
+
+            var result = manager.RollAbilityCheck(Ability.Charisma);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Total.Should().Be(9);
+        }
+
+        [Fact]
+        public void RollSavingThrow_NegativeModifier_BuildsValidNotationAndSucceeds()
+        {
+            // Same regression as RollAbilityCheck's own negative-modifier
+            // case above, for the saving-throw path.
+            var abilityScores = Substitute.For<IAbilityScores>();
+            abilityScores.GetModifier(Ability.Intelligence).Returns(-2);
+
+            var diceRoller = Substitute.For<IDiceRoller>();
+            diceRoller.Roll("1d20-2").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(8, "1d20-2", new List<int> { 10 }, -2, RollType.Normal)
+            ));
+
+            var creature = Substitute.For<ICreature>();
+            creature.Effects.Returns((IEffectManager)null);
+            creature.AbilityScores.Returns(abilityScores);
+
+            var manager = new StandardCheckManager(diceRoller, creature);
+
+            var result = manager.RollSavingThrow(Ability.Intelligence);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Total.Should().Be(8);
+        }
+
+        [Fact]
         public void RollAbilityCheck_EffectAdjustsTotal_KeepsIndividualRollsFromRawRoll()
         {
             // A StatBonusEffect (StatType.AbilityCheck) shifts Total after

@@ -146,6 +146,36 @@ namespace OpenCombatEngine.Implementation.Tests.Actions
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("Dice error");
         }
+
+        [Fact]
+        public void Execute_NegativeAttackBonus_BuildsValidNotationAndRolls()
+        {
+            // Regression test for a real bug: naively string-interpolating
+            // a negative attackBonus used to build "1d20+-1" (a double
+            // sign), which the dice notation regex rejects outright,
+            // failing every attack roll for a creature/monster whose
+            // attack bonus happened to be negative rather than actually
+            // rolling with the penalty.
+            var action = new AttackAction("Rusty Dagger", "Stab", attackBonus: -1, damageDice: "1d4", DamageType.Piercing, 0, _diceRoller);
+
+            // Mock Attack Roll: 16 - 1 = 15 (Hits AC 15)
+            _diceRoller.Roll("1d20-1").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(15, "1d20-1", new List<int> { 16 }, -1, RollType.Normal)));
+
+            _diceRoller.Roll("1d4").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(2, "1d4", new List<int> { 2 }, 0, RollType.Normal)));
+
+            var context = new OpenCombatEngine.Implementation.Actions.Contexts.StandardActionContext(
+                _source,
+                new OpenCombatEngine.Core.Models.Actions.CreatureTarget(_target)
+            );
+            var result = action.Execute(context);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Success.Should().BeTrue();
+            result.Value.DamageDealt.Should().Be(2);
+        }
+
         [Fact]
         public void Execute_Should_Consume_Action_When_Successful()
         {
