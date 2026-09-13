@@ -973,13 +973,18 @@ message TransferItemRequest {
   string campaign_id = 2;
   Actor source = 3;
   Actor target = 4;
-  // Must already be a real member of source's inventory.
+  // Must already be a real item source is carrying — equipped, quick-
+  // access, or stowed inside a container (nested arbitrarily deep, e.g.
+  // looting a corpse's own backpack). Lands in target's inventory as
+  // quick-access, never re-nested inside one of target's own
+  // containers. If item_name is itself a container, its own contents
+  // move with it intact.
   string item_name = 5;
 }
 
 message TransferItemResponse {
   bool success = 1;
-  string error = 2; // set when item_name isn't in source's inventory
+  string error = 2; // set when item_name isn't carried by source, or target is missing
   Actor source = 3;
   Actor target = 4;
   string result_message = 5;

@@ -839,14 +839,29 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
     }
 
     /// <summary>
-    /// Moves a real member of source's inventory into target's
-    /// inventory — see the proto's own TransferItem doc comment.
-    /// Explicitly ends attunement first if the item is currently
-    /// attuned (SRD: giving away an attuned item ends attunement) —
-    /// <c>StandardInventory.RemoveItem</c>'s own auto-unequip does not
-    /// also do this, so it's handled here rather than left silently
-    /// inconsistent.
+    /// Moves a real item source is carrying into target's inventory —
+    /// see the proto's own TransferItem doc comment. Explicitly ends
+    /// attunement first if the item is currently attuned (SRD: giving
+    /// away an attuned item ends attunement) — <c>StandardInventory.
+    /// RemoveItem</c>'s own auto-unequip does not also do this, so it's
+    /// handled here rather than left silently inconsistent.
     /// </summary>
+    /// <remarks>
+    /// Looked up via <see cref="OpenCombatEngine.Core.Interfaces.Creatures.ICreature.GetCarriedItemLocations"/>
+    /// (the same traversal StowItem/DrawItem/ListCarriedItems all share),
+    /// not <c>Inventory.GetItem</c> — closes a real, previously-flagged
+    /// gap: <c>GetItem</c> only ever searched the flat top-level list, so
+    /// an item stowed inside a container (looting a corpse's own
+    /// backpack, say) could never be found or transferred at all, only
+    /// something already equipped or quick-access. The removed item
+    /// always lands in target's flat inventory as quick-access — never
+    /// re-nested inside one of target's own containers — the same
+    /// "surfaces to quick-access" behavior DrawItem already documents
+    /// for bringing a stowed item back into hand. If item_name is itself
+    /// a container, its own nested Contents move with it intact (they
+    /// live inside that same object, not a separate structure this
+    /// method has to reconstruct).
+    /// </remarks>
     public override Task<TransferItemResponse> TransferItem(TransferItemRequest request, ServerCallContext context)
     {
         var sourceResult = ActorMapping.ToCreature(request.Source, _spellRepository, _itemLibrary);
@@ -861,16 +876,26 @@ public class SystemEngineGrpcService : SystemEngine.SystemEngineBase
             return Task.FromResult(new TransferItemResponse { Success = false, Error = targetResult.Error });
         var target = targetResult.Value;
 
-        var item = source.Inventory.GetItem(request.ItemName);
-        if (item is null)
+        var itemLocation = source.GetCarriedItemLocations().FirstOrDefault(l => l.Item.Name == request.ItemName);
+        if (itemLocation is null)
             return Task.FromResult(new TransferItemResponse { Success = false, Error = $"{request.ItemName} is not in {source.Name}'s inventory." });
+        var item = itemLocation.Item;
 
         if (item is IMagicItem magicItem && source.Equipment.AttunedItems.Contains(magicItem))
         {
             source.Equipment.UnattuneItem(magicItem);
         }
 
-        var removeResult = source.Inventory.RemoveItem(item);
+        // A nested item is never itself a member of the flat inventory
+        // list (see StandardCreature.GetCarriedItemLocations' own
+        // remarks), so Inventory.RemoveItem would fail to find it —
+        // remove it from its actual parent container instead. Anything
+        // else (equipped or already quick-access) IS a flat member, same
+        // as before this fix — Inventory.RemoveItem's own auto-unequip
+        // still applies unchanged for the equipped case.
+        var removeResult = itemLocation.ParentContainer is IContainer parentContainer
+            ? parentContainer.RemoveItem(item)
+            : source.Inventory.RemoveItem(item);
         if (removeResult.IsFailure)
             return Task.FromResult(new TransferItemResponse { Success = false, Error = removeResult.Error });
 

@@ -1636,6 +1636,69 @@ public class SystemEngineGrpcServiceTests
     }
 
     [Fact]
+    public async Task TransferItem_StowedItemInContainer_MovesToTargetAsQuickAccess()
+    {
+        // Closes a real, previously-flagged gap: TransferItem used to
+        // search only the flat inventory list (Inventory.GetItem), so an
+        // item stowed inside a container — looting a corpse's own
+        // backpack, the exact scenario this was flagged against — could
+        // never be found or transferred at all.
+        var source = MakeActorWithItemStowedInContainer("Backpack", "Torch");
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, ItemName = "Torch",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+        response.Error.Should().BeEmpty();
+
+        var restoredSource = ActorMapping.ToCreature(response.Source, _spellRepository, _itemLibrary);
+        restoredSource.IsSuccess.Should().BeTrue();
+        var backpack = restoredSource.Value.Inventory.Items.Single(i => i.Name == "Backpack") as IContainer;
+        backpack.Should().NotBeNull();
+        backpack!.Contents.Should().NotContain(i => i.Name == "Torch");
+
+        // Lands as quick-access on the target — a flat inventory member,
+        // not re-nested inside any of the target's own containers.
+        var restoredTarget = ActorMapping.ToCreature(response.Target, _spellRepository, _itemLibrary);
+        restoredTarget.IsSuccess.Should().BeTrue();
+        restoredTarget.Value.Inventory.Items.Should().Contain(i => i.Name == "Torch");
+    }
+
+    [Fact]
+    public async Task TransferItem_ContainerWithContents_MovesEntireSubtreeIntact()
+    {
+        // Transferring the container itself (not something inside it)
+        // must carry its own nested contents along — they live inside
+        // the same object, so this proves nothing here strips or
+        // flattens them out along the way.
+        var source = MakeActorWithItemStowedInContainer("Backpack", "Torch");
+        var target = MakeSecondGridTargetActor();
+
+        var response = await _service.TransferItem(new TransferItemRequest
+        {
+            RequestId = "r1", CampaignId = "c1", Source = source, Target = target, ItemName = "Backpack",
+        }, null!);
+
+        response.Success.Should().BeTrue();
+
+        // Restored against a throwaway library, not the shared
+        // _itemLibrary the RPC call itself already restored source
+        // against internally — same reasoning as MakeActorWithItemStowedInContainer's
+        // own remarks: FakeItemLibrary hands out one shared, mutable
+        // Backpack instance per name, and re-restoring against that same
+        // already-populated instance would double-add the nested Torch
+        // rather than actually prove what the wire state says.
+        var restoredTarget = ActorMapping.ToCreature(response.Target, _spellRepository, new FakeItemLibrary());
+        restoredTarget.IsSuccess.Should().BeTrue();
+        var backpack = restoredTarget.Value.Inventory.Items.Single(i => i.Name == "Backpack") as IContainer;
+        backpack.Should().NotBeNull();
+        backpack!.Contents.Should().ContainSingle(i => i.Name == "Torch");
+    }
+
+    [Fact]
     public async Task TransferItem_ItemNotInSource_ReturnsFailure()
     {
         var source = MakeActor();
