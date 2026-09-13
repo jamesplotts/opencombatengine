@@ -72,7 +72,12 @@ namespace OpenCombatEngine.Implementation.Creatures
             int total = roll.Value.Total;
             if (_creature.Effects != null)
             {
-                total = _creature.Effects.ApplyStatBonuses(StatType.AbilityCheck, total);
+                // skillName is forwarded here (not just used for the
+                // proficiency lookup above) so a skill-scoped StatBonusEffect
+                // (e.g. "+2 Intimidation") can tell this check apart from a
+                // bare ability check or a different skill under the same
+                // ability — see StatBonusEffect.ModifyStat.
+                total = _creature.Effects.ApplyStatBonuses(StatType.AbilityCheck, total, skillName);
             }
 
             // Effects may have adjusted the total beyond what the raw roll

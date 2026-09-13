@@ -108,14 +108,15 @@ namespace OpenCombatEngine.Core.Models.States
     /// <param name="Modifier">
     /// The total modifier a real check with this skill would add beyond
     /// the d20 face — ability modifier, plus the proficiency bonus when
-    /// <paramref name="Proficient"/>, plus any active general
-    /// ability-check bonus (a buff, a feat, a magic item implemented as
-    /// one) via the same effects hook a real roll applies. This engine
-    /// has no per-skill-specific bonus mechanism today (only whole-
-    /// ability-check/whole-saving-throw granularity) — an item or feat
-    /// that boosts one named skill only has no representation here yet;
-    /// this value is exactly what the engine can currently compute, never
-    /// an invented approximation of what it can't.
+    /// <paramref name="Proficient"/>, plus any active ability-check bonus
+    /// via the same effects hook a real roll applies (a buff, a feat, a
+    /// magic item), whether it's a whole-ability-check bonus (applies to
+    /// every skill under that ability) or scoped to this one named skill
+    /// only (e.g. a "+2 Intimidation" item, via
+    /// OpenCombatEngine.Implementation.Features.SkillBonusFeature — this
+    /// project's Core assembly has no reference back to that layer, so it
+    /// can't be linked here directly). This value is exactly what a real
+    /// check for this skill would add, never an invented approximation.
     /// </param>
     public record SkillEntry(string Name, string Ability, bool Proficient, int Modifier);
 

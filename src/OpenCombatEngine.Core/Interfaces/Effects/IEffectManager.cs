@@ -39,7 +39,15 @@ namespace OpenCombatEngine.Core.Interfaces.Effects
         /// </summary>
         /// <param name="stat">The stat to modify.</param>
         /// <param name="baseValue">The base value of the stat.</param>
+        /// <param name="skillName">
+        /// The named skill this check is for, when <paramref name="stat"/> is
+        /// <see cref="StatType.AbilityCheck"/> and the check is skill-based
+        /// (e.g. "Intimidation"). Null for any other stat, or a bare ability
+        /// check with no named skill. Forwarded to each effect's
+        /// <see cref="IActiveEffect.ModifyStat"/> so a skill-scoped effect
+        /// can tell whether this particular check is the one it targets.
+        /// </param>
         /// <returns>The final value after all modifications.</returns>
-        int ApplyStatBonuses(StatType stat, int baseValue);
+        int ApplyStatBonuses(StatType stat, int baseValue, string? skillName = null);
     }
 }

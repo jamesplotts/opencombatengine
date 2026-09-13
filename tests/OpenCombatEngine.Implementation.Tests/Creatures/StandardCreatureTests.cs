@@ -110,10 +110,12 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             // Proves the sheet's Skills modifier can never silently
             // disagree with what a real RollAbilityCheck actually adds —
             // both go through the exact same Effects.ApplyStatBonuses
-            // hook. A general ability-check bonus (a feat, a buff, a
-            // magic item implemented this way) applies uniformly to every
-            // skill, proficient or not — this engine has no per-skill-only
-            // bonus mechanism (see SkillEntry's own doc comment).
+            // hook. A whole-ability-check effect (no target skill name
+            // given, e.g. a general buff like Guidance) applies uniformly
+            // to every skill, proficient or not. A bonus scoped to one
+            // named skill only is a different, additive effect shape —
+            // see GetState_Skills_SkillScopedEffect_AppliesOnlyToThatSkill
+            // below.
             var scores = new StandardAbilityScores(strength: 10); // +0 modifier
             var creature = new StandardCreature(Guid.NewGuid().ToString(), "Kestrel", scores, new StandardHitPoints(10, 10, 0), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
             creature.Effects.AddEffect(new StatBonusEffect("Guidance", "A minor blessing.", durationRounds: 1, StatType.AbilityCheck, bonus: 4));
@@ -122,6 +124,26 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
 
             var athletics = state.Skills!.Single(s => s.Name == "Athletics"); // STR, not proficient
             athletics.Modifier.Should().Be(4); // +0 ability mod, +0 proficiency, +4 effect bonus
+        }
+
+        [Fact]
+        public void GetState_Skills_SkillScopedEffect_AppliesOnlyToThatSkill()
+        {
+            // The literal motivating example: a "+2 Intimidation" bonus
+            // (e.g. from a SkillBonusFeature-granting magic item or feat)
+            // raises exactly Intimidation's modifier and leaves every
+            // other skill untouched — including Deception and Persuasion,
+            // which share Intimidation's governing Charisma ability, so a
+            // whole-ability leak would otherwise go unnoticed.
+            var scores = new StandardAbilityScores(charisma: 10); // +0 modifier
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Kestrel", scores, new StandardHitPoints(10, 10, 0), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
+            creature.Effects.AddEffect(new StatBonusEffect("Ring of Intimidation", "A cowed glare.", durationRounds: -1, StatType.AbilityCheck, bonus: 2, targetSkillName: "Intimidation"));
+
+            var state = creature.GetState();
+
+            state.Skills!.Single(s => s.Name == "Intimidation").Modifier.Should().Be(2);
+            state.Skills!.Single(s => s.Name == "Deception").Modifier.Should().Be(0);
+            state.Skills!.Single(s => s.Name == "Persuasion").Modifier.Should().Be(0);
         }
     }
 }

@@ -3,10 +3,12 @@ using NSubstitute;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Creatures;
+using OpenCombatEngine.Core.Interfaces.Dice;
 using OpenCombatEngine.Core.Interfaces.Effects;
 using OpenCombatEngine.Core.Interfaces.Items;
 using OpenCombatEngine.Core.Interfaces.Spells;
 using OpenCombatEngine.Core.Models.Combat;
+using OpenCombatEngine.Core.Results;
 using OpenCombatEngine.Implementation.Creatures;
 using OpenCombatEngine.Implementation.Dice;
 using OpenCombatEngine.Implementation.Effects;
@@ -33,6 +35,17 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             armor.ArmorClass.Returns(10);
             equipment.Armor.Returns(armor);
 
+            // A deterministic dice roller: every ability check in this
+            // class rolls with a +0 modifier (no ability score bonus, no
+            // proficiency granted anywhere below), so "1d20+0" is the only
+            // notation RollAbilityCheck ever builds here. This lets the
+            // ability-check tests below assert an exact Total instead of
+            // only checking that a call didn't throw.
+            var diceRoller = Substitute.For<IDiceRoller>();
+            diceRoller.Roll("1d20+0").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(10, "1d20+0", new System.Collections.Generic.List<int> { 10 }, 0, RollType.Normal)
+            ));
+
             _creature = new StandardCreature(
                 System.Guid.NewGuid().ToString(),
                 "Test Creature",
@@ -40,7 +53,8 @@ namespace OpenCombatEngine.Implementation.Tests.Features
                 Substitute.For<IHitPoints>(),
                 new StandardInventory(),
                 new StandardTurnManager(new StandardDiceRoller()),
-                equipmentManager: equipment
+                equipmentManager: equipment,
+                defaultDiceRoller: diceRoller
             );
             _creature.Team = "Neutral";
             
@@ -78,18 +92,33 @@ namespace OpenCombatEngine.Implementation.Tests.Features
             var result = _creature.Checks.RollAbilityCheck(Ability.Strength);
 
             // Assert
-            // Dice roller is standard, so result is random. 
-            // We can't easily assert exact value without mocking dice roller inside creature.
-            // StandardCreature creates its own dice roller if not passed checkManager.
-            // But we can't inject dice roller into StandardCreature easily for Checks property creation unless we pass CheckManager.
-            // Let's rely on the fact that StandardDiceRoller returns 1-20.
-            // Wait, StandardDiceRoller is random.
-            // I should have injected a mock CheckManager or DiceRoller.
-            // But StandardCreature constructor allows passing checkManager.
-            // Let's recreate creature with mocked check manager? No, CheckManager logic is what we are testing.
-            // We need to inject DiceRoller into CheckManager.
+            // The class-level dice roller is a substitute fixed on
+            // "1d20+0" (see the constructor above), so the raw roll is
+            // deterministically 10 — this whole-ability-check effect
+            // applies regardless of which ability or skill was rolled.
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Total.Should().Be(11); // 10 raw + 1 Guidance
         }
-        
+
+        [Fact]
+        public void Should_Apply_SkillScoped_Bonus_Only_To_The_Matching_Skill()
+        {
+            // The skill-scoped sibling of Should_Apply_Ability_Check_Bonus
+            // above — a SkillBonusFeature-style effect (e.g. a "+2
+            // Intimidation" item) must not leak onto a different named
+            // skill, or a bare ability check with no named skill at all.
+            var effect = new StatBonusEffect("Ring of Intimidation", "+2 Intimidation", -1, StatType.AbilityCheck, 2, targetSkillName: "Intimidation");
+            _effectManager.AddEffect(effect);
+
+            var intimidation = _creature.Checks.RollAbilityCheck(Ability.Charisma, "Intimidation");
+            var persuasion = _creature.Checks.RollAbilityCheck(Ability.Charisma, "Persuasion");
+            var bareCheck = _creature.Checks.RollAbilityCheck(Ability.Charisma);
+
+            intimidation.Value.Total.Should().Be(12); // 10 raw + 2
+            persuasion.Value.Total.Should().Be(10); // different named skill: no bonus
+            bareCheck.Value.Total.Should().Be(10); // no named skill at all: no bonus
+        }
+
         [Fact]
         public void Should_Apply_Spell_DC_Bonus()
         {

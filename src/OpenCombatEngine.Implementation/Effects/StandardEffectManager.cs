@@ -81,12 +81,12 @@ namespace OpenCombatEngine.Implementation.Effects
             }
         }
 
-        public int ApplyStatBonuses(StatType stat, int baseValue)
+        public int ApplyStatBonuses(StatType stat, int baseValue, string? skillName = null)
         {
             int currentValue = baseValue;
             foreach (var effect in _effects)
             {
-                currentValue = effect.ModifyStat(stat, currentValue);
+                currentValue = effect.ModifyStat(stat, currentValue, skillName);
             }
             return currentValue;
         }

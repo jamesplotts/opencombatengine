@@ -149,5 +149,38 @@ namespace OpenCombatEngine.Implementation.Tests
             result.Value.Total.Should().Be(17);
             result.Value.IndividualRolls.Should().Equal(15);
         }
+
+        [Fact]
+        public void RollAbilityCheck_ForwardsSkillNameToEffects_SoASkillScopedEffectCanMatchIt()
+        {
+            // RollAbilityCheck already threads skillName through for the
+            // proficiency-bonus lookup above; this proves it also reaches
+            // the effects layer — the seam a skill-scoped StatBonusEffect
+            // (e.g. a "+2 Intimidation" item, via SkillBonusFeature) needs
+            // to tell this check apart from a bare ability check or a
+            // different named skill.
+            var abilityScores = Substitute.For<IAbilityScores>();
+            abilityScores.GetModifier(Ability.Charisma).Returns(0);
+
+            var diceRoller = Substitute.For<IDiceRoller>();
+            diceRoller.Roll("1d20+0").Returns(Result<DiceRollResult>.Success(
+                new DiceRollResult(10, "1d20+0", new List<int> { 10 }, 0, RollType.Normal)
+            ));
+
+            var effects = Substitute.For<IEffectManager>();
+            effects.ApplyStatBonuses(StatType.AbilityCheck, 10, "Intimidation").Returns(12); // +2 Ring of Intimidation
+
+            var creature = Substitute.For<ICreature>();
+            creature.Effects.Returns(effects);
+            creature.AbilityScores.Returns(abilityScores);
+
+            var manager = new StandardCheckManager(diceRoller, creature);
+
+            var result = manager.RollAbilityCheck(Ability.Charisma, "Intimidation");
+
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Total.Should().Be(12);
+            effects.Received(1).ApplyStatBonuses(StatType.AbilityCheck, 10, "Intimidation");
+        }
     }
 }

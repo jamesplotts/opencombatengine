@@ -193,7 +193,7 @@ public static class CharacterSchema
         },
         "skills": {
           "type": ["array", "null"],
-          "description": "All 18 SRD 5.1 skills with their already-computed total modifiers (ability modifier, plus proficiency bonus when proficient, plus any active general ability-check bonus) — a client can render a full Skills table without its own copy of the skill-to-ability map or the modifier math.",
+          "description": "All 18 SRD 5.1 skills with their already-computed total modifiers (ability modifier, plus proficiency bonus when proficient, plus any active ability-check bonus, whole-ability-wide or scoped to this one skill) — a client can render a full Skills table without its own copy of the skill-to-ability map or the modifier math.",
           "items": {
             "type": "object",
             "required": ["name", "ability", "proficient", "modifier"],

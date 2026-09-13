@@ -23,15 +23,15 @@ namespace OpenCombatEngine.Implementation.Effects
         public virtual void OnRemoved(ICreature target) { }
         public virtual void OnTurnStart(ICreature target) { }
         public virtual void OnTurnEnd(ICreature target) { }
-        public virtual int ModifyStat(StatType stat, int currentValue) => currentValue;
+        public virtual int ModifyStat(StatType stat, int currentValue, string? skillName = null) => currentValue;
     }
 
     public class AdvantageOnIncomingAttacksEffect : ConditionEffectBase
     {
-        public AdvantageOnIncomingAttacksEffect(string sourceCondition) 
+        public AdvantageOnIncomingAttacksEffect(string sourceCondition)
             : base($"{sourceCondition}_AdvantageIncoming", $"Attacks against target have advantage due to {sourceCondition}.") { }
 
-        public override int ModifyStat(StatType stat, int currentValue)
+        public override int ModifyStat(StatType stat, int currentValue, string? skillName = null)
         {
             if (stat == StatType.IncomingAttackAdvantage) return 1;
             return currentValue;
@@ -40,10 +40,10 @@ namespace OpenCombatEngine.Implementation.Effects
 
     public class DisadvantageOnOutgoingAttacksEffect : ConditionEffectBase
     {
-        public DisadvantageOnOutgoingAttacksEffect(string sourceCondition) 
+        public DisadvantageOnOutgoingAttacksEffect(string sourceCondition)
             : base($"{sourceCondition}_DisadvantageOutgoing", $"Attacks by target have disadvantage due to {sourceCondition}.") { }
 
-        public override int ModifyStat(StatType stat, int currentValue)
+        public override int ModifyStat(StatType stat, int currentValue, string? skillName = null)
         {
             if (stat == StatType.AttackDisadvantage) return 1;
             return currentValue;

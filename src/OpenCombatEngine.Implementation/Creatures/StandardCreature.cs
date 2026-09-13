@@ -535,10 +535,11 @@ namespace OpenCombatEngine.Implementation.Creatures
                 int baseModifier = AbilityScores.GetModifier(skill.Ability) + (proficient ? ProficiencyBonus : 0);
                 // Same effects hook RollAbilityCheck's own real roll applies
                 // to its total, probed with the base modifier rather than a
-                // real roll result — see SkillEntry's own doc comment for
-                // exactly what this does and doesn't capture.
+                // real roll result — passing skill.Name means this matches a
+                // real roll's result exactly, including any effect scoped to
+                // this one named skill (see SkillEntry's own doc comment).
                 int modifier = Effects != null
-                    ? Effects.ApplyStatBonuses(StatType.AbilityCheck, baseModifier)
+                    ? Effects.ApplyStatBonuses(StatType.AbilityCheck, baseModifier, skill.Name)
                     : baseModifier;
                 skills.Add(new SkillEntry(skill.Name, SrdSkills.Abbreviate(skill.Ability), proficient, modifier));
             }
