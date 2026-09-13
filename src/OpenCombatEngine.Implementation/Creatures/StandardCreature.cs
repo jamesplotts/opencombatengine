@@ -314,7 +314,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             Effects = new StandardEffectManager(this);
             CombatStats.SetEffectManager(Effects);
             
-            Checks = new StandardCheckManager(new StandardDiceRoller(), this);
+            Checks = new StandardCheckManager(new StandardDiceRoller(), this, state.Checks);
             // Equipment already created above
 
             LevelManager = state.LevelManager != null
@@ -497,10 +497,52 @@ namespace OpenCombatEngine.Implementation.Creatures
             var inventoryState = (Inventory as IStateful<InventoryState>)?.GetState();
             var equipmentState = BuildEquipmentState();
             var spellcastingState = (Spellcasting as IStateful<SpellCasterState>)?.GetState();
+            var checksState = (Checks as IStateful<CheckManagerState>)?.GetState();
+            var abilities = BuildAbilityEntries();
+            var skills = BuildSkillEntries();
 
             return new CreatureState(
                 Id, Name, Team, abilityState, hpState, combatState, conditionState, levelState, actionEconomyState,
-                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender, RaceName, Background);
+                inventoryState, equipmentState, spellcastingState, ChallengeRating, Gender, RaceName, Background,
+                checksState, abilities, skills);
+        }
+
+        // BuildAbilityEntries/BuildSkillEntries are purely derived,
+        // display-oriented data for a schema-driven character sheet (see
+        // AbilityEntry/SkillEntry's own doc comments) — never read by any
+        // rules logic, recomputed fresh every GetState() call so they can
+        // never drift out of sync with AbilityScores/Checks/Effects.
+
+        private Collection<AbilityEntry> BuildAbilityEntries()
+        {
+            return new Collection<AbilityEntry>
+            {
+                new("Strength", AbilityScores.Strength, AbilityScores.GetModifier(Ability.Strength)),
+                new("Dexterity", AbilityScores.Dexterity, AbilityScores.GetModifier(Ability.Dexterity)),
+                new("Constitution", AbilityScores.Constitution, AbilityScores.GetModifier(Ability.Constitution)),
+                new("Intelligence", AbilityScores.Intelligence, AbilityScores.GetModifier(Ability.Intelligence)),
+                new("Wisdom", AbilityScores.Wisdom, AbilityScores.GetModifier(Ability.Wisdom)),
+                new("Charisma", AbilityScores.Charisma, AbilityScores.GetModifier(Ability.Charisma)),
+            };
+        }
+
+        private Collection<SkillEntry> BuildSkillEntries()
+        {
+            var skills = new Collection<SkillEntry>();
+            foreach (var skill in SrdSkills.All)
+            {
+                bool proficient = Checks.HasSkillProficiency(skill.Name);
+                int baseModifier = AbilityScores.GetModifier(skill.Ability) + (proficient ? ProficiencyBonus : 0);
+                // Same effects hook RollAbilityCheck's own real roll applies
+                // to its total, probed with the base modifier rather than a
+                // real roll result — see SkillEntry's own doc comment for
+                // exactly what this does and doesn't capture.
+                int modifier = Effects != null
+                    ? Effects.ApplyStatBonuses(StatType.AbilityCheck, baseModifier)
+                    : baseModifier;
+                skills.Add(new SkillEntry(skill.Name, SrdSkills.Abbreviate(skill.Ability), proficient, modifier));
+            }
+            return skills;
         }
 
         private static IItem ResolveItem(ItemInstanceState itemState, IItemLibrary? itemLibrary)

@@ -64,4 +64,32 @@ public class CharacterSchemaTests
     {
         CharacterSchema.SchemaVersion.Should().Be(ActorMapping.SchemaVersion);
     }
+
+    [Fact]
+    public void Json_DescribesAbilitiesAsAnArrayOfNameScoreModifier()
+    {
+        using var doc = JsonDocument.Parse(CharacterSchema.Json);
+
+        var abilities = doc.RootElement.GetProperty("properties").GetProperty("abilities");
+        abilities.GetProperty("type")[0].GetString().Should().Be("array");
+        var itemProperties = abilities.GetProperty("items").GetProperty("properties");
+        foreach (var field in new[] { "name", "score", "modifier" })
+        {
+            itemProperties.TryGetProperty(field, out _).Should().BeTrue($"abilities' items should describe '{field}'");
+        }
+    }
+
+    [Fact]
+    public void Json_DescribesSkillsAsAnArrayOfNameAbilityProficientModifier()
+    {
+        using var doc = JsonDocument.Parse(CharacterSchema.Json);
+
+        var skills = doc.RootElement.GetProperty("properties").GetProperty("skills");
+        skills.GetProperty("type")[0].GetString().Should().Be("array");
+        var itemProperties = skills.GetProperty("items").GetProperty("properties");
+        foreach (var field in new[] { "name", "ability", "proficient", "modifier" })
+        {
+            itemProperties.TryGetProperty(field, out _).Should().BeTrue($"skills' items should describe '{field}'");
+        }
+    }
 }

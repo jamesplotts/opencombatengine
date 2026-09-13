@@ -3,7 +3,9 @@
 // Game mechanics under OGL 1.0a
 // See LEGAL.md for full disclaimers
 
+using System.Collections.ObjectModel;
 using FluentAssertions;
+using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Models.States;
 using OpenCombatEngine.GrpcSidecar.Mapping;
 
@@ -146,6 +148,41 @@ public class CreatureStateJsonTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.ActionEconomy.Should().BeNull();
+    }
+
+    [Fact]
+    public void Deserialize_ValidJsonWithChecks_RoundTripsChecks()
+    {
+        // Regression coverage for a real bug: skill/saving-throw
+        // proficiencies were never persisted anywhere before CheckManagerState
+        // existed — see its own doc comment.
+        var original = MakeState() with
+        {
+            Checks = new CheckManagerState(
+                new Collection<string> { "Persuasion", "Athletics" },
+                new Collection<Ability> { Ability.Wisdom }),
+        };
+        var json = CreatureStateJson.Serialize(original);
+
+        var result = CreatureStateJson.Deserialize(json);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Checks.Should().NotBeNull();
+        result.Value.Checks!.SkillProficiencies.Should().BeEquivalentTo(new[] { "Persuasion", "Athletics" });
+        result.Value.Checks.SavingThrowProficiencies.Should().BeEquivalentTo(new[] { Ability.Wisdom });
+    }
+
+    [Fact]
+    public void Deserialize_NoChecksInJson_ChecksIsNull()
+    {
+        // A save predating CheckManagerState (or a creature with no
+        // proficiencies recorded) restores to "no proficiencies," not an
+        // exception — same backward-compatible-optional-field convention
+        // as Gender/RaceName/Background/ActionEconomy.
+        var result = CreatureStateJson.Deserialize(CreatureStateJson.Serialize(MakeState()));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Checks.Should().BeNull();
     }
 
     [Fact]

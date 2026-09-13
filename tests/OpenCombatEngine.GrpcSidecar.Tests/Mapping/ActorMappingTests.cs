@@ -79,6 +79,31 @@ public class ActorMappingTests
     }
 
     [Fact]
+    public void ToActor_StandardCreatureFromStateWithChecks_PreservesProficienciesThroughRoundTrip()
+    {
+        // Regression coverage for a real bug: skill/saving-throw
+        // proficiencies were never captured by StandardCreature's
+        // CreatureState-restoring constructor at all before
+        // CheckManagerState existed — see its own doc comment. Same
+        // "restore, then re-export" path Gender/RaceName/Background
+        // needed a fix for.
+        var creature = new StandardCreature(MakeState() with
+        {
+            Checks = new CheckManagerState(
+                new Collection<string> { "Persuasion" },
+                new Collection<Ability> { Ability.Wisdom }),
+        });
+
+        var actor = ActorMapping.ToActor(creature);
+        var result = ActorMapping.ToCreature(actor, EmptySpellRepository);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Checks.HasSkillProficiency("Persuasion").Should().BeTrue();
+        result.Value.Checks.HasSavingThrowProficiency(Ability.Wisdom).Should().BeTrue();
+        result.Value.Checks.HasSkillProficiency("Athletics").Should().BeFalse();
+    }
+
+    [Fact]
     public void ToActor_StandardCreatureFromStateWithBackground_PreservesBackgroundThroughRoundTrip()
     {
         // Same StandardCreature-restoring-constructor path Gender/RaceName

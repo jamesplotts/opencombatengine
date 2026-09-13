@@ -177,6 +177,33 @@ public static class CharacterSchema
             "pactSlotLevel": { "type": "integer" },
             "concentratingOnSpellName": { "type": ["string", "null"] }
           }
+        },
+        "abilities": {
+          "type": ["array", "null"],
+          "description": "The six ability scores with their already-computed SRD modifiers, in real STR/DEX/CON/INT/WIS/CHA order — purely derived from abilityScores, so a client can render a Name/Score/Mod table without its own copy of the modifier formula.",
+          "items": {
+            "type": "object",
+            "required": ["name", "score", "modifier"],
+            "properties": {
+              "name": { "type": "string" },
+              "score": { "type": "integer" },
+              "modifier": { "type": "integer" }
+            }
+          }
+        },
+        "skills": {
+          "type": ["array", "null"],
+          "description": "All 18 SRD 5.1 skills with their already-computed total modifiers (ability modifier, plus proficiency bonus when proficient, plus any active general ability-check bonus) — a client can render a full Skills table without its own copy of the skill-to-ability map or the modifier math.",
+          "items": {
+            "type": "object",
+            "required": ["name", "ability", "proficient", "modifier"],
+            "properties": {
+              "name": { "type": "string" },
+              "ability": { "type": "string", "description": "The governing ability's 3-letter abbreviation (STR/DEX/CON/INT/WIS/CHA)." },
+              "proficient": { "type": "boolean" },
+              "modifier": { "type": "integer" }
+            }
+          }
         }
       },
       "$defs": {

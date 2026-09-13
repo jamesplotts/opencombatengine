@@ -1,4 +1,6 @@
 using System;
+using System.Collections.ObjectModel;
+using OpenCombatEngine.Core.Enums;
 
 namespace OpenCombatEngine.Core.Models.States
 {
@@ -51,6 +53,71 @@ namespace OpenCombatEngine.Core.Models.States
         bool HasBonusAction,
         bool HasReaction,
         bool HasFreeObjectInteraction = true);
+
+    /// <summary>
+    /// Serializable state for a check-manager component: which skills and
+    /// saving throws a creature is proficient in. Added to close a real,
+    /// live-observed gap — <c>StandardCheckManager</c>'s own proficiency
+    /// sets were never persisted at all before this (no state class, no
+    /// restore path), so every proficiency granted at character creation
+    /// silently vanished on the very next save/load or gRPC round trip,
+    /// the same bug class <see cref="ActionEconomyState"/>/Gender/RaceName/
+    /// Background were each already fixed for individually.
+    /// </summary>
+    /// <param name="SkillProficiencies">
+    /// Skill names (e.g. "Persuasion", "Athletics") this creature is
+    /// proficient in — matches whatever string
+    /// <see cref="OpenCombatEngine.Core.Interfaces.Creatures.ICheckManager.AddSkillProficiency"/>
+    /// was called with, compared case-insensitively at lookup time.
+    /// </param>
+    /// <param name="SavingThrowProficiencies">
+    /// Abilities this creature is proficient in saving throws for.
+    /// </param>
+    public record CheckManagerState(
+        Collection<string> SkillProficiencies,
+        Collection<Ability> SavingThrowProficiencies);
+
+    /// <summary>
+    /// One ability score with its already-computed SRD modifier
+    /// (<c>floor((Score-10)/2)</c>) — a purely derived, display-oriented
+    /// entry. Exists so a schema-driven client (Layforge's character
+    /// sheet) can render a Name/Score/Mod table without knowing the SRD
+    /// modifier formula itself: the engine that owns the rule computes
+    /// it, the client just displays whatever array of these it's given.
+    /// Built by the implementation layer's own creature state export (in
+    /// real STR/DEX/CON/INT/WIS/CHA order, not derived from this record's
+    /// own field order — JSON array order is what a client actually
+    /// sees) — this project's Core assembly has no reference back to
+    /// that layer, so it can't be linked here directly.
+    /// </summary>
+    /// <param name="Name">The ability's full name ("Strength").</param>
+    /// <param name="Score">The raw ability score.</param>
+    /// <param name="Modifier">The already-computed SRD modifier.</param>
+    public record AbilityEntry(string Name, int Score, int Modifier);
+
+    /// <summary>
+    /// One SRD skill with its already-computed total modifier — same
+    /// "engine computes, client just displays" reasoning as
+    /// <see cref="AbilityEntry"/>. <see cref="Ability"/> is deliberately
+    /// the 3-letter abbreviation ("STR"/"DEX"/...), not the full ability
+    /// name, for compact display in a narrow sheet column.
+    /// </summary>
+    /// <param name="Name">The SRD skill name ("Persuasion").</param>
+    /// <param name="Ability">The governing ability's 3-letter abbreviation.</param>
+    /// <param name="Proficient">Whether this creature is proficient in this skill.</param>
+    /// <param name="Modifier">
+    /// The total modifier a real check with this skill would add beyond
+    /// the d20 face — ability modifier, plus the proficiency bonus when
+    /// <paramref name="Proficient"/>, plus any active general
+    /// ability-check bonus (a buff, a feat, a magic item implemented as
+    /// one) via the same effects hook a real roll applies. This engine
+    /// has no per-skill-specific bonus mechanism today (only whole-
+    /// ability-check/whole-saving-throw granularity) — an item or feat
+    /// that boosts one named skill only has no representation here yet;
+    /// this value is exactly what the engine can currently compute, never
+    /// an invented approximation of what it can't.
+    /// </param>
+    public record SkillEntry(string Name, string Ability, bool Proficient, int Modifier);
 
     /// <summary>
     /// Serializable state for a creature.
@@ -109,6 +176,31 @@ namespace OpenCombatEngine.Core.Models.States
     /// monster/NPC, every record before this field). Appended last, same
     /// reasoning as Gender/RaceName.
     /// </param>
+    /// <param name="Checks">
+    /// Skill/saving-throw proficiencies (see <see cref="CheckManagerState"/>'s
+    /// own doc comment for the bug this closes). Null for a creature with
+    /// none recorded (every record before this field, or one restored from
+    /// a save that predates it) — restores as "no proficiencies," not an
+    /// error. Appended last, same reasoning as Gender/RaceName/Background.
+    /// </param>
+    /// <param name="Abilities">
+    /// The six ability scores with their computed SRD modifiers, in real
+    /// STR/DEX/CON/INT/WIS/CHA order — purely derived from
+    /// <paramref name="AbilityScores"/>, recomputed fresh on every
+    /// <c>GetState()</c> rather than stored independently, so it can never
+    /// drift out of sync with it. Exists only so a schema-driven client
+    /// can render a Name/Score/Mod table without its own copy of the SRD
+    /// modifier formula. Null on a restore path that doesn't recompute it
+    /// (e.g. a hand-built <see cref="CreatureState"/> in a test) — never
+    /// read by any rules logic, display-only.
+    /// </param>
+    /// <param name="Skills">
+    /// All 18 SRD skills with their computed total modifiers — same
+    /// "derived, display-only, recomputed every <c>GetState()</c>"
+    /// reasoning as <paramref name="Abilities"/>. See
+    /// <see cref="SkillEntry"/>'s own doc comment for exactly what the
+    /// modifier does and doesn't include.
+    /// </param>
     public record CreatureState(
         Guid Id,
         string Name,
@@ -125,5 +217,8 @@ namespace OpenCombatEngine.Core.Models.States
         double? ChallengeRating = null,
         string? Gender = null,
         string? RaceName = null,
-        string? Background = null);
+        string? Background = null,
+        CheckManagerState? Checks = null,
+        Collection<AbilityEntry>? Abilities = null,
+        Collection<SkillEntry>? Skills = null);
 }
