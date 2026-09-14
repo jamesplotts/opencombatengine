@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using OpenCombatEngine.Core.Enums;
 using OpenCombatEngine.Core.Interfaces;
 using OpenCombatEngine.Core.Interfaces.Conditions;
@@ -576,6 +577,15 @@ namespace OpenCombatEngine.Implementation.Creatures
             return item;
         }
 
+        // SlotDisplayName spaces an EquipmentSlot's PascalCase name into
+        // words ("MainHand" -> "Main Hand", "Ring1" -> "Ring 1") for
+        // display — the same "space before an uppercase/digit that
+        // follows a lowercase letter" convention Layforge's own
+        // humanizeFieldName uses client-side, done here instead since the
+        // client has no business knowing this enum's members by name.
+        private static string SlotDisplayName(EquipmentSlot slot) =>
+            Regex.Replace(slot.ToString(), "([a-z])([A-Z0-9])", "$1 $2");
+
         private EquipmentState? BuildEquipmentState()
         {
             var inventoryItems = Inventory.Items.ToList();
@@ -585,7 +595,7 @@ namespace OpenCombatEngine.Implementation.Creatures
             {
                 if (item == null) return;
                 int index = inventoryItems.FindIndex(i => ReferenceEquals(i, item));
-                if (index >= 0) equippedSlots.Add(new EquippedSlotState(slot, index));
+                if (index >= 0) equippedSlots.Add(new EquippedSlotState(slot, index, SlotDisplayName(slot), item.Name));
             }
 
             TryAddSlot(Equipment.MainHand, EquipmentSlot.MainHand);
@@ -601,14 +611,22 @@ namespace OpenCombatEngine.Implementation.Creatures
             TryAddSlot(Equipment.Ring2, EquipmentSlot.Ring2);
             TryAddSlot(Equipment.Back, EquipmentSlot.Back);
 
-            var attunedIndices = Equipment.AttunedItems
-                .Select(item => inventoryItems.FindIndex(i => ReferenceEquals(i, item)))
-                .Where(index => index >= 0)
-                .ToList();
+            var attunedIndices = new List<int>();
+            var attunedNames = new List<string>();
+            foreach (var item in Equipment.AttunedItems)
+            {
+                int index = inventoryItems.FindIndex(i => ReferenceEquals(i, item));
+                if (index < 0) continue;
+                attunedIndices.Add(index);
+                attunedNames.Add(item.Name);
+            }
 
             if (equippedSlots.Count == 0 && attunedIndices.Count == 0) return null;
 
-            return new EquipmentState(new Collection<EquippedSlotState>(equippedSlots), new Collection<int>(attunedIndices));
+            return new EquipmentState(
+                new Collection<EquippedSlotState>(equippedSlots),
+                new Collection<int>(attunedIndices),
+                new Collection<string>(attunedNames));
         }
 
         public void AddFeature(IFeature feature)

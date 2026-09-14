@@ -138,19 +138,19 @@ public static class CharacterSchema
         },
         "equipment": {
           "type": ["object", "null"],
+          "description": "Which inventory items are actively worn/wielded/attuned right now (a subset of inventory.items, by name) — distinct from inventory itself, which is everything carried whether equipped or not. slotName/itemName are already human-readable (\"Main Hand\", \"Quarterstaff\") so a client can render a real table with no cross-referencing of its own; null only for a character saved before these two fields existed.",
           "properties": {
             "equippedSlots": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["slot", "itemIndex"],
                 "properties": {
-                  "slot": { "type": "string" },
-                  "itemIndex": { "type": "integer" }
+                  "slotName": { "type": ["string", "null"] },
+                  "itemName": { "type": ["string", "null"] }
                 }
               }
             },
-            "attunedItemIndices": { "type": "array", "items": { "type": "integer" } }
+            "attunedItemNames": { "type": ["array", "null"], "items": { "type": "string" } }
           }
         },
         "spellcasting": {

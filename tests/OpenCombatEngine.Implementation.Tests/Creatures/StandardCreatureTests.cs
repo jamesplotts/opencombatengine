@@ -145,5 +145,49 @@ namespace OpenCombatEngine.Implementation.Tests.Creatures
             state.Skills!.Single(s => s.Name == "Deception").Modifier.Should().Be(0);
             state.Skills!.Single(s => s.Name == "Persuasion").Modifier.Should().Be(0);
         }
+
+        [Fact]
+        public void GetState_Equipment_ResolvesSlotAndItemNamesForDisplay()
+        {
+            // A schema-driven client (Layforge's character sheet) has no
+            // domain knowledge to cross-reference EquippedSlots[].ItemIndex
+            // back into Inventory.Items itself — SlotName/ItemName exist so
+            // the engine does that resolution once, here, instead.
+            var scores = new StandardAbilityScores();
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Kestrel", scores, new StandardHitPoints(10, 10, 0), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
+            var sword = new Weapon("Longsword", "1d8", DamageType.Slashing);
+            var ring = new MagicItem("Ring of Protection", "A ring.", 0, 2000, ItemType.Ring, true);
+            creature.Inventory.AddItem(sword);
+            creature.Inventory.AddItem(ring);
+            creature.Equipment.EquipMainHand(sword);
+            creature.Equipment.AttuneItem(ring);
+
+            var state = creature.GetState();
+
+            state.Equipment.Should().NotBeNull();
+            var slot = state.Equipment!.EquippedSlots.Should().ContainSingle().Subject;
+            slot.Slot.Should().Be(EquipmentSlot.MainHand);
+            slot.SlotName.Should().Be("Main Hand");
+            slot.ItemName.Should().Be("Longsword");
+            state.Equipment.AttunedItemNames.Should().Equal("Ring of Protection");
+        }
+
+        [Fact]
+        public void GetState_Equipment_Ring1Slot_SpacesDigitFromWord()
+        {
+            // EquipmentSlot.Ring1/Ring2 are the one case where a digit
+            // immediately follows a letter — SlotDisplayName's regex needs
+            // to insert a space there too ("Ring 1"), not just before an
+            // uppercase letter.
+            var scores = new StandardAbilityScores();
+            var creature = new StandardCreature(Guid.NewGuid().ToString(), "Kestrel", scores, new StandardHitPoints(10, 10, 0), new StandardInventory(), new StandardTurnManager(new StandardDiceRoller()));
+            var ring = new MagicItem("Ring of Protection", "A ring.", 0, 2000, ItemType.Ring, false);
+            creature.Inventory.AddItem(ring);
+            creature.Equipment.Equip(ring, EquipmentSlot.Ring1);
+
+            var state = creature.GetState();
+
+            state.Equipment!.EquippedSlots.Should().ContainSingle().Which.SlotName.Should().Be("Ring 1");
+        }
     }
 }
